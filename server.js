@@ -1,11 +1,12 @@
 const express = require('express');
-const path = require('path');
+const path = require('path'); // Verifique se esta linha existe
 const http = require('http');
 const { Server } = require("socket.io");
 const Database = require('better-sqlite3');
 const session = require('express-session');
 const SqliteStore = require('better-sqlite3-session-store')(session);
 const { MercadoPagoConfig, Payment } = require('mercadopago');
+const fs = require('fs'); // <-- 1. ADICIONADO AQUI
 
 const app = express();
 const server = http.createServer(app);
@@ -16,7 +17,6 @@ const PORTA = process.env.PORT || 3000;
 // ==========================================================
 // *** IMPORTANTE: CONFIGURAÇÃO DO MERCADO PAGO V3 ***
 // ==========================================================
-// MODIFICAÇÃO 1: Usar Variável de Ambiente
 const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN; 
 
 const mpClient = new MercadoPagoConfig({ 
@@ -36,10 +36,24 @@ const pagamentosPendentes = {};
 // *** BANCO DE DADOS SQLITE (Estrutura Completa) ***
 // ==========================================================
 
-// MODIFICAÇÃO 2: Usar Variável de Ambiente para o caminho do DB
-// Isso permite que o Render salve o DB no Disco Persistente
 const dbPath = process.env.DATABASE_PATH || 'bingo_data.db'; 
-const db = new Database(dbPath);
+
+// *** 2. INÍCIO DA CORREÇÃO: Garantir que o diretório do DB exista ***
+// (Isso é crucial para o Disco Persistente do Render)
+try {
+    const dirName = path.dirname(dbPath);
+    if (!fs.existsSync(dirName)) {
+        fs.mkdirSync(dirName, { recursive: true });
+        console.log(`Diretório do banco de dados criado em: ${dirName}`);
+    }
+} catch (err) {
+    console.error("ERRO CRÍTICO AO CRIAR DIRETÓRIO DO DB:", err);
+    // Se não puder criar o diretório, o app não pode continuar.
+    process.exit(1); // Encerra o processo
+}
+// *** FIM DA CORREÇÃO ***
+
+const db = new Database(dbPath); // Esta era a linha 42 que falhava
 console.log(`Conectado ao banco de dados em: ${dbPath}`);
 
 db.exec(`
@@ -61,15 +75,40 @@ db.prepare("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('duracao_
 db.prepare("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('min_bots', '80')").run();
 db.prepare("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('max_bots', '150')").run();
 
-// (O resto do seu código de DB, SESSÃO, MIDDLEWARES, etc. continua aqui... eu vou pular para a próxima modificação)
-// ... (código de migração do DB) ...
-// ... (código de configuração de sessão) ...
+// ==========================================================
+// *** MIGRAÇÃO DB (Status Pagamento) ***
+// ==========================================================
+try {
+    console.log("Verificando migrações do banco de dados...");
+    const colunas = db.prepare("PRAGMA table_info(vencedores)").all();
+    const existeColuna = colunas.some(col => col.name === 'status_pagamento');
+    if (!existeColuna) {
+        console.log("Aplicando migração: Adicionando 'status_pagamento' à tabela 'vencedores'...");
+        db.exec("ALTER TABLE vencedores ADD COLUMN status_pagamento TEXT DEFAULT 'Pendente' NOT NULL");
+        console.log("Migração concluída com sucesso.");
+    } else {
+        console.log("Banco de dados já está atualizado.");
+    }
+} catch (err) {
+    console.error("Erro durante a migração do banco de dados:", err);
+    if (!err.message.includes("no such table: vencedores")) {
+        throw err;
+    }
+}
+// ==========================================================
 
-// MODIFICAÇÃO 3: Usar Variável de Ambiente para a Session Secret
+// ==========================================================
+// *** CONFIGURAÇÃO DE SESSÃO ***
+// ==========================================================
+const store = new SqliteStore({ client: db, expired: { clear: true, intervalMs: 900000 } });
+// 3. USANDO A VARIÁVEL DE AMBIENTE
 const SESSION_SECRET = process.env.SESSION_SECRET || 'seu_segredo_muito_secreto_e_longo_troque_isso!';
 if (SESSION_SECRET === 'seu_segredo_muito_secreto_e_longo_troque_isso!') { console.warn("AVISO: Usando chave secreta padrão para sessão..."); }
 app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true, sameSite: 'lax' } }));
 
+// ==========================================================
+// *** MIDDLEWARES GERAIS ***
+// ==========================================================
 app.use(express.json()); 
 
 // ==========================================================
@@ -140,42 +179,78 @@ app.post('/webhook-mercadopago', (req, res) => {
     res.sendStatus(200);
 });
 
-// ... (Todo o resto do seu server.js: carregarConfiguracoes, rotas públicas, rotas admin, etc. permanece igual) ...
-// ... (pulando para a seção io.on('connection')) ...
-
-// ==========================================================
-// *** LÓGICA DO JOGO (SOCKET.IO) (MODIFICADA) ***
-// ==========================================================
-
-// ... (definição de nomesBots, funções de gerar cartela, checar vencedor, etc.) ...
-// ... (pulando para io.on('connection')) ...
-
-// (As funções: gerarIdUnico, gerarNumerosAleatorios, gerarDadosCartela, checarVencedorLinha, checarVencedorCartelaCheia, contarFaltantesParaCheia, setInterval, iniciarNovaRodada, sortearNumero, salvarVencedorNoDB, terminarRodada, getContagemJogadores, getUltimosVencedoresDoDB, getAdminStatusData)
-// ... (COLE TODO O RESTANTE DO SEU SERVER.JS A PARTIR DAQUI) ...
-// ... (A ÚNICA MUDANÇA É DENTRO DO 'socket.on('criarPagamento', ...)' ABAIXO) ...
-
-// Colando o resto do server.js para garantir que está completo
 // ==========================================================
 // *** VARIÁVEIS GLOBAIS DE CONFIGURAÇÃO (MODIFICADA) ***
 // ==========================================================
-// ... (Já definido acima) ...
+let PREMIO_LINHA = '100.00'; let PREMIO_CHEIA = '500.00'; let PRECO_CARTELA = '5.00';
+let DURACAO_ESPERA_ATUAL = 20; 
+let MIN_BOTS_ATUAL = 80;
+let MAX_BOTS_ATUAL = 150;
+
+function carregarConfiguracoes() {
+    try {
+        const linha = db.prepare("SELECT valor FROM configuracoes WHERE chave = 'premio_linha'").get();
+        const cheia = db.prepare("SELECT valor FROM configuracoes WHERE chave = 'premio_cheia'").get();
+        const preco = db.prepare("SELECT valor FROM configuracoes WHERE chave = 'preco_cartela'").get();
+        const espera = db.prepare("SELECT valor FROM configuracoes WHERE chave = 'duracao_espera'").get(); 
+        const minBots = db.prepare("SELECT valor FROM configuracoes WHERE chave = 'min_bots'").get();
+        const maxBots = db.prepare("SELECT valor FROM configuracoes WHERE chave = 'max_bots'").get();
+
+        PREMIO_LINHA = linha ? linha.valor : '100.00';
+        PREMIO_CHEIA = cheia ? cheia.valor : '500.00';
+        PRECO_CARTELA = preco ? preco.valor : '5.00';
+        DURACAO_ESPERA_ATUAL = espera ? parseInt(espera.valor, 10) : 20; 
+        if (isNaN(DURACAO_ESPERA_ATUAL) || DURACAO_ESPERA_ATUAL < 10) DURACAO_ESPERA_ATUAL = 10; 
+
+        MIN_BOTS_ATUAL = minBots ? parseInt(minBots.valor, 10) : 80;
+        MAX_BOTS_ATUAL = maxBots ? parseInt(maxBots.valor, 10) : 150;
+        if (isNaN(MIN_BOTS_ATUAL) || MIN_BOTS_ATUAL < 0) MIN_BOTS_ATUAL = 0;
+        if (isNaN(MAX_BOTS_ATUAL) || MAX_BOTS_ATUAL < MIN_BOTS_ATUAL) MAX_BOTS_ATUAL = MIN_BOTS_ATUAL;
+
+        console.log(`Configurações de Jogo carregadas: Linha=R$${PREMIO_LINHA}, Cheia=R$${PREMIO_CHEIA}, Cartela=R$${PRECO_CARTELA}, Espera=${DURACAO_ESPERA_ATUAL}s, Bots(${MIN_BOTS_ATUAL}-${MAX_BOTS_ATUAL})`); 
+    } catch (err) { console.error("Erro ao carregar configurações do DB:", err); }
+}
+carregarConfiguracoes();
 
 // ==========================================================
 // *** ROTAS PÚBLICAS (ANTES DO STATIC) ***
 // ==========================================================
-// ... (Já definido acima) ...
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
+app.get('/api/config', (req, res) => {
+    try {
+        const stmt = db.prepare("SELECT chave, valor FROM configuracoes");
+        const configs = stmt.all();
+        const configMap = configs.reduce((acc, config) => {
+            acc[config.chave] = config.valor;
+            return acc;
+        }, {});
+        res.json(configMap);
+    } catch (error) {
+        console.error("Erro ao buscar /api/config:", error);
+        res.status(500).json({ success: false, message: "Erro ao buscar configurações." });
+    }
+});
 
-// ==========================================================
-// *** ARQUIVOS ESTÁTICOS (DEPOIS DAS ROTAS CUSTOMIZADAS) ***
-// ==========================================================
-// ... (Já definido acima) ...
+app.get('/dashboard', (req, res) => {
+    console.log("Servindo página de anúncio para /dashboard");
+    res.sendFile(path.join(__dirname, 'public', 'anuncio.html'));
+});
+
+app.get('/dashboard-real', (req, res) => {
+    console.log("Servindo dashboard real para /dashboard-real");
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+    console.log("Redirecionando /dashboard.html para /dashboard");
+    res.redirect('/dashboard'); 
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ==========================================================
 // *** ROTAS DE ADMINISTRAÇÃO ***
 // ==========================================================
-// ... (Todas as suas rotas admin: /admin/login, checkAdmin, /admin/painel.html, /admin/logout, /admin/premios-e-preco, /admin/gerar-cartelas, /admin/relatorios.html, /admin/api/vendas, /admin/api/vendas/limpar, /admin/vencedores.html, /admin/api/vencedores, /admin/api/vencedor/pagar, /admin/api/vencedores/limpar, app.use('/admin', ...)) ...
-// ... (COLE TODO O SEU BLOCO DE ROTAS ADMIN AQUI) ...
-// Colando o bloco de rotas admin para garantir:
 app.post('/admin/login', (req, res) => {
     const { usuario, senha } = req.body; console.log(`Tentativa de login admin para usuário: ${usuario}`);
     if (!usuario || !senha) return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
@@ -309,38 +384,6 @@ app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'adm
 // *** LÓGICA DO JOGO (SOCKET.IO) (MODIFICADA) ***
 // ==========================================================
 // ... (nomesBots, funções de gerar cartela, etc.) ...
-// Colando o bloco de lógica de jogo para garantir:
-const nomesBots = [
-    // Nomes Pessoais
-    "Maria Souza", "João Pereira", "Ana Costa", "Carlos Santos", "Sofia Oliveira", "Pedro Almeida", "Laura Ferreira", "Lucas Rodrigues", "Beatriz Lima", "Guilherme Azevedo",
-    "Arthur Silva", "Alice Santos", "Bernardo Oliveira", "Manuela Rodrigues", "Heitor Ferreira", "Valentina Alves", "Davi Pereira", "Helena Lima", "Lorenzo Souza", "Isabella Costa",
-    "Miguel Martins", "Sophia Rocha", "Theo Gonçalves", "Júlia Carvalho", "Gabriel Gomes", "Heloísa Mendes", "Pedro Henrique Ribeiro", "Maria Clara Dias", "Matheus Cardoso", "Isadora Vieira",
-    "Enzo Fernandes", "Lívia Pinto", "Nicolas Andrade", "Maria Luísa Barbosa", "Benjamin Teixeira", "Ana Clara Nogueira", "Samuel Correia", "Lorena Rezende", "Rafael Duarte", "Cecília Freitas",
-    "Gustavo Campos", "Yasmin Sales", "Daniel Moura", "Isabelly Viana", "Felipe Cunha", "Sarah Morais", "Lucas Gabriel Castro", "Ana Júlia Ramos", "João Miguel Pires", "Esther Aragão",
-    "Murilo Farias", "Emanuelly Melo", "Bryan Macedo", "Mariana Barros", "Eduardo Cavalcanti", "Rebeca Borges", "Leonardo Monteiro", "Ana Laura Brandão", "Henrique Lins", "Clarice Dantas",
-    "Cauã Azevedo", "Agatha Gusmão", "Vinícius Peixoto", "Gabrielly Benites", "João Guilherme Guedes", "Melissa Siqueira",
-    // Nomes de Bares Genéricos
-    "Bar do Zé", "Bar da Esquina", "Cantinho do Amigo", "Boteco do Manolo", "Bar Central", "Adega do Portuga", "Bar & Petiscos", "Ponto Certo Bar", "Bar Vira Copo", "Skina Bar",
-    "Recanto do Chopp", "Bar do Gato", "Toca do Urso Bar", "Bar Boa Vista", "Empório do Bar", "Bar da Praça", "Boteco da Vila", "Bar Avenida", "Bar Estrela", "Parada Obrigatória Bar",
-    // Nomes de Distribuidoras Genéricas
-    "Distribuidora Silva", "Adega & Cia", "Disk Bebidas Rápido", "Central de Bebidas", "Distribuidora Irmãos Unidos", "Ponto Frio Bebidas", "Império das Bebidas", "Distribuidora Confiança", "SOS Bebidas", "Mundo das Bebidas",
-    "Planeta Gelo & Bebidas", "Distribuidora Aliança", "O Rei da Cerveja", "Point das Bebidas", "Distribuidora Amigão", "Bebidas Delivery Já", "Varanda Bebidas", "Distribuidora Campeã", "Expresso Bebidas", "Top Beer Distribuidora",
-    // Apelidos/Personagens
-    "Ricardão", "Paty", "Beto", "Juju", "Zeca", "Lulu", "Tio Sam", "Dona Flor", "Professor", "Capitão", "Alemão", "Baixinho", "Careca", "Japa", "Madruga", "Xará", "Campeão", "Princesa", "Chefe"
-];
-
-// ... (funções gerarIdUnico, gerarNumerosAleatorios, etc.) ...
-// ... (funções checarVencedorLinha, checarVencedorCartelaCheia, etc.) ...
-// ... (constantes TEMPO_ENTRE_NUMEROS, etc.) ...
-// ... (variáveis let numeroDoSorteio, etc.) ...
-// ... (função setInterval) ...
-// ... (função iniciarNovaRodada) ...
-// ... (função sortearNumero) ...
-// ... (função salvarVencedorNoDB) ...
-// ... (função terminarRodada) ...
-// ... (função getContagemJogadores) ...
-// ... (função getUltimosVencedoresDoDB) ...
-// ... (função getAdminStatusData) ...
 // Colando as funções para garantir
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6) + '-' + Math.random().toString(36).substring(2, 6); }
 function gerarNumerosAleatorios(quantidade, min, max) { const numeros = new Set(); while (numeros.size < quantidade) { const aleatorio = Math.floor(Math.random() * (max - min + 1)) + min; numeros.add(aleatorio); } return Array.from(numeros); }
@@ -555,7 +598,6 @@ io.on('connection', (socket) => {
                 transaction_amount: valorTotal,
                 description: `Compra de ${quantidade} cartela(s) - Bingo do Pix`,
                 payment_method_id: 'pix',
-                // MODIFICAÇÃO 4: Usar Variável de Ambiente
                 notification_url: `${process.env.BASE_URL || 'https://SEU_DOMINIO_HTTPS_AQUI'}/webhook-mercadopago`,
                 payer: {
                     email: `jogador_${telefone}@bingo.com`, // Email fictício, mas obrigatório
