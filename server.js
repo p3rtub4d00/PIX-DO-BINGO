@@ -1,12 +1,12 @@
 const express = require('express');
-const path = require('path'); // Verifique se esta linha existe
+const path = require('path');
 const http = require('http');
 const { Server } = require("socket.io");
 const Database = require('better-sqlite3');
 const session = require('express-session');
 const SqliteStore = require('better-sqlite3-session-store')(session);
 const { MercadoPagoConfig, Payment } = require('mercadopago');
-const fs = require('fs'); // <-- 1. ADICIONADO AQUI
+// const fs = require('fs'); // <-- REMOVIDO
 
 const app = express();
 const server = http.createServer(app);
@@ -38,22 +38,9 @@ const pagamentosPendentes = {};
 
 const dbPath = process.env.DATABASE_PATH || 'bingo_data.db'; 
 
-// *** 2. INÍCIO DA CORREÇÃO: Garantir que o diretório do DB exista ***
-// (Isso é crucial para o Disco Persistente do Render)
-try {
-    const dirName = path.dirname(dbPath);
-    if (!fs.existsSync(dirName)) {
-        fs.mkdirSync(dirName, { recursive: true });
-        console.log(`Diretório do banco de dados criado em: ${dirName}`);
-    }
-} catch (err) {
-    console.error("ERRO CRÍTICO AO CRIAR DIRETÓRIO DO DB:", err);
-    // Se não puder criar o diretório, o app não pode continuar.
-    process.exit(1); // Encerra o processo
-}
-// *** FIM DA CORREÇÃO ***
+// *** BLOCO DE CRIAÇÃO DE DIRETÓRIO FOI REMOVIDO DAQUI ***
 
-const db = new Database(dbPath); // Esta era a linha 42 que falhava
+const db = new Database(dbPath); // Esta era a linha que falhava (agora deve funcionar)
 console.log(`Conectado ao banco de dados em: ${dbPath}`);
 
 db.exec(`
@@ -101,7 +88,6 @@ try {
 // *** CONFIGURAÇÃO DE SESSÃO ***
 // ==========================================================
 const store = new SqliteStore({ client: db, expired: { clear: true, intervalMs: 900000 } });
-// 3. USANDO A VARIÁVEL DE AMBIENTE
 const SESSION_SECRET = process.env.SESSION_SECRET || 'seu_segredo_muito_secreto_e_longo_troque_isso!';
 if (SESSION_SECRET === 'seu_segredo_muito_secreto_e_longo_troque_isso!') { console.warn("AVISO: Usando chave secreta padrão para sessão..."); }
 app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true, sameSite: 'lax' } }));
@@ -262,7 +248,10 @@ app.post('/admin/login', (req, res) => {
         } else { console.log(`Falha no login admin para: ${usuario}`); return res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' }); }
     } catch (error) { console.error("Erro durante o login admin:", error); return res.status(500).json({ success: false, message: 'Erro interno do servidor.' }); }
 });
-// function checkAdmin... (já definida acima)
+function checkAdmin(req, res, next) {
+    if (req.session && req.session.isAdmin) { return next(); }
+    else { console.log("Acesso negado à área admin. Redirecionando para login."); if (req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('json'))) { return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' }); } return res.redirect('/admin/login.html'); }
+}
 app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'painel.html')); });
 app.get('/admin/logout', (req, res) => { req.session.destroy((err) => { if (err) { console.error("Erro ao fazer logout:", err); return res.status(500).send("Erro ao sair."); } console.log("Usuário admin deslogado."); res.clearCookie('connect.sid'); res.redirect('/admin/login.html'); }); });
 
@@ -383,8 +372,25 @@ app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'adm
 // ==========================================================
 // *** LÓGICA DO JOGO (SOCKET.IO) (MODIFICADA) ***
 // ==========================================================
-// ... (nomesBots, funções de gerar cartela, etc.) ...
-// Colando as funções para garantir
+const nomesBots = [
+    // Nomes Pessoais
+    "Maria Souza", "João Pereira", "Ana Costa", "Carlos Santos", "Sofia Oliveira", "Pedro Almeida", "Laura Ferreira", "Lucas Rodrigues", "Beatriz Lima", "Guilherme Azevedo",
+    "Arthur Silva", "Alice Santos", "Bernardo Oliveira", "Manuela Rodrigues", "Heitor Ferreira", "Valentina Alves", "Davi Pereira", "Helena Lima", "Lorenzo Souza", "Isabella Costa",
+    "Miguel Martins", "Sophia Rocha", "Theo Gonçalves", "Júlia Carvalho", "Gabriel Gomes", "Heloísa Mendes", "Pedro Henrique Ribeiro", "Maria Clara Dias", "Matheus Cardoso", "Isadora Vieira",
+    "Enzo Fernandes", "Lívia Pinto", "Nicolas Andrade", "Maria Luísa Barbosa", "Benjamin Teixeira", "Ana Clara Nogueira", "Samuel Correia", "Lorena Rezende", "Rafael Duarte", "Cecília Freitas",
+    "Gustavo Campos", "Yasmin Sales", "Daniel Moura", "Isabelly Viana", "Felipe Cunha", "Sarah Morais", "Lucas Gabriel Castro", "Ana Júlia Ramos", "João Miguel Pires", "Esther Aragão",
+    "Murilo Farias", "Emanuelly Melo", "Bryan Macedo", "Mariana Barros", "Eduardo Cavalcanti", "Rebeca Borges", "Leonardo Monteiro", "Ana Laura Brandão", "Henrique Lins", "Clarice Dantas",
+    "Cauã Azevedo", "Agatha Gusmão", "Vinícius Peixoto", "Gabrielly Benites", "João Guilherme Guedes", "Melissa Siqueira",
+    // Nomes de Bares Genéricos
+    "Bar do Zé", "Bar da Esquina", "Cantinho do Amigo", "Boteco do Manolo", "Bar Central", "Adega do Portuga", "Bar & Petiscos", "Ponto Certo Bar", "Bar Vira Copo", "Skina Bar",
+    "Recanto do Chopp", "Bar do Gato", "Toca do Urso Bar", "Bar Boa Vista", "Empório do Bar", "Bar da Praça", "Boteco da Vila", "Bar Avenida", "Bar Estrela", "Parada Obrigatória Bar",
+    // Nomes de Distribuidoras Genéricas
+    "Distribuidora Silva", "Adega & Cia", "Disk Bebidas Rápido", "Central de Bebidas", "Distribuidora Irmãos Unidos", "Ponto Frio Bebidas", "Império das Bebidas", "Distribuidora Confiança", "SOS Bebidas", "Mundo das Bebidas",
+    "Planeta Gelo & Bebidas", "Distribuidora Aliança", "O Rei da Cerveja", "Point das Bebidas", "Distribuidora Amigão", "Bebidas Delivery Já", "Varanda Bebidas", "Distribuidora Campeã", "Expresso Bebidas", "Top Beer Distribuidora",
+    // Apelidos/Personagens
+    "Ricardão", "Paty", "Beto", "Juju", "Zeca", "Lulu", "Tio Sam", "Dona Flor", "Professor", "Capitão", "Alemão", "Baixinho", "Careca", "Japa", "Madruga", "Xará", "Campeão", "Princesa", "Chefe"
+];
+
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6) + '-' + Math.random().toString(36).substring(2, 6); }
 function gerarNumerosAleatorios(quantidade, min, max) { const numeros = new Set(); while (numeros.size < quantidade) { const aleatorio = Math.floor(Math.random() * (max - min + 1)) + min; numeros.add(aleatorio); } return Array.from(numeros); }
 function gerarDadosCartela(sorteioId) { const cartela = []; const colunas = [ gerarNumerosAleatorios(5, 1, 15), gerarNumerosAleatorios(5, 16, 30), gerarNumerosAleatorios(4, 31, 45), gerarNumerosAleatorios(5, 46, 60), gerarNumerosAleatorios(5, 61, 75) ]; for (let i = 0; i < 5; i++) { const linha = []; for (let j = 0; j < 5; j++) { if (j === 2 && i === 2) { linha.push("FREE"); } else if (j === 2) { linha.push(colunas[j][i > 2 ? i - 1 : i]); } else { linha.push(colunas[j][i]); } } cartela.push(linha); } return { c_id: gerarIdUnico(), s_id: sorteioId, data: cartela }; }
@@ -580,19 +586,16 @@ io.on('connection', (socket) => {
         socket.emit('estadoInicial', { sorteioId: numeroDoSorteio, estado: estadoJogo, tempoRestante: estadoJogo === 'ESPERANDO' ? tempoRestante : 0, jogadoresOnline: totalOnline, jogadoresReais: reaisOnline, ultimosVencedores: ultimosVencedoresDB, numerosSorteados: numerosSorteados, ultimoNumero: numerosSorteados.length > 0 ? numerosSorteados[numerosSorteados.length - 1] : null, quaseLa: [], configuracoes: configMap });
     } catch (error) { console.error("Erro ao emitir estado inicial:", error); }
     
-    // *** INÍCIO DA MODIFICAÇÃO: LÓGICA DE PAGAMENTO REAL ***
     socket.on('criarPagamento', async (dadosCompra, callback) => {
         try {
             const { nome, telefone, quantidade } = dadosCompra;
             
-            // 1. Calcula o valor total
             const preco = db.prepare("SELECT valor FROM configuracoes WHERE chave = 'preco_cartela'").get();
             const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
             const valorTotal = quantidade * precoUnitarioAtual;
             
             console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade} cartela(s). Total: R$${valorTotal.toFixed(2)}.`);
 
-            // 2. Cria o pagamento no Mercado Pago
             const payment = new Payment(mpClient);
             const body = {
                 transaction_amount: valorTotal,
@@ -600,17 +603,15 @@ io.on('connection', (socket) => {
                 payment_method_id: 'pix',
                 notification_url: `${process.env.BASE_URL || 'https://SEU_DOMINIO_HTTPS_AQUI'}/webhook-mercadopago`,
                 payer: {
-                    email: `jogador_${telefone}@bingo.com`, // Email fictício, mas obrigatório
+                    email: `jogador_${telefone}@bingo.com`, 
                     first_name: nome,
                     last_name: "Jogador",
-                    // identificação fictícia
                 },
                 date_of_expiration: new Date(Date.now() + (10 * 60 * 1000)).toISOString().replace("Z", "-03:00") // 10 min
             };
 
             const response = await payment.create({ body });
             
-            // 3. Armazena os dados do pagamento pendente
             const paymentId = response.id.toString();
             pagamentosPendentes[paymentId] = {
                 socketId: socket.id,
@@ -619,7 +620,6 @@ io.on('connection', (socket) => {
             
             console.log(`Pagamento PIX ${paymentId} criado para socket ${socket.id}.`);
 
-            // 4. Envia o QR Code de volta para o cliente
             const qrCodeBase64 = response.point_of_interaction.transaction_data.qr_code_base64;
             const qrCodeCopiaCola = response.point_of_interaction.transaction_data.qr_code;
             
@@ -634,7 +634,6 @@ io.on('connection', (socket) => {
             }
         }
     });
-    // *** FIM DA MODIFICAÇÃO ***
     
     socket.on('registerPlayer', (playerData) => { try { if (playerData && playerData.cartelas && playerData.cartelas.length > 0) { const s_id_cartela = playerData.cartelas[0].s_id; if (s_id_cartela === numeroDoSorteio || (estadoJogo === "ESPERANDO")) { console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio #${numeroDoSorteio}.`); jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; io.emit('contagemJogadores', getContagemJogadores()); } else { console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio #${numeroDoSorteio} com cartela inválida (Sorteio #${s_id_cartela}, Estado: ${estadoJogo}). REJEITADO.`); socket.emit('cartelaAntiga'); } } } catch(error) { console.error("Erro em registerPlayer:", error); } });
     socket.on('disconnect', () => { console.log(`Usuário desconectado: ${socket.id}`); const eraJogadorRegistrado = jogadores[socket.id] && jogadores[socket.id].nome && !jogadores[socket.id].isBot && !jogadores[socket.id].isManual; delete jogadores[socket.id]; if (eraJogadorRegistrado) { try { io.emit('contagemJogadores', getContagemJogadores()); } catch (error) { console.error("Erro ao emitir contagemJogadores no disconnect:", error); } } });
