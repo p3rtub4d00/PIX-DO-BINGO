@@ -1,0 +1,149 @@
+/* Estilos específicos para a Sala de Espera */
+
+#espera-container {
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+#espera-container h2 {
+    font-size: 2.2em;
+    margin-bottom: 15px;
+}
+
+#espera-container p {
+    font-size: 1.1em;
+    max-width: 500px;
+    margin: 0 auto 30px auto;
+    line-height: 1.6;
+}
+
+/* Animação de "Loader" */
+.loader {
+    border: 8px solid var(--color-bg-light); /* Cinza claro */
+    border-top: 8px solid var(--color-pix-green); /* Verde Pix */
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1.5s linear infinite;
+    margin: 0 auto 30px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estilo do Cronômetro */
+#cronometro-container h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 1.4em;
+    color: var(--color-text-heading);
+    margin-bottom: 10px;
+}
+
+#cronometro {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 4em;
+    color: var(--color-text-heading);
+    margin-bottom: 30px;
+}
+
+/* --- INÍCIO: Estilos Copiados/Adaptados de jogo.css --- */
+
+/* Área das Cartelas */
+.cartelas-compradas {
+    background-color: var(--color-bg-light);
+    border: 1px dashed var(--color-pix-green);
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    width: 100%; /* Faz o container ocupar a largura */
+    max-width: 490px; /* Largura máxima (450 cartela + 20 padding + 20 padding) */
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box; /* Garante que o padding não estoure */
+}
+
+/* NAVEGADOR DA CARTELA (Copiado de jogo.css) */
+#cartela-switcher {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 450px; 
+    margin: 0 auto 20px auto;
+}
+.cartela-titulo-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#cartela-titulo-atual {
+    font-size: 1.4em;
+    font-weight: 700;
+    color: var(--color-text-heading);
+    margin: 0;
+}
+#cartela-id-display { /* ID da Cartela */
+    font-size: 0.9em;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 700;
+    color: var(--color-text-body);
+    background-color: #eee;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+.btn-switch {
+    background-color: transparent;
+    border: 2px solid var(--color-pix-green);
+    color: var(--color-pix-green);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 2em;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-bottom: 5px; 
+}
+.btn-switch:hover {
+    background-color: var(--color-pix-green);
+    color: #fff;
+}
+.btn-switch:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background-color: transparent;
+    color: #aaa;
+    border-color: #ddd;
+}
+
+/* Container das Cartelas (Copiado de jogo.css) */
+#cartelas-container {
+    position: relative;
+}
+
+/* Oculta cartelas não ativas (Copiado de jogo.css) */
+.cartela-jogador { 
+    display: none; 
+}
+.cartela-jogador.ativa {
+    display: grid; 
+}
+/* --- FIM: Estilos Copiados/Adaptados --- */
+
+
+.aviso {
+    margin: 0 !important; /* Sobrescreve margens anteriores */
+    font-size: 0.9em !important;
+    opacity: 0.8;
+}

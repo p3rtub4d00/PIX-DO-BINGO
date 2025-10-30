@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Bingo do Pix</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+</head>
+<body class="dashboard-body">
+
+    <div id="anuncio-espera-overlay" class="anuncio-espera-overlay">
+        <div class="anuncio-espera-container">
+            <h1>Aguarde o Início do Próximo Sorteio!</h1>
+            <div class="anuncio-area-espera">
+                <img src="/imagens/seu-anuncio-espera.gif" alt="Anúncio" style="max-width: 100%; border-radius: 8px;">
+                </div>
+            <p>O sorteio começará em breve...</p>
+            </div>
+    </div>
+    <div id="anuncio-vencedor-overlay">
+        <div class="anuncio-vencedor-box">
+            <h2 id="anuncio-vencedor-premio">PRÊMIO DA LINHA!</h2>
+            <p id="anuncio-vencedor-nome">Nome do Vencedor</p>
+        </div>
+    </div>
+
+    <header class="dashboard-header">
+        <h1 id="dash-sorteio-id-header">BINGO DO PIX - SORTEIO #...</h1>
+        <div class="header-controls">
+             <div id="dash-estado-header" class="estado-texto estado-esperando">AGUARDANDO</div>
+             <button id="btn-toggle-som" title="Ativar/Desativar Som">
+                 <i class="fas fa-volume-xmark"></i>
+             </button>
+        </div>
+    </header>
+
+    <main class="dashboard-main-fullscreen">
+        <div class="area-principal">
+            <div id="dash-ultimo-numero-wrapper">
+                <span id="dash-ultimo-numero">--</span>
+            </div>
+            <h3 id="titulo-numeros-sorteados">Números Sorteados:</h3>
+            <div id="dash-globo-numeros">
+                </div>
+        </div>
+
+        <aside class="barra-lateral">
+            <section id="info-rodada">
+                <h2>Informações</h2>
+                <div class="info-item">
+                    <span>Jogadores:</span>
+                    <strong id="dash-jogadores-total">--</strong>
+                </div>
+                <div class="info-item">
+                    <span>Prêmio Linha:</span>
+                    <strong class="text-pix-sidebar" id="dash-premio-linha">R$ ...</strong>
+                </div>
+                <div class="info-item">
+                    <span>Prêmio Cheia:</span>
+                    <strong class="text-pix-sidebar" id="dash-premio-cheia">R$ ...</strong>
+                </div>
+            </section>
+
+            <section id="quase-la">
+                <h2>Quase Lá! (Faltam ≤5)</h2>
+                <div id="lista-quase-la">
+                    <p>Aguardando início...</p>
+                </div>
+            </section>
+
+            <section id="ultimos-ganhadores">
+                <h2>Últimos Ganhadores</h2>
+                <div id="lista-ganhadores">
+                    <p>Nenhum ganhador ainda.</p>
+                </div>
+            </section>
+        </aside>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

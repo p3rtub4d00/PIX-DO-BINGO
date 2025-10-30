@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Vencedores - Admin</title>
+    <link rel="stylesheet" href="admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-panel-body">
+
+    <aside class="admin-sidebar">
+        <div class="logo">Bingo PIX</div>
+        <nav class="admin-nav">
+            <ul>
+                <li><a href="/admin/painel.html">Painel & Status</a></li>
+                <li><a href="/admin/vencedores.html" class="ativo">Gestão Vencedores</a></li>
+                <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
+            </ul>
+        </nav>
+        <div class="logout-link">
+             <a href="/admin/logout">Sair</a>
+        </div>
+    </aside>
+
+    <main class="admin-content">
+         <header class="content-header">
+             <h1>Gestão de Vencedores e Pagamentos</h1>
+        </header>
+
+        <section class="card admin-section">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h2>Controle de Pagamentos</h2>
+                    <p>Lista de todos os vencedores do sistema. Use esta tela para marcar os pagamentos PIX como concluídos.</p>
+                </div>
+                <button id="btn-limpar-vencedores" class="btn-comprar btn-perigo" style="width: auto; white-space: nowrap;">
+                    Limpar Histórico
+                </button>
+            </div>
+            <div class="tabela-relatorio-container">
+                <table class="relatorio-vendas relatorio-vencedores"> <thead>
+                        <tr>
+                            <th class="col-data">Data/Hora</th>
+                            <th class="col-sorteio">Sorteio #</th>
+                            <th class="col-premio">Prêmio</th>
+                            <th class="col-nome">Nome Vencedor</th>
+                            <th class="col-telefone">Telefone (PIX)</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-acao">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-vencedores-corpo">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 20px;">Carregando dados...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </section>
+    </main>
+
+    <script src="vencedores.js"></script>
+</body>
+</html>

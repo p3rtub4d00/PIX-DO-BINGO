@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sala de Espera - Bingo do Pix</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="espera.css"> 
+    <link rel="stylesheet" href="jogo.css"> 
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1 class="title-gradient">BINGO DO PIX</h1>
+    </header>
+
+    <main>
+        <div id="espera-container" class="card">
+            <h2 id="sorteio-id-display" class="text-pix">Sorteio #...</h2>
+            
+            <p>Seu lugar está garantido. Você será redirecionado automaticamente quando o jogo começar.</p>
+            
+            <div class="loader"></div>
+            
+            <div id="cronometro-container">
+                <h3>Próximo Sorteio em:</h3>
+                <div id="cronometro">--:--</div>
+            </div>
+            
+            <div class="cartelas-compradas">
+                <div id="cartela-switcher">
+                    <button id="btn-cartela-anterior" class="btn-switch" disabled>&lt;</button>
+                    <div class="cartela-titulo-wrapper">
+                        <h2 id="cartela-titulo-atual">Suas Cartelas</h2>
+                        <span id="cartela-id-display">ID: ...</span>
+                    </div>
+                    <button id="btn-cartela-proxima" class="btn-switch" disabled>&gt;</button>
+                </div>
+    
+                <div id="cartelas-container">
+                    </div>
+            </div>
+            </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+    </footer>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="espera.js"></script>
+</body>
+</html>

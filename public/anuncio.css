@@ -1,0 +1,60 @@
+/* Estilos específicos para a página de Anúncio */
+
+body.anuncio-body {
+    background-color: #2c3e50; /* Fundo escuro */
+    color: #ecf0f1; /* Texto claro */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Lato', sans-serif;
+    text-align: center;
+    padding: 20px;
+    margin: 0; /* Remove margens padrão do body */
+    box-sizing: border-box; /* Garante padding correto */
+}
+
+.anuncio-container {
+    background-color: rgba(255, 255, 255, 0.05); /* Painel semi-transparente */
+    padding: 40px;
+    border-radius: 15px;
+    max-width: 700px;
+    width: 100%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.anuncio-area {
+    margin-bottom: 30px;
+    background-color: #fff; /* Fundo branco para o anúncio destacar */
+    padding: 20px;
+    border-radius: 8px;
+    min-height: 200px; /* Altura mínima para o espaço do anúncio */
+    display: flex; /* Para centralizar conteúdo se for só texto */
+    justify-content: center;
+    align-items: center;
+    color: #333; /* Cor escura para texto do anúncio */
+}
+
+.anuncio-area h2 {
+    color: var(--color-pix-green);
+    margin-bottom: 10px;
+}
+
+.contador-area {
+    font-family: 'Montserrat', sans-serif;
+}
+
+.contador-area p {
+    font-size: 1.2em;
+    margin: 10px 0;
+    opacity: 0.8;
+}
+
+.contador-area .tempo {
+    font-size: 4em;
+    font-weight: 900;
+    color: var(--color-pix-green);
+    display: block; /* Para ocupar a linha */
+    line-height: 1;
+}

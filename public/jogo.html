@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sala de Jogo - Bingo do Pix</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="jogo.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1 class="title-gradient">BINGO DO PIX</h1>
+    </header>
+
+    <main class="jogo-main">
+        
+        <section id="painel-sorteio" class="card">
+            <h2 id="sorteio-id-display" class="text-pix">Sorteio #...</h2>
+            
+            <h2>Último Sorteado</h2>
+            <div id="ultimo-numero-wrapper">
+                <span id="ultimo-numero-sorteado" class="text-pix">--</span>
+            </div>
+            <h2>Todos os Números Sorteados</h2>
+            <div id="globo-numeros"></div>
+        </section>
+
+        <section id="area-jogador" class="card">
+            
+            <div id="cartela-switcher">
+                <button id="btn-cartela-anterior" class="btn-switch" disabled>&lt;</button>
+                <div class="cartela-titulo-wrapper">
+                    <h2 id="cartela-titulo-atual">Minhas Cartelas</h2>
+                    <span id="cartela-id-display">ID: ...</span>
+                </div>
+                <button id="btn-cartela-proxima" class="btn-switch" disabled>&gt;</button>
+            </div>
+
+            <div id="cartelas-container">
+                </div>
+            <button id="btn-bingo" class="btn-comprar btn-destaque">BINGO!</button>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+    </footer>
+
+    <div id="modal-resultado" class="modal-overlay">
+        <div class="modal-content" id="modal-vencedor-conteudo">
+            
+            <div id="area-comprovante">
+                <h2 id="resultado-titulo" class="title-gradient">Resultado</h2>
+                
+                <div class="comprovante-ids">
+                    <span id="comprovante-sorteio-id">Sorteio: #...</span>
+                    <span id="comprovante-cartela-id">Cartela: ...</span>
+                </div>
+
+                <div class="comprovante-detalhes">
+                     <span id="comprovante-nome">Nome: ...</span>
+                     <span id="comprovante-premio">Prêmio: ...</span>
+                </div>
+                <div class="comprovante-detalhes">
+                     <span id="comprovante-data">Data: ...</span>
+                </div>
+                <p id="resultado-mensagem">O vencedor foi...</p>
+                
+                <div id="resultado-prova-cartela" style="display: none;">
+                    <h4>Sua Cartela Vencedora:</h4>
+                    <div id="cartela-vencedora-display" class="cartela-jogador">
+                        </div>
+                </div>
+            </div>
+
+            <div class="modal-botoes">
+                <button id="btn-baixar-comprovante" class="btn-comprar btn-comprar-azul" style="display: none;">
+                    Baixar Comprovante (PDF)
+                </button>
+                <button id="btn-resultado-fechar" class="btn-comprar btn-destaque">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <script src="jogo.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "bingodopix",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "better-sqlite3-session-store": "^0.1.0",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "mercadopago": "^2.0.10",
+    "socket.io": "^4.8.1"
+  }
+}
