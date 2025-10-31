@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tituloCartelaAtualEl = document.getElementById('cartela-titulo-atual');
     const sorteioIdDisplay = document.getElementById('sorteio-id-display'); 
     const cartelaIdDisplay = document.getElementById('cartela-id-display'); 
+    const btnToggleSom = document.getElementById('btn-toggle-som'); // <-- ADICIONADO
     
     // --- Seletores do Modal de Resultado ---
     const modalResultado = document.getElementById('modal-resultado');
@@ -30,10 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const areaComprovante = document.getElementById('area-comprovante');
     const comprovanteSorteioId = document.getElementById('comprovante-sorteio-id'); 
     const comprovanteCartelaId = document.getElementById('comprovante-cartela-id'); 
-    
     const comprovanteNome = document.getElementById('comprovante-nome');
     const comprovantePremio = document.getElementById('comprovante-premio');
-    const comprovanteData = document.getElementById('comprovante-data');
+    const comprovanteData = document.getElementById('comprovante-data'); 
 
     let cartelasGeradas = []; 
     let cartelaAtualIndex = 0;
@@ -41,6 +41,92 @@ document.addEventListener('DOMContentLoaded', () => {
     let jogoEstaAtivo = true; 
     let nomeJogador = ""; 
     let cartelasSalvas = []; 
+
+    // --- *** INÍCIO: LÓGICA DE VOZ (Copiada de dashboard.js) *** ---
+    let somAtivo = false; 
+    let synth = null; 
+    let voces = []; 
+    const suporteVoz = 'speechSynthesis' in window;
+
+    if (suporteVoz) {
+        synth = window.speechSynthesis; 
+        function carregarVozes() { 
+            try { 
+                voces = synth.getVoices().filter(voice => voice.lang.startsWith('pt')); 
+                console.log("Vozes PT:", voces.map(v => v.name)); 
+            } catch (error) { 
+                console.error("Erro vozes:", error); 
+            } 
+        }
+        carregarVozes(); 
+        if (speechSynthesis.onvoiceschanged !== undefined) { 
+            speechSynthesis.onvoiceschanged = carregarVozes; 
+        }
+        
+        function falar(texto) { 
+            if (!somAtivo || !synth || !texto) { 
+                console.log(`Falar ignorado: som=${somAtivo}`); 
+                return; 
+            } 
+            try { 
+                synth.cancel(); 
+                const utterThis = new SpeechSynthesisUtterance(texto); 
+                const vozPtBr = voces.find(voice => voice.lang === 'pt-BR'); 
+                if (vozPtBr) { 
+                    utterThis.voice = vozPtBr; 
+                } else if (voces.length > 0) { 
+                    utterThis.voice = voces[0]; 
+                } 
+                utterThis.pitch = 1; 
+                utterThis.rate = 1; 
+                utterThis.onstart = () => console.log(`Falando: "${texto}"`); 
+                utterThis.onerror = (event) => console.error('Erro voz:', event.error); 
+                utterThis.onend = () => console.log(`Fim fala: "${texto}"`); 
+                synth.speak(utterThis); 
+            } catch (error) { 
+                console.error("Erro falar:", error); 
+            } 
+        }
+
+        if (btnToggleSom) {
+            btnToggleSom.addEventListener('click', () => { 
+                somAtivo = !somAtivo; 
+                btnToggleSom.classList.toggle('som-ativo', somAtivo); 
+                const icon = btnToggleSom.querySelector('i'); 
+                if (icon) { 
+                    if (somAtivo) { 
+                        icon.className = 'fas fa-volume-high'; 
+                        falar("Som ativado"); 
+                    } else { 
+                        icon.className = 'fas fa-volume-xmark'; 
+                        if (synth) synth.cancel(); 
+                    } 
+                } 
+            });
+            const initialIcon = btnToggleSom.querySelector('i'); 
+            if(initialIcon) { 
+                initialIcon.className = 'fas fa-volume-xmark'; 
+            }
+        }
+    } else { 
+        if (btnToggleSom) { 
+            btnToggleSom.disabled = true; 
+            btnToggleSom.title = "Síntese de voz não suportada"; 
+            const icon = btnToggleSom.querySelector('i'); 
+            if(icon) { icon.className = 'fas fa-volume-xmark'; } 
+        } 
+    }
+
+    // Função auxiliar para pegar a letra
+    function getLetraDoNumero(numero) { 
+        if (numero >= 1 && numero <= 15) return "B"; 
+        if (numero >= 16 && numero <= 30) return "I"; 
+        if (numero >= 31 && numero <= 45) return "N"; 
+        if (numero >= 46 && numero <= 60) return "G"; 
+        if (numero >= 61 && numero <= 75) return "O"; 
+        return ""; 
+    }
+    // --- *** FIM: LÓGICA DE VOZ *** ---
 
     // --- 1. Gerar o Painel do Globo (Visual) ---
     function gerarGlobo() {
@@ -134,7 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // *** INÍCIO DA MODIFICAÇÃO (Função renomeada e atualizada) ***
     function preencherComprovante(data, indiceCartela, tipoPremio) {
         const elementoCartelaOriginal = cartelasGeradas[indiceCartela];
         if (!elementoCartelaOriginal) return;
@@ -151,16 +236,13 @@ document.addEventListener('DOMContentLoaded', () => {
         comprovantePremio.textContent = `Prêmio: R$ ${data.premioValor} (${tipoPremio})`;
         comprovanteData.textContent = `Data: ${new Date().toLocaleString('pt-BR')}`;
         
-        // MOSTRA os containers dos detalhes
         const detalhesContainers = document.querySelectorAll('.comprovante-detalhes');
         if (detalhesContainers) {
-            // Usa 'flex' como definido no CSS
             detalhesContainers.forEach(container => container.style.display = 'flex');
         }
 
         resultadoProvaCartela.style.display = 'block';
     }
-    // *** FIM DAS MODIFICAÇÕES ***
 
     // --- 6. FUNÇÃO DE GERAR COMPROVANTE ---
     btnBaixarComprovante.addEventListener('click', () => {
@@ -200,19 +282,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 7. OUVINTES DO SERVIDOR ---
     
-    // *** INÍCIO DA MODIFICAÇÃO (Esconde campos do comprovante) ***
     function resetarModal() {
         resultadoProvaCartela.style.display = 'none';
         btnBaixarComprovante.style.display = 'none';
         btnResultadoFechar.textContent = "OK";
         
-        // Esconde os containers dos detalhes
         const detalhesContainers = document.querySelectorAll('.comprovante-detalhes');
         if (detalhesContainers) {
             detalhesContainers.forEach(container => container.style.display = 'none');
         }
     }
-    // *** FIM DA MODIFICAÇÃO ***
     
     socket.on('novoNumeroSorteado', (numeroSorteado) => {
         if (!jogoEstaAtivo) return; 
@@ -227,6 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 celula.classList.add('marcado');
             }
         });
+
+        // *** INÍCIO DA MODIFICAÇÃO: FALAR O NÚMERO ***
+        const letra = getLetraDoNumero(numeroSorteado); 
+        falar(`${letra} ${numeroSorteado}`); 
+        // *** FIM DA MODIFICAÇÃO ***
     });
 
     socket.on('voceGanhouLinha', (data) => {
@@ -237,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultadoMensagem.textContent = "Você completou uma linha e ganhou o primeiro prêmio! O jogo continua valendo Cartela Cheia.";
         
         preencherComprovante(data, data.indiceCartela, 'Linha');
+        falar("Parabéns, você ganhou a linha!"); // <-- FALA
         
         btnBaixarComprovante.style.display = 'block'; 
         modalResultado.style.display = 'flex';
@@ -248,6 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         resultadoTitulo.textContent = "Bingo de Linha!";
         resultadoMensagem.textContent = `O jogador ${data.nome} completou uma linha. O jogo continua valendo Cartela Cheia!`;
+        falar(`Bingo de linha! O jogador ${data.nome} ganhou.`); // <-- FALA
         
         modalResultado.style.display = 'flex';
     });
@@ -261,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultadoMensagem.textContent = `Você completou a cartela e ganhou o grande prêmio! Salve seu comprovante. Entraremos em contato pelo telefone (PIX) cadastrado.`;
         
         preencherComprovante(data, data.indiceCartela, 'Cartela Cheia');
+        falar("BINGO! Parabéns, você ganhou a cartela cheia!"); // <-- FALA
         
         btnBaixarComprovante.style.display = 'block'; 
         btnResultadoFechar.textContent = "Voltar ao Início";
@@ -275,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resultadoTitulo.textContent = "O Jogo Acabou!";
         resultadoMensagem.textContent = `Que pena! O jogador ${data.nome} completou a cartela e ganhou o grande prêmio.`;
+        falar(`Bingo! O jogador ${data.nome} ganhou a cartela cheia.`); // <-- FALA
         btnResultadoFechar.textContent = "Voltar ao Início";
 
         modalResultado.style.display = 'flex';
@@ -287,13 +375,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resultadoTitulo.textContent = "O Jogo Acabou!";
         resultadoMensagem.textContent = "Ninguém ganhou. Acabaram os números. O jogo será reiniciado.";
+        falar("O jogo terminou sem vencedores."); // <-- FALA
         btnResultadoFechar.textContent = "Voltar ao Início";
 
         modalResultado.style.display = 'flex';
     });
     
     socket.on('cartelaAntiga', () => {
-        alert("Erro: Suas cartelas são de um sorteio anterior e não são mais válidas.\n\NVocê será redirecionado para a página inicial.");
+        alert("Erro: Suas cartelas são de um sorteio anterior e não são mais válidas.\n\nVocê será redirecionado para a página inicial.");
         window.location.href = 'index.html';
     });
 
