@@ -376,7 +376,7 @@ app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'adm
 // *** LÓGICA DO JOGO (SOCKET.IO) (MODIFICADA) ***
 // ==========================================================
 const nomesBots = [
-    // Nomes Pessoais
+    // Nomes Pessoais Originais
     "Maria Souza", "João Pereira", "Ana Costa", "Carlos Santos", "Sofia Oliveira", "Pedro Almeida", "Laura Ferreira", "Lucas Rodrigues", "Beatriz Lima", "Guilherme Azevedo",
     "Arthur Silva", "Alice Santos", "Bernardo Oliveira", "Manuela Rodrigues", "Heitor Ferreira", "Valentina Alves", "Davi Pereira", "Helena Lima", "Lorenzo Souza", "Isabella Costa",
     "Miguel Martins", "Sophia Rocha", "Theo Gonçalves", "Júlia Carvalho", "Gabriel Gomes", "Heloísa Mendes", "Pedro Henrique Ribeiro", "Maria Clara Dias", "Matheus Cardoso", "Isadora Vieira",
@@ -384,14 +384,17 @@ const nomesBots = [
     "Gustavo Campos", "Yasmin Sales", "Daniel Moura", "Isabelly Viana", "Felipe Cunha", "Sarah Morais", "Lucas Gabriel Castro", "Ana Júlia Ramos", "João Miguel Pires", "Esther Aragão",
     "Murilo Farias", "Emanuelly Melo", "Bryan Macedo", "Mariana Barros", "Eduardo Cavalcanti", "Rebeca Borges", "Leonardo Monteiro", "Ana Laura Brandão", "Henrique Lins", "Clarice Dantas",
     "Cauã Azevedo", "Agatha Gusmão", "Vinícius Peixoto", "Gabrielly Benites", "João Guilherme Guedes", "Melissa Siqueira",
-    // Nomes de Bares Genéricos
+    // Bares Originais
     "Bar do Zé", "Bar da Esquina", "Cantinho do Amigo", "Boteco do Manolo", "Bar Central", "Adega do Portuga", "Bar & Petiscos", "Ponto Certo Bar", "Bar Vira Copo", "Skina Bar",
     "Recanto do Chopp", "Bar do Gato", "Toca do Urso Bar", "Bar Boa Vista", "Empório do Bar", "Bar da Praça", "Boteco da Vila", "Bar Avenida", "Bar Estrela", "Parada Obrigatória Bar",
-    // Nomes de Distribuidoras Genéricas
+    // Distribuidoras Originais
     "Distribuidora Silva", "Adega & Cia", "Disk Bebidas Rápido", "Central de Bebidas", "Distribuidora Irmãos Unidos", "Ponto Frio Bebidas", "Império das Bebidas", "Distribuidora Confiança", "SOS Bebidas", "Mundo das Bebidas",
     "Planeta Gelo & Bebidas", "Distribuidora Aliança", "O Rei da Cerveja", "Point das Bebidas", "Distribuidora Amigão", "Bebidas Delivery Já", "Varanda Bebidas", "Distribuidora Campeã", "Expresso Bebidas", "Top Beer Distribuidora",
-    // Apelidos/Personagens
-    "Ricardão", "Paty", "Beto", "Juju", "Zeca", "Lulu", "Tio Sam", "Dona Flor", "Professor", "Capitão", "Alemão", "Baixinho", "Careca", "Japa", "Madruga", "Xará", "Campeão", "Princesa", "Chefe"
+    // Apelidos Originais
+    "Ricardão", "Paty", "Beto", "Juju", "Zeca", "Lulu", "Tio Sam", "Dona Flor", "Professor", "Capitão", "Alemão", "Baixinho", "Careca", "Japa", "Madruga", "Xará", "Campeão", "Princesa", "Chefe",
+
+    // --- 500 NOVOS NOMES ADICIONADOS ---
+
     // Nomes Pessoais (Novos)
     "Arthur Moreira", "Alice Ribeiro", "Bernardo Rocha", "Manuela Alves", "Heitor Martins", "Valentina Barbosa", "Davi Barros", "Helena Soares", "Lorenzo Ferreira", "Isabella Gomes",
     "Miguel Pereira", "Sophia Rodrigues", "Theo Almeida", "Júlia Lima", "Gabriel Souza", "Heloísa Oliveira", "Pedro Henrique Santos", "Maria Clara Silva", "Matheus Costa", "Isadora Mendes",
@@ -449,6 +452,7 @@ const nomesBots = [
     "Adega da Serra", "Bar do Tim", "Distribuidora do Sol", "Boteco do Morro", "Point do Gelo", "Bar do Cabelo", "Conveniência do Gelo", "Bar do Guto", "Distribuidora do Cais", "Boteco do Rio",
     "Adega do Mar", "Bar do Tita", "Distribuidora da Praça", "Boteco da Ponte", "Gela Gela Bebidas", "Bar do Vitão", "Cervejaria do Bairro", "Bar do Fred", "Distribuidora da Ilha", "Boteco do Sertão"
 ];
+
 
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6) + '-' + Math.random().toString(36).substring(2, 6); }
 function gerarNumerosAleatorios(quantidade, min, max) { const numeros = new Set(); while (numeros.size < quantidade) { const aleatorio = Math.floor(Math.random() * (max - min + 1)) + min; numeros.add(aleatorio); } return Array.from(numeros); }
@@ -725,4 +729,3 @@ process.on('exit', () => db.close());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
-
