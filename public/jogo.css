@@ -364,13 +364,11 @@ html {
 
 /* --- ESTILOS DO MODAL DE RESULTADO --- */
 
-/* --- CORREÇÃO ROLAGEM MODAL --- */
 #modal-resultado .modal-content {
     max-width: 550px;
     max-height: 90vh; /* Limita a altura máxima */
     overflow-y: auto;  /* Adiciona rolagem vertical SE necessário */
 }
-/* --- FIM DA CORREÇÃO --- */
 
 .comprovante-ids { /* IDs no Modal */
     display: flex;
@@ -386,6 +384,25 @@ html {
 .comprovante-ids span {
     font-size: 1.1em;
     color: var(--color-text-heading);
+}
+
+.comprovante-detalhes {
+    display: flex;
+    flex-direction: column; /* Coloca um em cima do outro */
+    align-items: flex-start; /* Alinha à esquerda */
+    width: 100%;
+    background-color: #f9f9f9;
+    padding: 10px 15px; /* Mais padding lateral */
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-family: 'Lato', sans-serif; /* Fonte normal, não de código */
+    border: 1px solid #eee;
+}
+.comprovante-detalhes span {
+    font-size: 1.1em;
+    color: var(--color-text-body); /* Cor de texto normal */
+    font-weight: 700;
+    line-height: 1.5;
 }
 
 #resultado-titulo {
@@ -425,27 +442,33 @@ html {
     font-size: 1em;
 }
 
-/* --- ESTILOS PARA OS BOTÕES DO MODAL --- */
+/* --- ESTILOS PARA OS BOTÕES DO MODAL (CORREÇÃO DE ROLAGEM) --- */
 .modal-botoes {
     display: flex;
     flex-direction: column-reverse;
     gap: 15px;
     align-items: center;
     margin-top: 20px;
-    /* Adicionado para garantir visibilidade mesmo com rolagem */
-    position: sticky;
-    bottom: -1px; /* Pequeno ajuste para garantir visibilidade */
-    background-color: var(--color-bg-white); /* Fundo para cobrir conteúdo */
-    padding-top: 15px; /* Espaço acima dos botões */
-    padding-bottom: 5px; /* Espaço abaixo */
-    margin-left: -30px; /* Compensa o padding do modal-content */
-    margin-right: -30px; /* Compensa o padding do modal-content */
-    width: calc(100% + 60px); /* Compensa o padding do modal-content */
-    border-top: 1px solid #eee; /* Linha sutil separadora */
+    
+    /* Fica "preso" no final da rolagem */
+    position: sticky; 
+    bottom: -30px; /* Ajusta para colar no fundo do padding */
+    
+    background-color: var(--color-bg-white); /* Fundo branco */
+    
+    /* Padding para espaçar e compensar margens */
+    padding: 15px 30px 30px 30px; 
+    
+    border-top: 1px solid #eee; /* Linha sutil */
+    
+    /* Remove margens negativas e ajusta largura */
+    width: 100%; 
+    margin-left: -30px;
+    margin-right: -30px;
 }
 #btn-resultado-fechar,
 #btn-baixar-comprovante {
-    width: 90%; /* Ajusta a largura dentro do novo contexto */
+    width: 90%; 
     max-width: 300px;
 }
 .btn-comprar-azul {
@@ -454,3 +477,45 @@ html {
 .btn-comprar-azul:hover {
     background-color: #0056b3;
 }
+
+
+/* --- *** INÍCIO: NOVOS ESTILOS PARA BOTÃO DE SOM *** --- */
+.painel-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px; /* Substitui a margem do h2 */
+}
+
+#painel-sorteio #sorteio-id-display {
+    margin-bottom: 0; /* Remove a margem original */
+    padding-bottom: 0; /* Remove a borda original */
+    border-bottom: none; /* Remove a borda original */
+}
+
+#btn-toggle-som {
+    background: none;
+    border: 2px solid #ddd; /* Borda clara */
+    color: var(--color-text-body); /* Cor do texto normal */
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.1em; /* Tamanho de ícone razoável */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0; /* Não deixa o botão esmagar */
+}
+#btn-toggle-som:hover {
+    background-color: var(--color-pix-green);
+    border-color: var(--color-pix-green);
+    color: #fff;
+}
+#btn-toggle-som.som-ativo {
+    background-color: var(--color-pix-green);
+    border-color: var(--color-pix-green);
+    color: #fff;
+}
+/* --- *** FIM: NOVOS ESTILOS PARA BOTÃO DE SOM *** --- */
