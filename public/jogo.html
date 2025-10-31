@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="jogo.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
-</head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    </head>
 <body>
     <header>
         <h1 class="title-gradient">BINGO DO PIX</h1>
@@ -16,8 +17,13 @@
     <main class="jogo-main">
         
         <section id="painel-sorteio" class="card">
-            <h2 id="sorteio-id-display" class="text-pix">Sorteio #...</h2>
             
+            <div class="painel-header-flex">
+                <h2 id="sorteio-id-display" class="text-pix">Sorteio #...</h2>
+                <button id="btn-toggle-som" title="Ativar/Desativar Som">
+                    <i class="fas fa-volume-xmark"></i>
+                </button>
+            </div>
             <h2>Último Sorteado</h2>
             <div id="ultimo-numero-wrapper">
                 <span id="ultimo-numero-sorteado" class="text-pix">--</span>
@@ -66,6 +72,7 @@
                 <div class="comprovante-detalhes">
                      <span id="comprovante-data">Data: ...</span>
                 </div>
+
                 <p id="resultado-mensagem">O vencedor foi...</p>
                 
                 <div id="resultado-prova-cartela" style="display: none;">
