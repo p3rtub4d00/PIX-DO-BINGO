@@ -392,6 +392,62 @@ const nomesBots = [
     "Planeta Gelo & Bebidas", "Distribuidora Aliança", "O Rei da Cerveja", "Point das Bebidas", "Distribuidora Amigão", "Bebidas Delivery Já", "Varanda Bebidas", "Distribuidora Campeã", "Expresso Bebidas", "Top Beer Distribuidora",
     // Apelidos/Personagens
     "Ricardão", "Paty", "Beto", "Juju", "Zeca", "Lulu", "Tio Sam", "Dona Flor", "Professor", "Capitão", "Alemão", "Baixinho", "Careca", "Japa", "Madruga", "Xará", "Campeão", "Princesa", "Chefe"
+    // Nomes Pessoais (Novos)
+    "Arthur Moreira", "Alice Ribeiro", "Bernardo Rocha", "Manuela Alves", "Heitor Martins", "Valentina Barbosa", "Davi Barros", "Helena Soares", "Lorenzo Ferreira", "Isabella Gomes",
+    "Miguel Pereira", "Sophia Rodrigues", "Theo Almeida", "Júlia Lima", "Gabriel Souza", "Heloísa Oliveira", "Pedro Henrique Santos", "Maria Clara Silva", "Matheus Costa", "Isadora Mendes",
+    "Enzo Castro", "Lívia Andrade", "Nicolas Pinto", "Maria Luísa Cunha", "Benjamin Dias", "Ana Clara Azevedo", "Samuel Lopes", "Lorena Matos", "Rafael Nunes", "Cecília Gonçalves",
+    "Gustavo Mendes", "Yasmin Correia", "Daniel Farias", "Isabelly Cardoso", "Felipe Neves", "Sarah Campos", "Lucas Gabriel Reis", "Ana Júlia Meireles", "João Miguel Viana", "Esther Pires",
+    "Murilo Sales", "Emanuelly Freire", "Bryan Silveira", "Mariana Magalhães", "Eduardo Bastos", "Rebeca Santana", "Leonardo Teixeira", "Ana Laura Gomes", "Henrique Vieira", "Clarice Moraes",
+    "Cauã Duarte", "Agatha Rezende", "Vinícius Monteiro", "Gabrielly Nogueira", "João Guilherme Guerra", "Melissa Xavier", "Davi Lucca", "Maria Eduarda", "Anthony", "Elisa",
+    "João Lucas", "Maria Alice", "Erick", "Lavínia", "Fernando", "Letícia", "Rodrigo", "Nicole", "Otávio", "Gabriela",
+    "Igor", "Yasmin", "Francisco", "Mariana", "Benício", "Eloá", "Victor", "Clara", "Cauê", "Lívia",
+    "João Pedro", "Beatriz", "Breno", "Laís", "Vicente", "Ayla", "Fábio", "Alícia", "Diego", "Estela",
+    "Luiz Felipe", "Catarina", "Emanuel", "Vitória", "André", "Olívia", "Nathan", "Maitê", "Ruan", "Mirella",
+    "Davi Luiz", "Heloísa", "Kaique", "Luna", "Bruno", "Lara", "Noah", "Maria Fernanda", "Thiago", "Isis",
+    "Ravi", "Antonella", "Caio", "Liz", "Eduardo", "Maria Vitória", "Pedro Lucas", "Agatha", "Luiz Miguel", "Ana Luísa",
+    "Antônio", "Pietra", "Enrico", "Marina", "João Gabriel", "Rebeca", "Augusto", "Ana Beatriz", "Isaac", "Alexia",
+    "Lucca", "Bianca", "Otávio", "Esther", "Davi Miguel", "Ana Vitória", "Calebe", "Evelyn", "Luiz Gustavo", "Aurora",
+    "Henrique", "Livia", "Ryan", "Milena", "Yuri", "Natália", "Benjamin", "Maria Flor", "Luiz Otávio", "Ana Liz",
+    "Emanuel", "Elisa", "Davi Lucas", "Maria Helena", "Ian", "Rafaela", "Guilherme", "Melissa", "Luiz Henrique", "Mirela",
+    "Breno", "Isabel", "Matheus Henrique", "Ana Sophia", "Oliver", "Maria Cecília", "Levi", "Ana Lívia", "Enzo Gabriel", "Joana",
+    "Joaquim", "Clarice", "Davi", "Isabelly", "Bryan", "Stella", "Samuel", "Maria Valentina", "Heitor", "Ana",
+    
+    // Bares e Distribuidoras (Novos)
+    "Adega do Vale", "Distribuidora Premium", "Bar do Chico", "O Canecão Bar", "Bebidas & Cia", "Stop Beer", "Bar do Ponto", "Casa da Cerveja", "Toca da Onça Bar", "Império da Bebida",
+    "Distribuidora Gela Guela", "Bar da Galera", "Point do Litrão", "Cantina do Sabor", "Bar do Mineiro", "Adega 24 Horas", "O Botecão", "Distribuidora Central", "Bar do Lago", "Rota da Cerveja",
+    "Vem Que Tem Bebidas", "Bar do Pescador", "Adega Imperial", "Boteco do Rei", "Distribuidora Expresso", "Bar do Paulista", "Beer Point Distribuidora", "Bar dos Artistas", "Gelo e Bebidas Express", "Boteco do Alto",
+    "Cantinho da Cerveja", "Bar do Arlindo", "Toma Todas Distribuidora", "Bar da Torre", "Adega dos Amigos", "Bar do Comércio", "Distribuidora Ouro Verde", "Bar da Boa", "Mundo da Gela", "Boteco Pé de Serra",
+    "Distribuidora Copo Cheio", "Bar do China", "Adega Noturna", "Boteco do Frazão", "Gela Rápido", "Bar do Beto", "Point da Bebida", "Bar do Cais", "Distribuidora Zero Grau", "Boteco do Estudante",
+    "Adega e Tabacaria Prime", "Bar do Nando", "Distribuidora do Trabalhador", "Bar da Matriz", "SOS Cerveja", "Boteco do Parque", "Distribuidora São Jorge", "Bar do Mário", "Bebidas.com", "O Encontro Bar",
+    "Distribuidora Água na Boca", "Bar do Bigode", "Adega Fênix", "Boteco do Léo", "Distribuidora Monte Carlo", "Bar da Ponte", "Casa do Gelo", "Bar do Tio", "Distribuidora Elite", "Boteco do Tchê",
+    "Adega do Chefe", "Bar do Juarez", "Disk Gelo e Bebidas", "Bar do Meio", "Ponto do Malte", "Boteco do Alex", "Distribuidora Sol Nascente", "Bar do Nelson", "Mestre Cervejeiro Adega", "Bar do Valdir",
+    "Distribuidora Premium", "Bar do Nogueira", "Armazém da Bebida", "Boteco do Careca", "Planeta Bebidas", "Bar do Elias", "Adega do Bairro", "Boteco do Sítio", "Distribuidora Pit Stop", "Bar do Osmar",
+    "Distribuidora Bom Preço", "Bar do Wilson", "Mundo da Cerveja", "Boteco do Ceará", "Casa da Bebida", "Bar do Gaúcho", "Adega e Conveniência", "Boteco do Portuga", "Distribuidora Real", "Bar do Dito",
+    
+    // Nomes Pessoais (Mais Novos)
+    "Camila Alves", "Diego Fernandes", "Larissa Barbosa", "Rodrigo Nogueira", "Bruna Melo", "Sérgio Azevedo", "Letícia Cunha", "Marcos Rocha", "Amanda Freitas", "Renato Borges",
+    "Juliana Teixeira", "Felipe Dantas", "Patrícia Sales", "Thiago Gusmão", "Carolina Pires", "Anderson Viana", "Vanessa Morais", "Márcio Aragão", "Jéssica Peixoto", "Leandro Siqueira",
+    "Tatiane Campos", "Ricardo Rezende", "Elaine Correia", "Fábio Benites", "Adriana Guedes", "Marcelo Ramos", "Daniela Castro", "Alexandre Lins", "Aline Brandão", "César Dantas",
+    "Cristiane Gusmão", "Vinícius Peixoto", "Fernanda Benites", "Rafael Guedes", "Cláudia Siqueira", "Roberto Campos", "Priscila Rezende", "Márcio Correia", "Luciana Benites", "Carlos Guedes",
+    "Valéria Castro", "Rogério Lins", "Renata Brandão", "Sandro Dantas", "Mônica Gusmão", "André Peixoto", "Simone Benites", "Jonas Guedes", "Débora Siqueira", "Raul Campos",
+    "Regina Rezende", "Gustavo Correia", "Elisa Benites", "Leonardo Guedes", "Tânia Castro", "Jorge Lins", "Sandra Brandão", "Paulo Dantas", "Vera Gusmão", "Nelson Peixoto",
+    "Ângela Benites", "Fábio Guedes", "Cintia Siqueira", "William Campos", "Rosa Rezende", "Otávio Correia", "Ester Benites", "Douglas Guedes", "Gisele Castro", "Ricardo Lins",
+    "Teresa Brandão", "Alex Dantas", "Célia Gusmão", "Anderson Peixoto", "Eliane Benites", "Marcelo Guedes", "Cristina Siqueira", "Rodrigo Campos", "Lúcia Rezende", "Antônio Correia",
+    "Isabela Benites", "Bruno Guedes", "Débora Castro", "Fernando Lins", "Manuela Brandão", "Ronaldo Dantas", "Vânia Gusmão", "Felipe Peixoto", "Carolina Benites", "Jorge Guedes",
+    "Elisa Siqueira", "Ricardo Campos", "Lídia Rezende", "Marcos Correia", "Estela Benites", "Pedro Guedes", "Patrícia Castro", "Rafael Lins", "Carla Brandão", "Sérgio Dantas",
+    "Marta Gusmão", "Rui Peixoto", "Luana Benites", "Caio Guedes", "Simone Siqueira", "Vitor Campos", "Clara Rezende", "José Correia", "Laura Benites", "Guilherme Guedes",
+    
+    // Bares e Distribuidoras (Mais Novos)
+    "Bar do Cumpadi", "Adega do Beco", "Distribuidora do Gole", "Boteco do Litoral", "Cantinho da Birita", "Bar e Mercearia Sol", "Rei da Gelada", "Taberna do Zé", "Distribuidora Tio Patinhas", "Bar Aconchego",
+    "Bebidas da Hora", "Bar do Ferrugem", "Adega do Povo", "Boteco do Gringo", "Distribuidora Stop Gelo", "Bar do Sombra", "Cervejaria da Esquina", "Bar do Peixe", "Armazém do Gelo", "Boteco do Nono",
+    "Distribuidora do Chefe", "Bar do Tatu", "Adega do Frade", "Boteco do Zeca", "Geladão Bebidas", "Bar do Russo", "Ponto da Skol", "Bar do Gordo", "Distribuidora Central do Gelo", "Boteco do Baiano",
+    "Adega e Conveniência 24h", "Bar do Neno", "Distribuidora 3 Irmãos", "Bar do Brejo", "Bebidas e Cia Express", "Boteco do Bigode", "Distribuidora do Bairro", "Bar do Tênis", "Casa do Whisky", "Boteco do Vovô",
+    "Distribuidora do Japa", "Bar do Caju", "Adega do Mestre", "Boteco do China", "Império da Gela", "Bar do Preto", "Ponto da Brahma", "Bar do Jota", "Distribuidora do Ponto", "Boteco do Mineiro",
+    "Adega Ouro Fino", "Bar do Pirata", "Distribuidora do Gordo", "Boteco do Alemão", "Bebidas.com", "Bar do Zoinho", "Cerveja & Gelo", "Bar do Toca", "Distribuidora Gela Mais", "Boteco do Gela",
+    "Adega do Bira", "Bar do Poeta", "Distribuidora do Zé", "Boteco do Farol", "Sempre Gela", "Bar do Pescador", "Armazém da Cerveja", "Bar do Tonho", "Distribuidora do Parque", "Boteco da Madrugada",
+    "Adega do Lago", "Bar do Corvo", "Distribuidora do Vale", "Boteco do Lampião", "Gelo & conveniência", "Bar do Tiozinho", "Canto da Cerveja", "Bar do Vaguinho", "Distribuidora do Trevo", "Boteco do Beco",
+    "Adega da Serra", "Bar do Tim", "Distribuidora do Sol", "Boteco do Morro", "Point do Gelo", "Bar do Cabelo", "Conveniência do Gelo", "Bar do Guto", "Distribuidora do Cais", "Boteco do Rio",
+    "Adega do Mar", "Bar do Tita", "Distribuidora da Praça", "Boteco da Ponte", "Gela Gela Bebidas", "Bar do Vitão", "Cervejaria do Bairro", "Bar do Fred", "Distribuidora da Ilha", "Boteco do Sertão"
 ];
 
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6) + '-' + Math.random().toString(36).substring(2, 6); }
@@ -669,3 +725,4 @@ process.on('exit', () => db.close());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
+
