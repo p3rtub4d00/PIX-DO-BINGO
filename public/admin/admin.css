@@ -317,7 +317,7 @@ table.relatorio-vendas td .tipo-online { font-weight: bold; color: var(--color-a
     #form-config button { grid-column: initial; } /* Reset botão no mobile */
 }
 
-/* --- Estilos de Impressão (Mantidos) --- */
+/* --- Estilos de Impressão (MODIFICADO PARA IMPRESSORA TÉRMICA) --- */
 @media print {
     body.admin-panel-body {
         display: block; /* Remove flex layout */
@@ -336,22 +336,24 @@ table.relatorio-vendas td .tipo-online { font-weight: bold; color: var(--color-a
         padding: 0;
         margin: 0;
     }
+    
+    /* --- INÍCIO DA MODIFICAÇÃO PARA IMPRESSÃO TÉRMICA --- */
     #cartelas-preview-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px; /* Espaço menor para caber mais */
+        display: block; /* MUDADO: Remove flex/wrap */
         margin: 0;
-        justify-content: space-around; /* Tenta distribuir */
     }
     .mini-cartela {
         box-shadow: none;
-        border: 1px solid #000; /* Borda visível na impressão */
-        width: 45%; /* Tenta caber 2 por linha em A4 */
+        border: 1px solid #000; 
+        width: 100%; /* MUDADO: Ocupa 100% da largura do papel */
         padding: 8px;
         page-break-inside: avoid; /* Tenta não quebrar cartela entre páginas */
-        font-size: 9pt; /* Reduz fonte para caber */
+        font-size: 9pt; 
         color: #000 !important;
+        margin-bottom: 15px; /* NOVO: Adiciona espaço entre cartelas */
     }
+    /* --- FIM DA MODIFICAÇÃO --- */
+
     .mini-cartela-header { font-size: 0.8em; margin-bottom: 5px;}
     .mini-cartela-header .nome-jogador { font-size: 1em; }
     .mini-cartela-grid { gap: 3px; }
@@ -359,10 +361,12 @@ table.relatorio-vendas td .tipo-online { font-weight: bold; color: var(--color-a
     .mini-cartela-num.free { font-size: 0.8em; background-color: #eee !important; }
 
     @page {
-        size: A4;
-        margin: 1cm;
+        size: auto; /* Deixa a impressora térmica decidir o tamanho */
+        margin: 5mm; /* Margem pequena para papel térmico */
     }
 }
+/* --- FIM DAS MUDANÇAS DE IMPRESSÃO --- */
+
 
 /* --- Estilos para a Seção de Status --- */
 .admin-status-section h2 {
@@ -404,7 +408,7 @@ table.relatorio-vendas td .tipo-online { font-weight: bold; color: var(--color-a
     font-weight: 900;
 }
 
-/* --- INÍCIO DA MODIFICAÇÃO: BOTÃO DE PERIGO --- */
+/* --- BOTÃO DE PERIGO --- */
 .btn-perigo {
     background-color: #dc3545; /* Vermelho perigo */
     border-color: #dc3545;
@@ -413,4 +417,3 @@ table.relatorio-vendas td .tipo-online { font-weight: bold; color: var(--color-a
     background-color: #c82333; /* Vermelho mais escuro */
     border-color: #bd2130;
 }
-/* --- FIM DA MODIFICAÇÃO --- */
