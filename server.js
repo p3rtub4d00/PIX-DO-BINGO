@@ -36,12 +36,15 @@ const pagamentosPendentes = {};
 // *** BANCO DE DADOS SQLITE (Estrutura Completa) ***
 // ==========================================================
 
-const dbPath = process.env.DATABASE_PATH || 'bingo_data.db'; 
+// *** INÍCIO DA MODIFICAÇÃO: Caminho do DB para Plano Free ***
+// Usar um caminho relativo. Isso será salvo no disco temporário do Render.
+const dbPath = 'bingo_data.db'; 
+// *** FIM DA MODIFICAÇÃO ***
 
-// *** BLOCO DE CRIAÇÃO DE DIRETÓRIO FOI REMOVIDO DAQUI ***
+// Bloco que criava o diretório foi removido
 
-const db = new Database(dbPath); // Esta era a linha que falhava (agora deve funcionar)
-console.log(`Conectado ao banco de dados em: ${dbPath}`);
+const db = new Database(dbPath); // Esta linha agora funciona
+console.log(`Conectado ao banco de dados em: ${dbPath} (Modo Temporário)`);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS configuracoes (chave TEXT PRIMARY KEY, valor TEXT);
