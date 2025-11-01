@@ -22,12 +22,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const anuncioPremioEl = document.getElementById('anuncio-vencedor-premio');
     const anuncioNomeEl = document.getElementById('anuncio-vencedor-nome');
     const anuncioEsperaOverlay = document.getElementById('anuncio-espera-overlay');
+    
+    // *** INÍCIO DA MODIFICAÇÃO: Seletor do Timer ***
+    const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
+    // *** FIM DA MODIFICAÇÃO ***
 
     // --- Variável para rastrear o último estado conhecido ---
     let ultimoEstadoConhecido = null;
 
     // Verifica elementos
-    if (!sorteioIdHeaderEl || !estadoHeaderEl || !jogadoresTotalEl || !ultimoNumeroEl || !globoContainer || !listaVencedoresContainer || !dashPremioLinhaEl || !dashPremioCheiaEl || !btnToggleSom || !areaPrincipalEl || !listaQuaseLaContainer || !anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay ) {
+    if (!sorteioIdHeaderEl || !estadoHeaderEl || !jogadoresTotalEl || !ultimoNumeroEl || !globoContainer || !listaVencedoresContainer || !dashPremioLinhaEl || !dashPremioCheiaEl || !btnToggleSom || !areaPrincipalEl || !listaQuaseLaContainer || !anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay || !esperaCronometroDisplay ) { // <-- Adicionado ao check
         console.error("ERRO CRÍTICO: Um ou mais elementos essenciais do Dashboard não foram encontrados."); alert("Erro ao carregar a interface. Verifique o HTML e o Console (F12)."); return;
     }
     console.log("Elementos do DOM selecionados com sucesso.");
@@ -45,6 +49,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Funções Auxiliares Visuais ---
     function formatarBRL(valor) { const numero = parseFloat(valor); if (isNaN(numero) || valor === null || valor === undefined) return 'R$ --,--'; return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+    
+    // *** INÍCIO DA MODIFICAÇÃO: Função de formatar tempo ***
+    function formatarTempo(tempo) {
+        const minutos = Math.floor(tempo / 60);
+        let segundos = tempo % 60;
+        segundos = segundos < 10 ? '0' + segundos : segundos;
+        return `${minutos}:${segundos}`;
+    }
+    // *** FIM DA MODIFICAÇÃO ***
+    
     function gerarGlobo() { if (!globoContainer) return; globoContainer.innerHTML = ''; for (let i = 1; i <= 75; i++) { try { const numeroEl = document.createElement('div'); numeroEl.classList.add('dash-globo-numero'); numeroEl.textContent = i; numeroEl.id = `dash-globo-${i}`; globoContainer.appendChild(numeroEl); } catch (error) { console.error(`Erro globo num ${i}:`, error); } } console.log("Globo gerado."); }
 
     function atualizarListaVencedores(vencedores, anunciar = false) {
@@ -97,10 +111,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function getLetraDoNumero(numero) { if (numero >= 1 && numero <= 15) return "B"; if (numero >= 16 && numero <= 30) return "I"; if (numero >= 31 && numero <= 45) return "N"; if (numero >= 46 && numero <= 60) return "G"; if (numero >= 61 && numero <= 75) return "O"; return ""; }
     function atualizarListaQuaseLa(jogadoresPerto) { if (!listaQuaseLaContainer) return; listaQuaseLaContainer.innerHTML = ''; if (!jogadoresPerto || jogadoresPerto.length === 0) { listaQuaseLaContainer.innerHTML = '<p>Ninguém perto ainda...</p>'; return; } try { jogadoresPerto.forEach(j => { const item = document.createElement('p'); const nomeSeguro = j.nome.replace(/</g, "&lt;").replace(/>/g, "&gt;"); item.innerHTML = `<span class="nome-jogador">${nomeSeguro}</span> <span class="faltam-contador">${j.faltam}</span>`; listaQuaseLaContainer.appendChild(item); }); } catch (error) { console.error("Erro ao atualizar lista 'Quase Lá':", error); listaQuaseLaContainer.innerHTML = '<p>Erro ao carregar.</p>'; } }
 
-    // --- ATUALIZADA: Adiciona um delay antes de mostrar o overlay de espera ---
     let anuncioVencedorTimer = null;
-    const DURACAO_ANUNCIO_VENCEDOR = 6000; // 6 segundos
-    const DELAY_EXTRA_ANTES_ESPERA = 500; // 0.5 segundos (igual à transição CSS)
+    const DURACAO_ANUNCIO_VENCEDOR = 6000; 
+    const DELAY_EXTRA_ANTES_ESPERA = 500; 
 
     function mostrarAnuncioVencedor(nome, premio) {
         if (!anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay) return;
@@ -110,28 +123,23 @@ document.addEventListener('DOMContentLoaded', () => {
         anuncioPremioEl.textContent = tipoPremio;
         anuncioNomeEl.textContent = nome;
 
-        // Garante que o overlay de espera esteja escondido
         anuncioEsperaOverlay.classList.add('oculto');
-        // Mostra o overlay do vencedor
         anuncioVencedorOverlay.classList.add('ativo');
 
-        // Define um timer para esconder o anúncio do VENCEDOR
         anuncioVencedorTimer = setTimeout(() => {
-            anuncioVencedorOverlay.classList.remove('ativo'); // Começa a esconder (fade out)
+            anuncioVencedorOverlay.classList.remove('ativo'); 
             console.log("Escondendo anúncio de vencedor.");
 
-            // **NOVO DELAY:** Espera a transição do overlay do vencedor terminar
             setTimeout(() => {
-                // Verifica se o jogo já voltou para o estado de ESPERA
                 if (ultimoEstadoConhecido === 'ESPERANDO') {
                     console.log("Jogo em espera (após delay), mostrando anúncio de espera.");
-                    anuncioEsperaOverlay.classList.remove('oculto'); // Mostra o overlay de espera
+                    anuncioEsperaOverlay.classList.remove('oculto'); 
                 } else {
                     console.log(`Jogo não está em espera (${ultimoEstadoConhecido}) (após delay), não mostrando anúncio de espera.`);
                 }
-            }, DELAY_EXTRA_ANTES_ESPERA); // Usa a constante de delay
+            }, DELAY_EXTRA_ANTES_ESPERA); 
 
-        }, DURACAO_ANUNCIO_VENCEDOR); // Usa a constante de duração
+        }, DURACAO_ANUNCIO_VENCEDOR); 
     }
 
     // --- OUVINTES DO SOCKET.IO ---
@@ -151,8 +159,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Aguardando início...</p>';
             if(data.quaseLa) atualizarListaQuaseLa(data.quaseLa);
-            if (data.estado === 'ESPERANDO') { anuncioEsperaOverlay.classList.remove('oculto'); }
-            else { anuncioEsperaOverlay.classList.add('oculto'); }
+            
+            // *** INÍCIO DA MODIFICAÇÃO: Timer e Overlay ***
+            if (data.estado === 'ESPERANDO') { 
+                anuncioEsperaOverlay.classList.remove('oculto'); 
+                esperaCronometroDisplay.textContent = formatarTempo(data.tempoRestante);
+            }
+            else { 
+                anuncioEsperaOverlay.classList.add('oculto'); 
+                esperaCronometroDisplay.textContent = "--:--";
+            }
+            // *** FIM DA MODIFICAÇÃO ***
+            
             console.log("Estado inicial aplicado.");
         } catch (error) { console.error("Erro ao processar 'estadoInicial':", error); }
     });
@@ -161,6 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data) return;
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
         atualizarEstadoVisual(data.estado);
+        
+        // *** INÍCIO DA MODIFICAÇÃO: Atualiza o timer no overlay ***
+        if (data.estado === 'ESPERANDO' && esperaCronometroDisplay) {
+            esperaCronometroDisplay.textContent = formatarTempo(data.tempo);
+        }
+        // *** FIM DA MODIFICAÇÃO ***
     });
 
     socket.on('estadoJogoUpdate', (data) => {
@@ -183,6 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if(ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
             if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Boa sorte!</p>';
             if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.add('oculto');
+            // *** INÍCIO DA MODIFICAÇÃO: Limpa o timer ***
+            if (esperaCronometroDisplay) esperaCronometroDisplay.textContent = "--:--";
+            // *** FIM DA MODIFICAÇÃO ***
         } catch (error){ console.error("Erro ao processar 'iniciarJogo':", error); }
     });
 
