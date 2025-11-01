@@ -58,7 +58,7 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
 }
 @keyframes glow { from { box-shadow: 0 0 8px rgba(0, 182, 170, 0.6); } to { box-shadow: 0 0 18px rgba(0, 255, 230, 0.9); } }
 
-/* --- BARRA LATERAL (COM 'Últimos Ganhadores') --- */
+/* --- BARRA LATERAL (CORRIGIDA) --- */
 .barra-lateral { 
     flex: 1; 
     display: flex; 
@@ -68,7 +68,7 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
     border-radius: 15px; 
     padding: 25px; 
     box-shadow: var(--shadow-light); 
-    overflow-y: auto; 
+    overflow: hidden; /* <-- CORREÇÃO: MUDADO DE 'auto' PARA 'hidden' */
     max-height: 100%; 
 }
 .barra-lateral section { 
@@ -198,34 +198,35 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
     transition: opacity 0.5s ease, visibility 0s linear 0.5s; /* Delay na visibilidade */
 }
 
+/* --- CORREÇÃO AQUI (REMOVENDO ROLAGEM) --- */
 .anuncio-espera-container {
     background-color: rgba(0, 0, 0, 0.2);
-    padding: 30px 40px;
+    padding: 20px 30px; /* Reduzido o padding */
     border-radius: 15px;
     max-width: 800px;
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.1);
     
     text-align: center;
-    max-height: 95vh; 
-    overflow-y: auto; 
+    /* max-height: 95vh; <-- REMOVIDO */
+    /* overflow-y: auto;  <-- REMOVIDO */
 }
 
 .anuncio-espera-container h1 {
     font-family: 'Montserrat', sans-serif;
-    font-size: 2em;
+    font-size: 1.8em; /* Reduzido */
     font-weight: 700;
     color: #fff;
-    margin: 0 0 25px 0;
+    margin: 0 0 15px 0; /* Margem reduzida */
     text-align: center;
 }
 
 .anuncio-area-espera {
     background-color: #fff; /* Fundo branco para anúncio */
-    padding: 15px;
+    padding: 10px; /* Reduzido */
     border-radius: 8px;
-    margin-bottom: 25px; /* Margem original */
-    min-height: 150px; /* Garante espaço */
+    margin-bottom: 15px; /* Margem reduzida */
+    min-height: 100px; /* Reduzido */
     display: flex;
     flex-direction: column; 
     justify-content: center;
@@ -234,20 +235,21 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
 }
 
 .anuncio-espera-container p {
-    font-size: 1.1em;
+    font-size: 1em; /* Reduzido */
     opacity: 0.9;
-    margin: 15px 0 0 0;
+    margin: 10px 0 0 0; /* Margem reduzida */
     text-align: center;
 }
 
-/* Opcional: Estilo para mini-cronômetro */
+/* Estilo para mini-cronômetro */
 #espera-cronometro-display {
     font-family: 'Montserrat', sans-serif;
-    font-size: 2.5em; /* Aumentado */
+    font-size: 2.2em; /* Reduzido */
     font-weight: 900;
     color: var(--color-pix-green);
-    margin-top: 10px;
+    margin-top: 5px; /* Margem reduzida */
 }
+/* --- FIM DA CORREÇÃO --- */
 
 
 /* --- Responsividade --- */
