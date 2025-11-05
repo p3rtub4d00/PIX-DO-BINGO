@@ -650,19 +650,48 @@ async function sortearNumero() { // Convertido para 'async'
             break; 
         } } if (vencedorLinhaEncontrado) break; }
     }
+
+    // *** ATUALIZAÇÃO (DELAY VENCEDOR) ***
     if (estadoJogo === "JOGANDO_CHEIA") {
-        for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; if (checarVencedorCartelaCheia(cartela, numerosSorteadosSet)) { 
-            console.log(`DEBUG: Vencedor da CARTELA CHEIA encontrado: ${getNome(jogador, socketId)}`); 
-            const nomeVencedor = getNome(jogador, socketId); 
+        for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; 
             
-            // Agora é 'await'
-            await salvarVencedorNoDB({ sorteioId: numeroDoSorteio, premio: "Cartela Cheia", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
-            
-            const dadosVencedor = { nome: nomeVencedor, telefone: jogador.telefone, cartelaGanhadora: cartela, indiceCartela: i, premioValor: PREMIO_CHEIA }; 
-            terminarRodada(dadosVencedor, (jogador.isBot || jogador.isManual) ? null : socketId); 
-            return; 
-        } } }
+            if (checarVencedorCartelaCheia(cartela, numerosSorteadosSet)) { 
+                console.log(`DEBUG: Vencedor da CARTELA CHEIA encontrado: ${getNome(jogador, socketId)}`); 
+                const nomeVencedor = getNome(jogador, socketId); 
+
+                // 1. Parar o sorteio de novos números IMEDIATAMENTE
+                if (intervaloSorteio) {
+                    clearInterval(intervaloSorteio);
+                    intervaloSorteio = null;
+                    console.log("DEBUG: Sorteio pausado. Vencedor encontrado.");
+                }
+
+                // 2. Mudar o estado para "travar" o jogo
+                estadoJogo = "ANUNCIANDO_VENCEDOR"; // Novo estado
+                io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
+
+                // 3. Preparar os dados do vencedor (Salva no DB)
+                await salvarVencedorNoDB({ sorteioId: numeroDoSorteio, premio: "Cartela Cheia", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
+                const dadosVencedor = { nome: nomeVencedor, telefone: jogador.telefone, cartelaGanhadora: cartela, indiceCartela: i, premioValor: PREMIO_CHEIA }; 
+                const socketVencedor = (jogador.isBot || jogador.isManual) ? null : socketId;
+
+                // 4. Esperar 5 segundos ANTES de anunciar
+                const TEMPO_DELAY_ANUNCIO = 5000; // 5 segundos
+                console.log(`Servidor: Esperando ${TEMPO_DELAY_ANUNCIO}ms para anunciar o vencedor...`);
+                
+                setTimeout(() => {
+                    console.log("Servidor: Anunciando vencedor e terminando a rodada.");
+                    terminarRodada(dadosVencedor, socketVencedor); // <-- CHAMADA ATRASADA
+                }, TEMPO_DELAY_ANUNCIO);
+                // *** FIM DA ATUALIZAÇÃO (DELAY VENCEDOR) ***
+                
+                return; // Para o loop de checagem de vencedores
+            } 
+        } }
     }
+    // *** FIM DA ATUALIZAÇÃO ***
+
+
     if (estadoJogo === "JOGANDO_LINHA" || estadoJogo === "JOGANDO_CHEIA") {
         const jogadoresPerto = [];
         for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (const cartela of jogador.cartelas) { if (cartela.s_id !== numeroDoSorteio) continue; const faltantes = contarFaltantesParaCheia(cartela, numerosSorteadosSet); if (faltantes > 0 && faltantes <= LIMITE_FALTANTES_QUASELA) { jogadoresPerto.push({ nome: getNome(jogador, socketId), faltam: faltantes }); } } }
@@ -686,8 +715,16 @@ async function salvarVencedorNoDB(vencedorInfo) {
 // A função agora é 'async' para salvar no banco
 async function terminarRodada(vencedor, socketVencedor) {
     console.log("DEBUG: Dentro de terminarRodada().");
-    if (intervaloSorteio) { clearInterval(intervaloSorteio); intervaloSorteio = null; console.log("DEBUG: Intervalo de sorteio parado em terminarRodada."); }
-    else { console.warn("DEBUG: terminarRodada chamada, mas intervaloSorteio já era null."); }
+    
+    // *** ATUALIZAÇÃO (DELAY VENCEDOR) ***
+    // A limpeza do intervalo agora é feita ANTES, na função 'sortearNumero'
+    // Apenas checamos por segurança.
+    if (intervaloSorteio) { 
+        clearInterval(intervaloSorteio); 
+        intervaloSorteio = null; 
+        console.warn("DEBUG: Intervalo de sorteio parado em terminarRodada (não deveria acontecer se o delay funcionou).");
+    }
+    // *** FIM DA ATUALIZAÇÃO ***
     
     const idSorteioFinalizado = numeroDoSorteio;
     
