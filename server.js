@@ -82,7 +82,6 @@ async function inicializarBanco() {
             }
         }
         
-        // *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
         // Adiciona coluna 'payment_id' na tabela 'vendas'
         try {
             await db.query('ALTER TABLE vendas ADD COLUMN payment_id TEXT');
@@ -94,7 +93,6 @@ async function inicializarBanco() {
                 throw e;
             }
         }
-        // *** FIM DA ATUALIZAÇÃO ***
 
         // Cria a tabela para pagamentos pendentes
         await db.query(`
@@ -214,9 +212,6 @@ app.post('/webhook-mercadopago', (req, res) => {
                         
                         console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
                         
-                        // Não precisamos mais do socket. Se ele desconectou, o poller do cliente vai pegar.
-                        // const socket = io.sockets.sockets.get(socketId);
-                        
                         try {
                             let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
                             const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
@@ -244,9 +239,6 @@ app.post('/webhook-mercadopago', (req, res) => {
                             const vendaId = vendaResult.rows[0].id; 
                             
                             console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
-
-                            // NÃO emitimos mais 'pagamentoAprovado' daqui
-                            // O cliente vai perguntar (poll) e encontrar essa venda
 
                             // 2. Deleta o pagamento pendente do banco, pois foi processado
                             await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
@@ -663,7 +655,7 @@ async function sortearNumero() { // Convertido para 'async'
         } } if (vencedorLinhaEncontrado) break; }
     }
 
-    // ATUALIZAÇÃO (DELAY VENCEDOR)
+    // *** ATUALIZAÇÃO (CORREÇÃO DO BUG DO DELAY) ***
     if (estadoJogo === "JOGANDO_CHEIA") {
         for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; 
             
@@ -682,24 +674,43 @@ async function sortearNumero() { // Convertido para 'async'
                 estadoJogo = "ANUNCIANDO_VENCEDOR"; // Novo estado
                 io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
 
-                // 3. Preparar os dados do vencedor (Salva no DB)
-                await salvarVencedorNoDB({ sorteioId: numeroDoSorteio, premio: "Cartela Cheia", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
-                const dadosVencedor = { nome: nomeVencedor, telefone: jogador.telefone, cartelaGanhadora: cartela, indiceCartela: i, premioValor: PREMIO_CHEIA }; 
+                // 3. Preparar os dados para o DB e para o fim da rodada
+                const vencedorInfoDB = { 
+                    sorteioId: numeroDoSorteio, 
+                    premio: "Cartela Cheia", 
+                    nome: jogador.nome, 
+                    telefone: jogador.telefone, 
+                    cartelaId: cartela.c_id 
+                };
+                const dadosVencedor = { 
+                    nome: nomeVencedor, 
+                    telefone: jogador.telefone, 
+                    cartelaGanhadora: cartela, 
+                    indiceCartela: i, 
+                    premioValor: PREMIO_CHEIA 
+                }; 
                 const socketVencedor = (jogador.isBot || jogador.isManual) ? null : socketId;
 
-                // 4. Esperar 5 segundos ANTES de anunciar
+                // 4. Esperar 5 segundos ANTES de salvar e anunciar
                 const TEMPO_DELAY_ANUNCIO = 5000; // 5 segundos
                 console.log(`Servidor: Esperando ${TEMPO_DELAY_ANUNCIO}ms para anunciar o vencedor...`);
                 
-                setTimeout(() => {
+                setTimeout(async () => { // <-- Função dentro do timeout agora é async
                     console.log("Servidor: Anunciando vencedor e terminando a rodada.");
-                    terminarRodada(dadosVencedor, socketVencedor); // <-- CHAMADA ATRASADA
+                    
+                    // 5. SALVA NO DB (e emite 'atualizarVencedores' para o dashboard)
+                    await salvarVencedorNoDB(vencedorInfoDB); 
+                    
+                    // 6. TERMINA A RODADA (e emite 'alguemGanhouCartelaCheia' para o jogo.html)
+                    terminarRodada(dadosVencedor, socketVencedor); 
                 }, TEMPO_DELAY_ANUNCIO);
+                // *** FIM DA ATUALIZAÇÃO (CORREÇÃO DO BUG DO DELAY) ***
                 
                 return; // Para o loop de checagem de vencedores
             } 
         } }
     }
+    // *** FIM DA ATUALIZAÇÃO ***
 
 
     if (estadoJogo === "JOGANDO_LINHA" || estadoJogo === "JOGANDO_CHEIA") {
@@ -985,7 +996,6 @@ io.on('connection', async (socket) => {
         }
     });
     
-    // *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
     // Novo ouvinte para o cliente checar o status do pagamento
     socket.on('checarMeuPagamento', async (data) => {
         try {
@@ -1015,7 +1025,6 @@ io.on('connection', async (socket) => {
             console.error("Erro ao checar status de pagamento (checarMeuPagamento):", err);
         }
     });
-    // *** FIM DA ATUALIZAÇÃO ***
 
 });
 // ==========================================================
