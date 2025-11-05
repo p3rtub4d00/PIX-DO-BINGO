@@ -76,12 +76,24 @@ async function inicializarBanco() {
             console.log("Coluna 'cartelas_json' adicionada à tabela 'vendas'.");
         } catch (e) {
             if (e.code === '42701') {
-                // Código '42701' = column already exists (coluna já existe)
                 console.log("Coluna 'cartelas_json' já existe. Ignorando.");
             } else {
                 throw e;
             }
         }
+        
+        // *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
+        // Cria a nova tabela para pagamentos pendentes
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS pagamentos_pendentes (
+                payment_id TEXT PRIMARY KEY,
+                socket_id TEXT NOT NULL,
+                dados_compra_json TEXT NOT NULL,
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log("Tabela 'pagamentos_pendentes' verificada.");
+        // *** FIM DA ATUALIZAÇÃO ***
         
         // Verifica se o admin existe
         const adminRes = await db.query('SELECT COUNT(*) as count FROM usuarios_admin WHERE usuario = $1', ['admin']);
@@ -143,9 +155,11 @@ if (!MERCADOPAGO_ACCESS_TOKEN) {
     console.warn("AVISO: MERCADOPAGO_ACCESS_TOKEN não foi configurado nas variáveis de ambiente.");
 }
 
-// FALHA CRÍTICA #3: 'pagamentosPendentes' em memória será perdido.
-// Devemos mover isso para o banco de dados em uma próxima etapa.
-const pagamentosPendentes = {};
+// *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
+// A variável 'pagamentosPendentes' foi removida.
+// const pagamentosPendentes = {}; // <-- REMOVIDO
+// *** FIM DA ATUALIZAÇÃO ***
+
 // ==========================================================
 
 
@@ -168,7 +182,7 @@ app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUnini
 app.use(express.json()); 
 
 // ==========================================================
-// *** WEBHOOK MERCADO PAGO (ATUALIZADO - SALVA CARTELAS) ***
+// *** WEBHOOK MERCADO PAGO (ATUALIZADO - LÊ DO BANCO) ***
 // ==========================================================
 app.post('/webhook-mercadopago', (req, res) => {
     console.log("Webhook do Mercado Pago recebido!");
@@ -183,75 +197,79 @@ app.post('/webhook-mercadopago', (req, res) => {
                 const status = pagamento.status;
                 console.log(`Webhook: Status do Pagamento ${paymentId} é: ${status}`);
 
-                if (status === 'approved' && pagamentosPendentes[paymentId]) {
-                    
-                    const { socketId, dadosCompra } = pagamentosPendentes[paymentId];
-                    const socket = io.sockets.sockets.get(socketId);
+                // *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
+                if (status === 'approved') {
+                    // 1. Busca o pagamento pendente no BANCO DE DADOS
+                    console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
+                    const query = "SELECT * FROM pagamentos_pendentes WHERE payment_id = $1";
+                    const pendingPaymentResult = await db.query(query, [paymentId]);
 
-                    if (!socket) {
-                        console.error(`Webhook ERRO: Socket ${socketId} não encontrado. O jogador pode ter desconectado.`);
-                        delete pagamentosPendentes[paymentId]; 
-                        return;
-                    }
-
-                    console.log(`Webhook: Socket ${socketId} encontrado. Gerando cartelas para ${dadosCompra.nome}...`);
-
-                    try {
-                        let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+                    if (pendingPaymentResult.rows.length > 0) {
+                        const pendingPayment = pendingPaymentResult.rows[0];
+                        const socketId = pendingPayment.socket_id;
+                        const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
                         
-                        const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
-                        const preco = precoRes.rows[0];
+                        console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
                         
-                        const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
-                        const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
-                        
-                        // *** ATUALIZAÇÃO (Salvar Cartelas) ***
-                        const cartelasGeradas = [];
-                        for (let i = 0; i < dadosCompra.quantidade; i++) {
-                            cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+                        const socket = io.sockets.sockets.get(socketId);
+                        if (!socket) {
+                            console.error(`Webhook ERRO: Socket ${socketId} não encontrado. O jogador pode ter desconectado. O pagamento ${paymentId} fica no banco para consulta manual.`);
+                            // Não deletamos o pagamento daqui, pois ele foi pago mas não entregue
+                            return;
                         }
-                        const cartelasJSON = JSON.stringify(cartelasGeradas); // Converte para JSON
 
-                        // Query atualizada para salvar o JSON e retornar o ID
-                        const stmtVenda = `
-                            INSERT INTO vendas 
-                            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
-                            VALUES ($1, $2, $3, $4, $5, $6, $7) 
-                            RETURNING id`; // RETURNING id pega o ID da venda
-                        
-                        const vendaResult = await db.query(stmtVenda, [
-                            sorteioAlvo, 
-                            dadosCompra.nome, 
-                            dadosCompra.telefone || null, 
-                            dadosCompra.quantidade, 
-                            valorTotal, 
-                            'Online',
-                            cartelasJSON // Salva o JSON das cartelas
-                        ]);
+                        // (A LÓGICA DE GERAR CARTELAS E SALVAR VENDA CONTINUA A MESMA)
+                        console.log(`Webhook: Socket ${socketId} encontrado. Gerando cartelas para ${dadosCompra.nome}...`);
+                        try {
+                            let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+                            const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
+                            const preco = precoRes.rows[0];
+                            const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
+                            const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
+                            
+                            const cartelasGeradas = [];
+                            for (let i = 0; i < dadosCompra.quantidade; i++) {
+                                cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+                            }
+                            const cartelasJSON = JSON.stringify(cartelasGeradas); 
 
-                        const vendaId = vendaResult.rows[0].id; // Pega o ID da venda
-                        
-                        console.log(`Webhook: Venda #${vendaId} registrada e ${cartelasGeradas.length} cartelas salvas.`);
+                            const stmtVenda = `
+                                INSERT INTO vendas 
+                                (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
+                                VALUES ($1, $2, $3, $4, $5, $6, $7) 
+                                RETURNING id`; 
+                            
+                            const vendaResult = await db.query(stmtVenda, [
+                                sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null, 
+                                dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON
+                            ]);
+                            const vendaId = vendaResult.rows[0].id; 
+                            
+                            console.log(`Webhook: Venda #${vendaId} registrada e ${cartelasGeradas.length} cartelas salvas.`);
 
-                        // Envia o ID da Venda para o cliente, não as cartelas
-                        socket.emit('pagamentoAprovado', {
-                            vendaId: vendaId, 
-                            nome: dadosCompra.nome, 
-                            telefone: dadosCompra.telefone
-                        });
-                        // *** FIM DA ATUALIZAÇÃO ***
+                            socket.emit('pagamentoAprovado', {
+                                vendaId: vendaId, 
+                                nome: dadosCompra.nome, 
+                                telefone: dadosCompra.telefone
+                            });
 
-                        delete pagamentosPendentes[paymentId];
+                            // 2. Deleta o pagamento pendente do banco, pois foi processado
+                            await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+                            console.log(`Pagamento ${paymentId} processado e removido do DB.`);
 
-                    } catch (dbError) {
-                        console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
-                        if (socket) socket.emit('pagamentoErro', { message: 'Erro ao registrar sua compra após o pagamento. Contate o suporte.' });
+                        } catch (dbError) {
+                            console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
+                            if (socket) socket.emit('pagamentoErro', { message: 'Erro ao registrar sua compra após o pagamento. Contate o suporte.' });
+                        }
+                    } else {
+                         console.warn(`Webhook: Pagamento ${paymentId} aprovado, mas NÃO FOI ENCONTRADO no banco 'pagamentos_pendentes'. (Pode ser um pagamento antigo ou um erro)`);
                     }
+                // *** FIM DA ATUALIZAÇÃO ***
 
                 } else if (status === 'cancelled' || status === 'rejected') {
-                    delete pagamentosPendentes[paymentId];
-                    const socket = io.sockets.sockets.get(pagamentosPendentes[paymentId]?.socketId);
-                    if(socket) socket.emit('pagamentoErro', { message: 'Seu pagamento foi recusado ou cancelado.' });
+                    // Se foi cancelado ou rejeitado, limpa do banco
+                    await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+                    console.log(`Pagamento ${paymentId} (${status}) removido do DB.`);
                 }
             })
             .catch(error => {
@@ -555,13 +573,11 @@ app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'adm
 // *** LÓGICA DO JOGO (SOCKET.IO) (Funções auxiliares) ***
 // ==========================================================
 
-// *** ATUALIZAÇÃO CORREÇÃO DE ERRO ***
-// Movendo as constantes para o topo desta seção, ANTES de serem usadas.
+// Constantes do Jogo
 const TEMPO_ENTRE_NUMEROS = 5000;
 const MAX_VENCEDORES_HISTORICO = 10;
 const MIN_CARTELAS_POR_BOT = 1; const MAX_CARTELAS_POR_BOT = 5;
 const LIMITE_FALTANTES_QUASELA = 5; const MAX_JOGADORES_QUASELA = 5;
-// *** FIM DA ATUALIZAÇÃO ***
 
 const nomesBots = [ "Maria Souza", "João Pereira", "Ana Costa", "Carlos Santos", "Sofia Oliveira", "Pedro Almeida", "Laura Ferreira", "Lucas Rodrigues", "Beatriz Lima", "Guilherme Azevedo", "Arthur Silva", "Alice Santos", "Bernardo Oliveira", "Manuela Rodrigues", "Heitor Ferreira", "Valentina Alves", "Davi Pereira", "Helena Lima", "Lorenzo Souza", "Isabella Costa", "Miguel Martins", "Sophia Rocha", "Theo Gonçalves", "Júlia Carvalho", "Gabriel Gomes", "Heloísa Mendes", "Pedro Henrique Ribeiro", "Maria Clara Dias", "Matheus Cardoso", "Isadora Vieira", "Enzo Fernandes", "Lívia Pinto", "Nicolas Andrade", "Maria Luísa Barbosa", "Benjamin Teixeira", "Ana Clara Nogueira", "Samuel Correia", "Lorena Rezende", "Rafael Duarte", "Cecília Freitas", "Gustavo Campos", "Yasmin Sales", "Daniel Moura", "Isabelly Viana", "Felipe Cunha", "Sarah Morais", "Lucas Gabriel Castro", "Ana Júlia Ramos", "João Miguel Pires", "Esther Aragão", "Murilo Farias", "Emanuelly Melo", "Bryan Macedo", "Mariana Barros", "Eduardo Cavalcanti", "Rebeca Borges", "Leonardo Monteiro", "Ana Laura Brandão", "Henrique Lins", "Clarice Dantas", "Cauã Azevedo", "Agatha Gusmão", "Vinícius Peixoto", "Gabrielly Benites", "João Guilherme Guedes", "Melissa Siqueira", "Bar do Zé", "Bar da Esquina", "Cantinho do Amigo", "Boteco do Manolo", "Bar Central", "Adega do Portuga", "Bar & Petiscos", "Ponto Certo Bar", "Bar Vira Copo", "Skina Bar", "Recanto do Chopp", "Bar do Gato", "Toca do Urso Bar", "Bar Boa Vista", "Empório do Bar", "Bar da Praça", "Boteco da Vila", "Bar Avenida", "Bar Estrela", "Parada Obrigatória Bar", "Distribuidora Silva", "Adega & Cia", "Disk Bebidas Rápido", "Central de Bebidas", "Distribuidora Irmãos Unidos", "Ponto Frio Bebidas", "Império das Bebidas", "Distribuidora Confiança", "SOS Bebidas", "Mundo das Bebidas", "Planeta Gelo & Bebidas", "Distribuidora Aliança", "O Rei da Cerveja", "Point das Bebidas", "Distribuidora Amigão", "Bebidas Delivery Já", "Varanda Bebidas", "Distribuidora Campeã", "Expresso Bebidas", "Top Beer Distribuidora", "Ricardão", "Paty", "Beto", "Juju", "Zeca", "Lulu", "Tio Sam", "Dona Flor", "Professor", "Capitão", "Alemão", "Baixinho", "Careca", "Japa", "Madruga", "Xará", "Campeão", "Princesa", "Chefe", "Arthur Moreira", "Alice Ribeiro", "Bernardo Rocha", "Manuela Alves", "Heitor Martins", "Valentina Barbosa", "Davi Barros", "Helena Soares", "Lorenzo Ferreira", "Isabella Gomes", "Miguel Pereira", "Sophia Rodrigues", "Theo Almeida", "Júlia Lima", "Gabriel Souza", "Heloísa Oliveira", "Pedro Henrique Santos", "Maria Clara Silva", "Matheus Costa", "Isadora Mendes", "Enzo Castro", "Lívia Andrade", "Nicolas Pinto", "Maria Luísa Cunha", "Benjamin Dias", "Ana Clara Azevedo", "Samuel Lopes", "Lorena Matos", "Rafael Nunes", "Cecília Gonçalves", "Gustavo Mendes", "Yasmin Correia", "Daniel Farias", "Isabelly Cardoso", "Felipe Neves", "Sarah Campos", "Lucas Gabriel Reis", "Ana Júlia Meireles", "João Miguel Viana", "Esther Pires", "Murilo Sales", "Emanuelly Freire", "Bryan Silveira", "Mariana Magalhães", "Eduardo Bastos", "Rebeca Santana", "Leonardo Teixeira", "Ana Laura Gomes", "Henrique Vieira", "Clarice Moraes", "Cauã Duarte", "Agatha Rezende", "Vinícius Monteiro", "Gabrielly Nogueira", "João Guilherme Guerra", "Melissa Xavier", "Davi Lucca", "Maria Eduarda", "Anthony", "Elisa", "João Lucas", "Maria Alice", "Erick", "Lavínia", "Fernando", "Letícia", "Rodrigo", "Nicole", "Otávio", "Gabriela", "Igor", "Yasmin", "Francisco", "Mariana", "Benício", "Eloá", "Victor", "Clara", "Cauê", "Lívia", "João Pedro", "Beatriz", "Breno", "Laís", "Vicente", "Ayla", "Fábio", "Alícia", "Diego", "Estela", "Luiz Felipe", "Catarina", "Emanuel", "Vitória", "André", "Olívia", "Nathan", "Maitê", "Ruan", "Mirella", "Davi Luiz", "Heloísa", "Kaique", "Luna", "Bruno", "Lara", "Noah", "Maria Fernanda", "Thiago", "Isis", "Ravi", "Antonella", "Caio", "Liz", "Eduardo", "Maria Vitória", "Pedro Lucas", "Agatha", "Luiz Miguel", "Ana Luísa", "Antônio", "Pietra", "Enrico", "Marina", "João Gabriel", "Rebeca", "Augusto", "Ana Beatriz", "Isaac", "Alexia", "Lucca", "Bianca", "Otávio", "Esther", "Davi Miguel", "Ana Vitória", "Calebe", "Evelyn", "Luiz Gustavo", "Aurora", "Henrique", "Livia", "Ryan", "Milena", "Yuri", "Natália", "Benjamin", "Maria Flor", "Luiz Otávio", "Ana Liz", "Emanuel", "Elisa", "Davi Lucas", "Maria Helena", "Ian", "Rafaela", "Guilherme", "Melissa", "Luiz Henrique", "Mirela", "Breno", "Isabel", "Matheus Henrique", "Ana Sophia", "Oliver", "Maria Cecília", "Levi", "Ana Lívia", "Enzo Gabriel", "Joana", "Joaquim", "Clarice", "Davi", "Isabelly", "Bryan", "Stella", "Samuel", "Maria Valentina", "Heitor", "Ana", "Adega do Vale", "Distribuidora Premium", "Bar do Chico", "O Canecão Bar", "Bebidas & Cia", "Stop Beer", "Bar do Ponto", "Casa da Cerveja", "Toca da Onça Bar", "Império da Bebida", "Distribuidora Gela Guela", "Bar da Galera", "Point do Litrão", "Cantina do Sabor", "Bar do Mineiro", "Adega 24 Horas", "O Botecão", "Distribuidora Central", "Bar do Lago", "Rota da Cerveja", "Vem Que Tem Bebidas", "Bar do Pescador", "Adega Imperial", "Boteco do Rei", "Distribuidora Expresso", "Bar do Paulista", "Beer Point Distribuidora", "Bar dos Artistas", "Gelo e Bebidas Express", "Boteco do Alto", "Cantinho da Cerveja", "Bar do Arlindo", "Toma Todas Distribuidora", "Bar da Torre", "Adega dos Amigos", "Bar do Comércio", "Distribuidora Ouro Verde", "Bar da Boa", "Mundo da Gela", "Boteco Pé de Serra", "Distribuidora Copo Cheio", "Bar do China", "Adega Noturna", "Boteco do Frazão", "Gela Rápido", "Bar do Beto", "Point da Bebida", "Bar do Cais", "Distribuidora Zero Grau", "Boteco do Estudante", "Adega e Tabacaria Prime", "Bar do Nando", "Distribuidora do Trabalhador", "Bar da Matriz", "SOS Cerveja", "Boteco do Parque", "Distribuidora São Jorge", "Bar do Mário", "Bebidas.com", "O Encontro Bar", "Distribuidora Água na Boca", "Bar do Bigode", "Adega Fênix", "Boteco do Léo", "Distribuidora Monte Carlo", "Bar da Ponte", "Casa do Gelo", "Bar do Tio", "Distribuidora Elite", "Boteco do Tchê", "Adega do Chefe", "Bar do Juarez", "Disk Gelo e Bebidas", "Bar do Meio", "Ponto do Malte", "Boteco do Alex", "Distribuidora Sol Nascente", "Bar do Nelson", "Mestre Cervejeiro Adega", "Bar do Valdir", "Distribuidora Premium", "Bar do Nogueira", "Armazém da Bebida", "Boteco do Careca", "Planeta Bebidas", "Bar do Elias", "Adega do Bairro", "Boteco do Sítio", "Distribuidora Pit Stop", "Bar do Osmar", "Distribuidora Bom Preço", "Bar do Wilson", "Mundo da Cerveja", "Boteco do Ceará", "Casa da Bebida", "Bar do Gaúcho", "Adega e Conveniência", "Boteco do Portuga", "Distribuidora Real", "Bar do Dito", "Camila Alves", "Diego Fernandes", "Larissa Barbosa", "Rodrigo Nogueira", "Bruna Melo", "Sérgio Azevedo", "Letícia Cunha", "Marcos Rocha", "Amanda Freitas", "Renato Borges", "Juliana Teixeira", "Felipe Dantas", "Patrícia Sales", "Thiago Gusmão", "Carolina Pires", "Anderson Viana", "Vanessa Morais", "Márcio Aragão", "Jéssica Peixoto", "Leandro Siqueira", "Tatiane Campos", "Ricardo Rezende", "Elaine Correia", "Fábio Benites", "Adriana Guedes", "Marcelo Ramos", "Daniela Castro", "Alexandre Lins", "Aline Brandão", "César Dantas", "Cristiane Gusmão", "Vinícius Peixoto", "Fernanda Benites", "Rafael Guedes", "Cláudia Siqueira", "Roberto Campos", "Priscila Rezende", "Márcio Correia", "Luciana Benites", "Carlos Guedes", "Valéria Castro", "Rogério Lins", "Renata Brandão", "Sandro Dantas", "Mônica Gusmão", "André Peixoto", "Simone Benites", "Jonas Guedes", "Débora Siqueira", "Raul Campos", "Regina Rezende", "Gustavo Correia", "Elisa Benites", "Leonardo Guedes", "Tânia Castro", "Jorge Lins", "Sandra Brandão", "Paulo Dantas", "Vera Gusmão", "Nelson Peixoto", "Ângela Benites", "Fábio Guedes", "Cintia Siqueira", "William Campos", "Rosa Rezende", "Otávio Correia", "Ester Benites", "Douglas Guedes", "Gisele Castro", "Ricardo Lins", "Teresa Brandão", "Alex Dantas", "Célia Gusmão", "Anderson Peixoto", "Eliane Benites", "Marcelo Guedes", "Cristina Siqueira", "Rodrigo Campos", "Lúcia Rezende", "Antônio Correia", "Isabela Benites", "Bruno Guedes", "Débora Castro", "Fernando Lins", "Manuela Brandão", "Ronaldo Dantas", "Vânia Gusmão", "Felipe Peixoto", "Carolina Benites", "Jorge Guedes", "Elisa Siqueira", "Ricardo Campos", "Lídia Rezende", "Marcos Correia", "Estela Benites", "Pedro Guedes", "Patrícia Castro", "Rafael Lins", "Carla Brandão", "Sérgio Dantas", "Marta Gusmão", "Rui Peixoto", "Luana Benites", "Caio Guedes", "Simone Siqueira", "Vitor Campos", "Clara Rezende", "José Correia", "Laura Benites", "Guilherme Guedes", "Bar do Cumpadi", "Adega do Beco", "Distribuidora do Gole", "Boteco do Litoral", "Cantinho da Birita", "Bar e Mercearia Sol", "Rei da Gelada", "Taberna do Zé", "Distribuidora Tio Patinhas", "Bar Aconchego", "Bebidas da Hora", "Bar do Ferrugem", "Adega do Povo", "Boteco do Gringo", "Distribuidora Stop Gelo", "Bar do Sombra", "Cervejaria da Esquina", "Bar do Peixe", "Armazém do Gelo", "Boteco do Nono", "Distribuidora do Chefe", "Bar do Tatu", "Adega do Frade", "Boteco do Zeca", "Geladão Bebidas", "Bar do Russo", "Ponto da Skol", "Bar do Gordo", "Distribuidora Central do Gelo", "Boteco do Baiano", "Adega e Conveniência 24h", "Bar do Neno", "Distribuidora 3 Irmãos", "Bar do Brejo", "Bebidas e Cia Express", "Boteco do Bigode", "Distribuidora do Bairro", "Bar do Tênis", "Casa do Whisky", "Boteco do Vovô", "Distribuidora do Japa", "Bar do Caju", "Adega do Mestre", "Boteco do China", "Império da Gela", "Bar do Preto", "Ponto da Brahma", "Bar do Jota", "Distribuidora do Ponto", "Boteco do Mineiro", "Adega Ouro Fino", "Bar do Pirata", "Distribuidora do Gordo", "Boteco do Alemão", "Bebidas.com", "Bar do Zoinho", "Cerveja & Gelo", "Bar do Toca", "Distribuidora Gela Mais", "Boteco do Gela", "Adega do Bira", "Bar do Poeta", "Distribuidora do Zé", "Boteco do Farol", "Sempre Gela", "Bar do Pescador", "Armazém da Cerveja", "Bar do Tonho", "Distribuidora do Parque", "Boteco da Madrugada", "Adega do Lago", "Bar do Corvo", "Distribuidora do Vale", "Boteco do Lampião", "Gelo & conveniência", "Bar do Tiozinho", "Canto da Cerveja", "Bar do Vaguinho", "Distribuidora do Trevo", "Boteco do Beco", "Adega da Serra", "Bar do Tim", "Distribuidora do Sol", "Boteco do Morro", "Point do Gelo", "Bar do Cabelo", "Conveniência do Gelo", "Bar do Guto", "Distribuidora do Cais", "Boteco do Rio", "Adega do Mar", "Bar do Tita", "Distribuidora da Praça", "Boteco da Ponte", "Gela Gela Bebidas", "Bar do Vitão", "Cervejaria do Bairro", "Bar do Fred", "Distribuidora da Ilha", "Boteco do Sertão" ];
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6) + '-' + Math.random().toString(36).substring(2, 6); }
@@ -650,19 +666,48 @@ async function sortearNumero() { // Convertido para 'async'
             break; 
         } } if (vencedorLinhaEncontrado) break; }
     }
+
+    // *** ATUALIZAÇÃO (DELAY VENCEDOR) ***
     if (estadoJogo === "JOGANDO_CHEIA") {
-        for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; if (checarVencedorCartelaCheia(cartela, numerosSorteadosSet)) { 
-            console.log(`DEBUG: Vencedor da CARTELA CHEIA encontrado: ${getNome(jogador, socketId)}`); 
-            const nomeVencedor = getNome(jogador, socketId); 
+        for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; 
             
-            // Agora é 'await'
-            await salvarVencedorNoDB({ sorteioId: numeroDoSorteio, premio: "Cartela Cheia", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
-            
-            const dadosVencedor = { nome: nomeVencedor, telefone: jogador.telefone, cartelaGanhadora: cartela, indiceCartela: i, premioValor: PREMIO_CHEIA }; 
-            terminarRodada(dadosVencedor, (jogador.isBot || jogador.isManual) ? null : socketId); 
-            return; 
-        } } }
+            if (checarVencedorCartelaCheia(cartela, numerosSorteadosSet)) { 
+                console.log(`DEBUG: Vencedor da CARTELA CHEIA encontrado: ${getNome(jogador, socketId)}`); 
+                const nomeVencedor = getNome(jogador, socketId); 
+
+                // 1. Parar o sorteio de novos números IMEDIATAMENTE
+                if (intervaloSorteio) {
+                    clearInterval(intervaloSorteio);
+                    intervaloSorteio = null;
+                    console.log("DEBUG: Sorteio pausado. Vencedor encontrado.");
+                }
+
+                // 2. Mudar o estado para "travar" o jogo
+                estadoJogo = "ANUNCIANDO_VENCEDOR"; // Novo estado
+                io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
+
+                // 3. Preparar os dados do vencedor (Salva no DB)
+                await salvarVencedorNoDB({ sorteioId: numeroDoSorteio, premio: "Cartela Cheia", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
+                const dadosVencedor = { nome: nomeVencedor, telefone: jogador.telefone, cartelaGanhadora: cartela, indiceCartela: i, premioValor: PREMIO_CHEIA }; 
+                const socketVencedor = (jogador.isBot || jogador.isManual) ? null : socketId;
+
+                // 4. Esperar 5 segundos ANTES de anunciar
+                const TEMPO_DELAY_ANUNCIO = 5000; // 5 segundos
+                console.log(`Servidor: Esperando ${TEMPO_DELAY_ANUNCIO}ms para anunciar o vencedor...`);
+                
+                setTimeout(() => {
+                    console.log("Servidor: Anunciando vencedor e terminando a rodada.");
+                    terminarRodada(dadosVencedor, socketVencedor); // <-- CHAMADA ATRASADA
+                }, TEMPO_DELAY_ANUNCIO);
+                // *** FIM DA ATUALIZAÇÃO (DELAY VENCEDOR) ***
+                
+                return; // Para o loop de checagem de vencedores
+            } 
+        } }
     }
+    // *** FIM DA ATUALIZAÇÃO ***
+
+
     if (estadoJogo === "JOGANDO_LINHA" || estadoJogo === "JOGANDO_CHEIA") {
         const jogadoresPerto = [];
         for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (const cartela of jogador.cartelas) { if (cartela.s_id !== numeroDoSorteio) continue; const faltantes = contarFaltantesParaCheia(cartela, numerosSorteadosSet); if (faltantes > 0 && faltantes <= LIMITE_FALTANTES_QUASELA) { jogadoresPerto.push({ nome: getNome(jogador, socketId), faltam: faltantes }); } } }
@@ -686,8 +731,16 @@ async function salvarVencedorNoDB(vencedorInfo) {
 // A função agora é 'async' para salvar no banco
 async function terminarRodada(vencedor, socketVencedor) {
     console.log("DEBUG: Dentro de terminarRodada().");
-    if (intervaloSorteio) { clearInterval(intervaloSorteio); intervaloSorteio = null; console.log("DEBUG: Intervalo de sorteio parado em terminarRodada."); }
-    else { console.warn("DEBUG: terminarRodada chamada, mas intervaloSorteio já era null."); }
+    
+    // *** ATUALIZAÇÃO (DELAY VENCEDOR) ***
+    // A limpeza do intervalo agora é feita ANTES, na função 'sortearNumero'
+    // Apenas checamos por segurança.
+    if (intervaloSorteio) { 
+        clearInterval(intervaloSorteio); 
+        intervaloSorteio = null; 
+        console.warn("DEBUG: Intervalo de sorteio parado em terminarRodada (não deveria acontecer se o delay funcionou).");
+    }
+    // *** FIM DA ATUALIZAÇÃO ***
     
     const idSorteioFinalizado = numeroDoSorteio;
     
@@ -857,12 +910,21 @@ io.on('connection', async (socket) => {
             const response = await payment.create({ body });
             
             const paymentId = response.id.toString();
-            pagamentosPendentes[paymentId] = {
-                socketId: socket.id,
-                dadosCompra: dadosCompra
-            };
             
-            console.log(`Pagamento PIX ${paymentId} criado para socket ${socket.id}.`);
+            // *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
+            // Salva o pagamento pendente no DB, não na variável
+            const dadosCompraJSON = JSON.stringify(dadosCompra);
+            const query = `
+                INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (payment_id) DO UPDATE SET
+                    socket_id = EXCLUDED.socket_id,
+                    dados_compra_json = EXCLUDED.dados_compra_json,
+                    timestamp = CURRENT_TIMESTAMP
+            `;
+            await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
+            console.log(`Pagamento PIX ${paymentId} salvo no DB para socket ${socket.id}.`);
+            // *** FIM DA ATUALIZAÇÃO ***
 
             const qrCodeBase64 = response.point_of_interaction.transaction_data.qr_code_base64;
             const qrCodeCopiaCola = response.point_of_interaction.transaction_data.qr_code;
