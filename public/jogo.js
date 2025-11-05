@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tituloCartelaAtualEl = document.getElementById('cartela-titulo-atual');
     const sorteioIdDisplay = document.getElementById('sorteio-id-display'); 
     const cartelaIdDisplay = document.getElementById('cartela-id-display'); 
-    const btnToggleSom = document.getElementById('btn-toggle-som'); // <-- ADICIONADO
+    const btnToggleSom = document.getElementById('btn-toggle-som'); 
     
     // --- Seletores do Modal de Resultado ---
     const modalResultado = document.getElementById('modal-resultado');
@@ -39,15 +39,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let cartelaAtualIndex = 0;
     let totalDeCartelas = 0;
     let jogoEstaAtivo = true; 
-    let nomeJogador = ""; 
-    let cartelasSalvas = []; 
+    let cartelasSalvas = []; // Agora é preenchido pelo Socket
 
-    // --- *** INÍCIO: LÓGICA DE VOZ (Copiada de dashboard.js) *** ---
+    // --- INÍCIO DA ATUALIZAÇÃO (Pega Venda ID e dados do Jogador) ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const vendaId = urlParams.get('venda');
+    const nomeJogador = sessionStorage.getItem('bingo_usuario_nome'); 
+    const telefoneJogador = sessionStorage.getItem('bingo_usuario_telefone');
+    
+    if (!vendaId || !nomeJogador || !telefoneJogador) {
+        alert("Seus dados de jogo não foram encontrados! Redirecionando para a página inicial.");
+        window.location.href = 'index.html';
+        return;
+    }
+    console.log(`Página de Jogo para Venda ID: ${vendaId} | Jogador: ${nomeJogador}`);
+    // --- FIM DA ATUALIZAÇÃO ---
+
+
+    // --- Lógica de Voz (Sem alterações) ---
     let somAtivo = false; 
     let synth = null; 
     let voces = []; 
     const suporteVoz = 'speechSynthesis' in window;
-
     if (suporteVoz) {
         synth = window.speechSynthesis; 
         function carregarVozes() { 
@@ -62,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (speechSynthesis.onvoiceschanged !== undefined) { 
             speechSynthesis.onvoiceschanged = carregarVozes; 
         }
-        
         function falar(texto) { 
             if (!somAtivo || !synth || !texto) { 
                 console.log(`Falar ignorado: som=${somAtivo}`); 
@@ -87,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Erro falar:", error); 
             } 
         }
-
         if (btnToggleSom) {
             btnToggleSom.addEventListener('click', () => { 
                 somAtivo = !somAtivo; 
@@ -116,8 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if(icon) { icon.className = 'fas fa-volume-xmark'; } 
         } 
     }
-
-    // Função auxiliar para pegar a letra
     function getLetraDoNumero(numero) { 
         if (numero >= 1 && numero <= 15) return "B"; 
         if (numero >= 16 && numero <= 30) return "I"; 
@@ -126,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (numero >= 61 && numero <= 75) return "O"; 
         return ""; 
     }
-    // --- *** FIM: LÓGICA DE VOZ *** ---
+    // --- Fim da Lógica de Voz ---
 
     // --- 1. Gerar o Painel do Globo (Visual) ---
     function gerarGlobo() {
@@ -212,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 4. Evento do Botão BINGO! (Desabilitado) ---
     btnBingo.style.display = 'none'; 
 
-    // --- 5. Funções do Modal de Resultado ---
+    // --- 5. Funções do Modal de Resultado (Sem alterações) ---
     btnResultadoFechar.addEventListener('click', () => {
         modalResultado.style.display = 'none';
         if (!jogoEstaAtivo) {
@@ -244,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultadoProvaCartela.style.display = 'block';
     }
 
-    // --- 6. FUNÇÃO DE GERAR COMPROVANTE ---
+    // --- 6. FUNÇÃO DE GERAR COMPROVANTE (Sem alterações) ---
     btnBaixarComprovante.addEventListener('click', () => {
         console.log("Gerando comprovante em PDF...");
         
@@ -280,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 7. OUVINTES DO SERVIDOR ---
+    // --- 7. OUVINTES DO SERVIDOR (Sem alterações) ---
     
     function resetarModal() {
         resultadoProvaCartela.style.display = 'none';
@@ -307,10 +316,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // *** INÍCIO DA MODIFICAÇÃO: FALAR O NÚMERO ***
         const letra = getLetraDoNumero(numeroSorteado); 
         falar(`${letra} ${numeroSorteado}`); 
-        // *** FIM DA MODIFICAÇÃO ***
     });
 
     socket.on('voceGanhouLinha', (data) => {
@@ -321,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultadoMensagem.textContent = "Você completou uma linha e ganhou o primeiro prêmio! O jogo continua valendo Cartela Cheia.";
         
         preencherComprovante(data, data.indiceCartela, 'Linha');
-        falar("Parabéns, você ganhou a linha!"); // <-- FALA
+        falar("Parabéns, você ganhou a linha!"); 
         
         btnBaixarComprovante.style.display = 'block'; 
         modalResultado.style.display = 'flex';
@@ -333,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         resultadoTitulo.textContent = "Bingo de Linha!";
         resultadoMensagem.textContent = `O jogador ${data.nome} completou uma linha. O jogo continua valendo Cartela Cheia!`;
-        falar(`Bingo de linha! O jogador ${data.nome} ganhou.`); // <-- FALA
+        falar(`Bingo de linha! O jogador ${data.nome} ganhou.`);
         
         modalResultado.style.display = 'flex';
     });
@@ -347,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultadoMensagem.textContent = `Você completou a cartela e ganhou o grande prêmio! Salve seu comprovante. Entraremos em contato pelo telefone (PIX) cadastrado.`;
         
         preencherComprovante(data, data.indiceCartela, 'Cartela Cheia');
-        falar("BINGO! Parabéns, você ganhou a cartela cheia!"); // <-- FALA
+        falar("BINGO! Parabéns, você ganhou a cartela cheia!"); 
         
         btnBaixarComprovante.style.display = 'block'; 
         btnResultadoFechar.textContent = "Voltar ao Início";
@@ -362,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resultadoTitulo.textContent = "O Jogo Acabou!";
         resultadoMensagem.textContent = `Que pena! O jogador ${data.nome} completou a cartela e ganhou o grande prêmio.`;
-        falar(`Bingo! O jogador ${data.nome} ganhou a cartela cheia.`); // <-- FALA
+        falar(`Bingo! O jogador ${data.nome} ganhou a cartela cheia.`);
         btnResultadoFechar.textContent = "Voltar ao Início";
 
         modalResultado.style.display = 'flex';
@@ -375,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resultadoTitulo.textContent = "O Jogo Acabou!";
         resultadoMensagem.textContent = "Ninguém ganhou. Acabaram os números. O jogo será reiniciado.";
-        falar("O jogo terminou sem vencedores."); // <-- FALA
+        falar("O jogo terminou sem vencedores.");
         btnResultadoFechar.textContent = "Voltar ao Início";
 
         modalResultado.style.display = 'flex';
@@ -386,42 +393,53 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'index.html';
     });
 
-    // ==========================================================
-    // --- INICIALIZAÇÃO ---
-    // ==========================================================
-    
-    cartelasSalvas = JSON.parse(sessionStorage.getItem('bingo_cartelas'));
-    nomeJogador = sessionStorage.getItem('bingo_usuario_nome'); 
-    const telefoneJogador = sessionStorage.getItem('bingo_usuario_telefone');
-    
-    if (!cartelasSalvas || !nomeJogador || !telefoneJogador || cartelasSalvas.length === 0) {
-        alert("Seus dados de jogo não foram encontrados! Redirecionando para a página inicial.");
-        window.location.href = 'index.html';
-        return;
-    }
 
-    socket.emit('registerPlayer', {
-        nome: nomeJogador,
-        telefone: telefoneJogador,
-        cartelas: cartelasSalvas 
+    // ==========================================================
+    // --- INICIALIZAÇÃO (ATUALIZADA) ---
+    // ==========================================================
+    
+    socket.on('connect', () => {
+        console.log(`Conectado ao servidor com o ID: ${socket.id}`);
+        // Assim que conectar, pede as cartelas ao servidor
+        console.log(`Pedindo cartelas para Venda ID: ${vendaId}`);
+        socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador });
     });
 
-    totalDeCartelas = cartelasSalvas.length;
-    console.log(`Bem-vindo, ${nomeJogador}! Lendo ${totalDeCartelas} cartela(s).`);
+    socket.on('cartelasEncontradas', (data) => {
+        const { cartelas } = data;
+        console.log(`Recebidas ${cartelas.length} cartelas do servidor.`);
+        
+        // Agora que temos as cartelas, podemos registrar o jogador e renderizar
+        cartelasSalvas = cartelas; // Salva globalmente
+        totalDeCartelas = cartelasSalvas.length;
+        console.log(`Bem-vindo, ${nomeJogador}! Lendo ${totalDeCartelas} cartela(s).`);
 
-    gerarGlobo();
+        gerarGlobo();
 
-    cartelasContainer.innerHTML = ''; 
-    cartelasGeradas = []; 
-    
-    for (let i = 0; i < totalDeCartelas; i++) {
-        const dadosCartela = cartelasSalvas[i]; 
-        const elementoCartela = criarElementoCartela(dadosCartela);
-        elementoCartela.id = `cartela-indice-${i}`;
-        cartelasGeradas.push(elementoCartela); 
-    }
-    
-    cartelaAtualIndex = 0; 
-    atualizarVisibilidadeCartela(); 
+        cartelasContainer.innerHTML = ''; 
+        cartelasGeradas = []; 
+        
+        for (let i = 0; i < totalDeCartelas; i++) {
+            const dadosCartela = cartelasSalvas[i]; 
+            const elementoCartela = criarElementoCartela(dadosCartela);
+            elementoCartela.id = `cartela-indice-${i}`;
+            cartelasGeradas.push(elementoCartela); 
+        }
+        
+        cartelaAtualIndex = 0; 
+        atualizarVisibilidadeCartela(); 
+
+        // Agora que as cartelas estão prontas, registra o jogador no sorteio
+        socket.emit('registerPlayer', {
+            nome: nomeJogador,
+            telefone: telefoneJogador,
+            cartelas: cartelasSalvas 
+        });
+    });
+
+    socket.on('cartelasNaoEncontradas', () => {
+        alert("Erro: Suas cartelas não foram encontradas no servidor.\n\nIsso pode acontecer se o nome salvo não bater com o da compra. Redirecionando.");
+        window.location.href = 'index.html';
+    });
     
 });
