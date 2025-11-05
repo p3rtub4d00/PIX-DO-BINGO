@@ -82,8 +82,21 @@ async function inicializarBanco() {
             }
         }
         
-        // *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
-        // Cria a nova tabela para pagamentos pendentes
+        // *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
+        // Adiciona coluna 'payment_id' na tabela 'vendas'
+        try {
+            await db.query('ALTER TABLE vendas ADD COLUMN payment_id TEXT');
+            console.log("Coluna 'payment_id' adicionada à tabela 'vendas'.");
+        } catch (e) {
+            if (e.code === '42701') {
+                console.log("Coluna 'payment_id' já existe. Ignorando.");
+            } else {
+                throw e;
+            }
+        }
+        // *** FIM DA ATUALIZAÇÃO ***
+
+        // Cria a tabela para pagamentos pendentes
         await db.query(`
             CREATE TABLE IF NOT EXISTS pagamentos_pendentes (
                 payment_id TEXT PRIMARY KEY,
@@ -93,7 +106,6 @@ async function inicializarBanco() {
             );
         `);
         console.log("Tabela 'pagamentos_pendentes' verificada.");
-        // *** FIM DA ATUALIZAÇÃO ***
         
         // Verifica se o admin existe
         const adminRes = await db.query('SELECT COUNT(*) as count FROM usuarios_admin WHERE usuario = $1', ['admin']);
@@ -103,7 +115,7 @@ async function inicializarBanco() {
             console.log("Usuário 'admin' criado.");
         }
 
-        // Insere configurações padrão (ON CONFLICT...DO UPDATE é o 'INSERT OR REPLACE' do PostgreSQL)
+        // Insere configurações padrão
         const configs = [
             { chave: 'premio_linha', valor: '100.00' },
             { chave: 'premio_cheia', valor: '500.00' },
@@ -114,12 +126,9 @@ async function inicializarBanco() {
             { chave: 'duracao_espera', valor: '20' },
             { chave: 'min_bots', valor: '80' },
             { chave: 'max_bots', valor: '150' },
-            // Adiciona um valor padrão para o número do sorteio
             { chave: 'numero_sorteio_atual', valor: '500' }
         ];
 
-        // Usamos ON CONFLICT para evitar erros de chave duplicada
-        // ON CONFLICT (chave) DO NOTHING = Só insere se a chave não existir
         const configQuery = 'INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO NOTHING';
         for (const config of configs) {
             await db.query(configQuery, [config.chave, config.valor]);
@@ -154,12 +163,6 @@ const mpClient = new MercadoPagoConfig({
 if (!MERCADOPAGO_ACCESS_TOKEN) {
     console.warn("AVISO: MERCADOPAGO_ACCESS_TOKEN não foi configurado nas variáveis de ambiente.");
 }
-
-// *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
-// A variável 'pagamentosPendentes' foi removida.
-// const pagamentosPendentes = {}; // <-- REMOVIDO
-// *** FIM DA ATUALIZAÇÃO ***
-
 // ==========================================================
 
 
@@ -182,7 +185,7 @@ app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUnini
 app.use(express.json()); 
 
 // ==========================================================
-// *** WEBHOOK MERCADO PAGO (ATUALIZADO - LÊ DO BANCO) ***
+// *** WEBHOOK MERCADO PAGO (ATUALIZADO - SEM SOCKET) ***
 // ==========================================================
 app.post('/webhook-mercadopago', (req, res) => {
     console.log("Webhook do Mercado Pago recebido!");
@@ -197,7 +200,7 @@ app.post('/webhook-mercadopago', (req, res) => {
                 const status = pagamento.status;
                 console.log(`Webhook: Status do Pagamento ${paymentId} é: ${status}`);
 
-                // *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
+                // *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
                 if (status === 'approved') {
                     // 1. Busca o pagamento pendente no BANCO DE DADOS
                     console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
@@ -206,20 +209,14 @@ app.post('/webhook-mercadopago', (req, res) => {
 
                     if (pendingPaymentResult.rows.length > 0) {
                         const pendingPayment = pendingPaymentResult.rows[0];
-                        const socketId = pendingPayment.socket_id;
+                        // const socketId = pendingPayment.socket_id; // Não precisamos mais disso
                         const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
                         
                         console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
                         
-                        const socket = io.sockets.sockets.get(socketId);
-                        if (!socket) {
-                            console.error(`Webhook ERRO: Socket ${socketId} não encontrado. O jogador pode ter desconectado. O pagamento ${paymentId} fica no banco para consulta manual.`);
-                            // Não deletamos o pagamento daqui, pois ele foi pago mas não entregue
-                            return;
-                        }
-
-                        // (A LÓGICA DE GERAR CARTELAS E SALVAR VENDA CONTINUA A MESMA)
-                        console.log(`Webhook: Socket ${socketId} encontrado. Gerando cartelas para ${dadosCompra.nome}...`);
+                        // Não precisamos mais do socket. Se ele desconectou, o poller do cliente vai pegar.
+                        // const socket = io.sockets.sockets.get(socketId);
+                        
                         try {
                             let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
                             const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
@@ -233,33 +230,31 @@ app.post('/webhook-mercadopago', (req, res) => {
                             }
                             const cartelasJSON = JSON.stringify(cartelasGeradas); 
 
+                            // Query atualizada para salvar o JSON e o payment_id
                             const stmtVenda = `
                                 INSERT INTO vendas 
-                                (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
-                                VALUES ($1, $2, $3, $4, $5, $6, $7) 
+                                (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id) 
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
                                 RETURNING id`; 
                             
                             const vendaResult = await db.query(stmtVenda, [
                                 sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null, 
-                                dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON
+                                dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
                             ]);
                             const vendaId = vendaResult.rows[0].id; 
                             
-                            console.log(`Webhook: Venda #${vendaId} registrada e ${cartelasGeradas.length} cartelas salvas.`);
+                            console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
 
-                            socket.emit('pagamentoAprovado', {
-                                vendaId: vendaId, 
-                                nome: dadosCompra.nome, 
-                                telefone: dadosCompra.telefone
-                            });
+                            // NÃO emitimos mais 'pagamentoAprovado' daqui
+                            // O cliente vai perguntar (poll) e encontrar essa venda
 
                             // 2. Deleta o pagamento pendente do banco, pois foi processado
                             await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
-                            console.log(`Pagamento ${paymentId} processado e removido do DB.`);
+                            console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
 
                         } catch (dbError) {
                             console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
-                            if (socket) socket.emit('pagamentoErro', { message: 'Erro ao registrar sua compra após o pagamento. Contate o suporte.' });
+                            // Se der erro aqui, o pagamento fica no 'pagamentos_pendentes' para análise manual
                         }
                     } else {
                          console.warn(`Webhook: Pagamento ${paymentId} aprovado, mas NÃO FOI ENCONTRADO no banco 'pagamentos_pendentes'. (Pode ser um pagamento antigo ou um erro)`);
@@ -476,6 +471,7 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
             INSERT INTO vendas 
             (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
             VALUES ($1, $2, $3, $4, $5, $6, $7)`;
+        // O payment_id de uma venda manual é null
         await db.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, valorTotal, 'Manual', cartelasJSON]);
         // *** FIM DA ATUALIZAÇÃO ***
         
@@ -667,7 +663,7 @@ async function sortearNumero() { // Convertido para 'async'
         } } if (vencedorLinhaEncontrado) break; }
     }
 
-    // *** ATUALIZAÇÃO (DELAY VENCEDOR) ***
+    // ATUALIZAÇÃO (DELAY VENCEDOR)
     if (estadoJogo === "JOGANDO_CHEIA") {
         for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; 
             
@@ -699,13 +695,11 @@ async function sortearNumero() { // Convertido para 'async'
                     console.log("Servidor: Anunciando vencedor e terminando a rodada.");
                     terminarRodada(dadosVencedor, socketVencedor); // <-- CHAMADA ATRASADA
                 }, TEMPO_DELAY_ANUNCIO);
-                // *** FIM DA ATUALIZAÇÃO (DELAY VENCEDOR) ***
                 
                 return; // Para o loop de checagem de vencedores
             } 
         } }
     }
-    // *** FIM DA ATUALIZAÇÃO ***
 
 
     if (estadoJogo === "JOGANDO_LINHA" || estadoJogo === "JOGANDO_CHEIA") {
@@ -732,15 +726,12 @@ async function salvarVencedorNoDB(vencedorInfo) {
 async function terminarRodada(vencedor, socketVencedor) {
     console.log("DEBUG: Dentro de terminarRodada().");
     
-    // *** ATUALIZAÇÃO (DELAY VENCEDOR) ***
     // A limpeza do intervalo agora é feita ANTES, na função 'sortearNumero'
-    // Apenas checamos por segurança.
     if (intervaloSorteio) { 
         clearInterval(intervaloSorteio); 
         intervaloSorteio = null; 
         console.warn("DEBUG: Intervalo de sorteio parado em terminarRodada (não deveria acontecer se o delay funcionou).");
     }
-    // *** FIM DA ATUALIZAÇÃO ***
     
     const idSorteioFinalizado = numeroDoSorteio;
     
@@ -871,7 +862,7 @@ io.on('connection', async (socket) => {
         });
     } catch (error) { console.error("Erro ao emitir estado inicial:", error); }
     
-    // --- FUNÇÃO DE PAGAMENTO ATUALIZADA (WEBHOOK CORRIGIDO) ---
+    // --- FUNÇÃO DE PAGAMENTO ATUALIZADA (SALVA PENDENTE NO DB) ---
     socket.on('criarPagamento', async (dadosCompra, callback) => {
         try {
             const { nome, telefone, quantidade } = dadosCompra;
@@ -930,7 +921,9 @@ io.on('connection', async (socket) => {
             const qrCodeCopiaCola = response.point_of_interaction.transaction_data.qr_code;
             
             if (typeof callback === 'function') {
-                callback({ success: true, qrCodeBase64, qrCodeCopiaCola });
+                // *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
+                // Retorna o paymentId para o cliente
+                callback({ success: true, qrCodeBase64, qrCodeCopiaCola, paymentId: paymentId });
             }
 
         } catch(error) {
@@ -956,7 +949,7 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // *** ATUALIZAÇÃO (Novo Ouvinte) ***
+    // Ouvinte para buscar cartelas
     socket.on('buscarMinhasCartelas', async (data) => {
         try {
             const { vendaId, nome } = data;
@@ -991,7 +984,39 @@ io.on('connection', async (socket) => {
             socket.emit('cartelasNaoEncontradas');
         }
     });
+    
+    // *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
+    // Novo ouvinte para o cliente checar o status do pagamento
+    socket.on('checarMeuPagamento', async (data) => {
+        try {
+            const { paymentId } = data;
+            if (!paymentId) return;
+
+            // Consulta a tabela de VENDAS (não a de pendentes)
+            const query = "SELECT id, nome_jogador, telefone FROM vendas WHERE payment_id = $1";
+            const res = await db.query(query, [paymentId]);
+
+            if (res.rows.length > 0) {
+                // Pagamento foi processado pelo webhook e a venda existe!
+                const venda = res.rows[0];
+                console.log(`Polling: Pagamento ${paymentId} encontrado (Venda #${venda.id}). Avisando cliente ${socket.id}`);
+                
+                // Avisa o cliente que o pagamento foi aprovado
+                socket.emit('pagamentoAprovado', {
+                    vendaId: venda.id,
+                    nome: venda.nome_jogador,
+                    telefone: venda.telefone
+                });
+            } else {
+                // Pagamento ainda não está na tabela de vendas. O cliente continua esperando.
+                // Não fazemos nada, o cliente vai perguntar de novo.
+            }
+        } catch (err) {
+            console.error("Erro ao checar status de pagamento (checarMeuPagamento):", err);
+        }
+    });
     // *** FIM DA ATUALIZAÇÃO ***
+
 });
 // ==========================================================
 
