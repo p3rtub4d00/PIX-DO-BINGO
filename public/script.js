@@ -33,10 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const especialValorEl = document.getElementById('especial-valor');
     const especialDataEl = document.getElementById('especial-data');
 
-    // *** ATUALIZAÇÃO (POLLING ROBUSTO) ***
+    // --- ATUALIZAÇÃO (POLLING ROBUSTO) ---
     let pollerInterval = null; // Guarda a referência do interval
     let currentPaymentId = null; // Guarda o ID do pagamento que estamos verificando
-    // *** FIM DA ATUALIZAÇÃO ***
+    // --- FIM DA ATUALIZAÇÃO ---
 
     // --- Função para formatar valor BRL ---
     function formatarBRL(valor) {
@@ -246,15 +246,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const nomeSalvo = sessionStorage.getItem('bingo_usuario_nome');
             if (nomeSalvo !== data.nome) {
                  console.warn("Pagamento aprovado, mas o nome não bate. Ignorando.");
+                 // Não paramos, pois pode ser uma aba antiga.
+                 // Mas a aba correta vai pegar.
                  return;
             }
             
-            alert("Pagamento confirmado!\n\nCartelas geradas.\nIndo para a sala de espera.");
-            
-            fecharModal(); 
-            modalNome.value = ""; 
-            modalTelefone.value = ""; 
-            modalQuantidadeInput.value = "1";
+            // Só exibe o alerta se o modal estiver aberto (para não incomodar quem pagou e já foi redirecionado)
+            if (modal.style.display === 'flex' && etapaPix.style.display === 'block') {
+                alert("Pagamento confirmado!\n\nCartelas geradas.\nIndo para a sala de espera.");
+                fecharModal(); 
+                modalNome.value = ""; 
+                modalTelefone.value = ""; 
+                modalQuantidadeInput.value = "1";
+            }
             
             // Redireciona para a sala de espera, passando o ID da Venda na URL
             window.location.href = `espera.html?venda=${data.vendaId}`;
@@ -273,10 +277,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ouvinte para quando o socket reconectar (ex: trocou de app e voltou)
         socket.on('connect', () => {
             console.log("Socket reconectado.");
-            // Tenta checar o pagamento se o usuário estiver na etapa 2 do modal
+            // Tenta checar o pagamento se o usuário RECARREGOU a página
             const paymentIdSalvo = sessionStorage.getItem('bingo_payment_id');
-            if (paymentIdSalvo && etapaPix.style.display === 'block') {
-                console.log("Reconectado. Reiniciando verificador.");
+            // AQUI ESTÁ A CORREÇÃO: Removemos a checagem do 'etapaPix'
+            if (paymentIdSalvo) {
+                console.log("Reconectado. Reiniciando verificador para paymentId salvo.");
                 iniciarVerificadorPagamento(paymentIdSalvo);
             }
         });
@@ -287,7 +292,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Aba do navegador ficou visível.");
                 // Tenta checar o pagamento se o usuário estiver na etapa 2 do modal
                 const paymentIdSalvo = sessionStorage.getItem('bingo_payment_id');
-                if (paymentIdSalvo && etapaPix.style.display === 'block') {
+                // AQUI ESTÁ A CORREÇÃO: Removemos a checagem do 'etapaPix'
+                if (paymentIdSalvo) {
                     console.log("Aba visível. Forçando uma checagem de pagamento.");
                     checarPagamento(); // Força uma checagem imediata
                 }
@@ -295,4 +301,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         // *** FIM DA ATUALIZAÇÃO ***
     }
+    
+    // *** ATUALIZAÇÃO (POLLING ROBUSTO) ***
+    // Ao carregar a página, verifica se um paymentId ficou "preso" no sessionStorage
+    // Isso acontece se o usuário recarregar a página enquanto paga
+    const paymentIdSalvo = sessionStorage.getItem('bingo_payment_id');
+    if (paymentIdSalvo) {
+        console.log(`Encontrado paymentId ${paymentIdSalvo} no sessionStorage ao carregar. Iniciando verificador.`);
+        // Mostra a tela de "Aguardando Pagamento"
+        modal.style.display = 'flex';
+        etapaDados.style.display = 'none';
+        etapaPix.style.display = 'block';
+        aguardandoPagamentoEl.style.display = 'block';
+        // (Não teremos o QR Code, mas o usuário só quer a confirmação)
+        pixQrCodeImg.style.display = 'none';
+        pixCopiaColaInput.value = "Verificando seu pagamento anterior...";
+        
+        iniciarVerificadorPagamento(paymentIdSalvo);
+    }
+    // *** FIM DA ATUALIZAÇÃO ***
 });
