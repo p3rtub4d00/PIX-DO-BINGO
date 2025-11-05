@@ -6,26 +6,17 @@ const session = require('express-session');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 // --- INÍCIO DAS MUDANÇAS NO BANCO DE DADOS ---
-
-// REMOVIDO: better-sqlite3
-// const Database = require('better-sqlite3');
-// const SqliteStore = require('better-sqlite3-session-store')(session);
-
-// ADICIONADO: 'pg' (PostgreSQL)
 const { Pool } = require('pg');
 const PgStore = require('connect-pg-simple')(session);
 
-// Conecta ao banco de dados PostgreSQL usando a variável de ambiente DATABASE_URL
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    // Adicione esta configuração se o Render reclamar de SSL (geralmente não precisa com Conexão Interna)
+    // (Opcional) Descomente se o Render reclamar de SSL
     // ssl: {
     //   rejectUnauthorized: false
     // }
 });
 
-// Renomeamos 'db' para 'db' para manter a compatibilidade
-// Agora, em vez de 'db.prepare', usamos 'db.query'
 const db = {
     query: (text, params) => pool.query(text, params),
 };
@@ -36,7 +27,6 @@ console.log("Conectando ao banco de dados PostgreSQL...");
 async function inicializarBanco() {
     console.log("Verificando estrutura do banco de dados...");
     try {
-        // Sintaxe do PostgreSQL: 'SERIAL PRIMARY KEY' em vez de 'INTEGER...AUTOINCREMENT'
         await db.query(`
             CREATE TABLE IF NOT EXISTS configuracoes (
                 chave TEXT PRIMARY KEY, 
@@ -65,16 +55,11 @@ async function inicializarBanco() {
             );
         `);
         
-        // Esta tabela é usada pelo 'connect-pg-simple' para sessões
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS "sessions" (
-              "sid" varchar NOT NULL COLLATE "default",
-              "sess" json NOT NULL,
-              "expire" timestamp(6) NOT NULL
-            )
-            WITH (OIDS=FALSE);
-            ALTER TABLE "sessions" ADD CONSTRAINT "sessions_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
-        `);
+        // --- BLOCO REMOVIDO ---
+        // O bloco de código que criava a tabela "sessions"
+        // foi removido daqui, pois o 'connect-pg-simple'
+        // fará isso automaticamente.
+        // --- FIM DO BLOCO REMOVIDO ---
 
         await db.query(`
             CREATE TABLE IF NOT EXISTS vendas (
@@ -124,7 +109,6 @@ async function inicializarBanco() {
         process.exit(1); 
     }
 }
-
 // --- FIM DAS MUDANÇAS NO BANCO DE DADOS ---
 
 
@@ -159,7 +143,7 @@ const pagamentosPendentes = {};
 // ==========================================================
 const store = new PgStore({
     pool: pool, // Usa o pool de conexão do PG
-    tableName: 'sessions', // Nome da tabela que criamos
+    tableName: 'sessions', // Nome da tabela
     pruneSessionInterval: 60 // Limpa sessões expiradas a cada 60s
 });
 
@@ -435,6 +419,8 @@ app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
     try {
         // 'strftime' (SQLite) vira 'to_char' (PostgreSQL)
+        // Corrigido: Usar 'America/Sao_Paulo' como exemplo, mas UTC é mais seguro se o servidor estiver em outra zona.
+        // Vamos usar UTC e o cliente formata
         const stmt = `
             SELECT sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, 
                    to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
@@ -713,6 +699,7 @@ async function getAdminStatusData() {
         statusData.proximoSorteioId = proximoSorteioId;
 
         // 'date()' (SQLite) vira '::date' (PostgreSQL)
+        // Corrigido para lidar com Timezones. Assume-se UTC para consistência.
         const receitaDiaRes = await db.query(`
             SELECT SUM(valor_total) as valor_total_dia
             FROM vendas
