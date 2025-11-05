@@ -41,7 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let jogoEstaAtivo = true; 
     let cartelasSalvas = []; // Agora é preenchido pelo Socket
 
-    // --- INÍCIO DA ATUALIZAÇÃO (Pega Venda ID e dados do Jogador) ---
+    // *** ATUALIZAÇÃO (CORREÇÃO RECONEXÃO) ***
+    // Guarda os números sorteados da rodada atual
+    let numerosSorteadosDaRodada = [];
+    // *** FIM DA ATUALIZAÇÃO ***
+
+
+    // --- Pega Venda ID e dados do Jogador ---
     const urlParams = new URLSearchParams(window.location.search);
     const vendaId = urlParams.get('venda');
     const nomeJogador = sessionStorage.getItem('bingo_usuario_nome'); 
@@ -53,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     console.log(`Página de Jogo para Venda ID: ${vendaId} | Jogador: ${nomeJogador}`);
-    // --- FIM DA ATUALIZAÇÃO ---
 
 
     // --- Lógica de Voz (Sem alterações) ---
@@ -289,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 7. OUVINTES DO SERVIDOR (Sem alterações) ---
+    // --- 7. OUVINTES DO SERVIDOR (Atualizado) ---
     
     function resetarModal() {
         resultadoProvaCartela.style.display = 'none';
@@ -302,19 +307,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // *** ATUALIZAÇÃO (CORREÇÃO RECONEXÃO) ***
+    // Nova função para marcar números no globo e cartelas
+    function marcarNumerosSorteados(numeros) {
+        if (!numeros || numeros.length === 0) return;
+        
+        console.log(`Marcando ${numeros.length} números pré-sorteados...`);
+        
+        numeros.forEach(num => {
+            // Marca no Globo
+            const globoNumEl = document.getElementById(`globo-${num}`);
+            if (globoNumEl) globoNumEl.classList.add('sorteado');
+
+            // Marca nas Cartelas
+            const celulasCartela = document.querySelectorAll(`.cartela-jogador .cartela-numero[data-valor="${num}"]`);
+            celulasCartela.forEach(celula => {
+                celula.classList.add('marcado');
+            });
+        });
+
+        // Atualiza o último número
+        ultimoNumeroEl.textContent = numeros[numeros.length - 1];
+    }
+    // *** FIM DA ATUALIZAÇÃO ***
+
+
     socket.on('novoNumeroSorteado', (numeroSorteado) => {
         if (!jogoEstaAtivo) return; 
         
-        ultimoNumeroEl.textContent = numeroSorteado;
-        const globoNumEl = document.getElementById(`globo-${numeroSorteado}`);
-        if (globoNumEl) globoNumEl.classList.add('sorteado');
-
-        const celulasCartela = document.querySelectorAll('.cartela-jogador .cartela-numero');
-        celulasCartela.forEach(celula => {
-            if (parseInt(celula.dataset.valor) === numeroSorteado) {
-                celula.classList.add('marcado');
-            }
-        });
+        // *** ATUALIZAÇÃO (CORREÇÃO RECONEXÃO) ***
+        // Adiciona o número novo à nossa lista local
+        numerosSorteadosDaRodada.push(numeroSorteado);
+        // Marcamos apenas o número novo (a função antiga já fazia isso)
+        marcarNumerosSorteados([numeroSorteado]);
+        // *** FIM DA ATUALIZAÇÃO ***
 
         const letra = getLetraDoNumero(numeroSorteado); 
         falar(`${letra} ${numeroSorteado}`); 
@@ -405,6 +431,24 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador });
     });
 
+    // *** ATUALIZAÇÃO (CORREÇÃO RECONEXÃO) ***
+    // Novo ouvinte para o 'estadoInicial'
+    socket.on('estadoInicial', (data) => {
+        console.log("Recebido 'estadoInicial' do servidor.");
+        if (data && data.numerosSorteados) {
+            // 1. Salva a lista de números
+            numerosSorteadosDaRodada = data.numerosSorteados;
+            console.log(`Histórico de ${numerosSorteadosDaRodada.length} números recebido.`);
+            
+            // 2. Gera o globo (limpa o antigo)
+            gerarGlobo();
+            
+            // 3. Marca os números no globo E nas cartelas (se já existirem)
+            marcarNumerosSorteados(numerosSorteadosDaRodada);
+        }
+    });
+    // *** FIM DA ATUALIZAÇÃO ***
+
     socket.on('cartelasEncontradas', (data) => {
         const { cartelas } = data;
         console.log(`Recebidas ${cartelas.length} cartelas do servidor.`);
@@ -414,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         totalDeCartelas = cartelasSalvas.length;
         console.log(`Bem-vindo, ${nomeJogador}! Lendo ${totalDeCartelas} cartela(s).`);
 
+        // Gera o globo (necessário aqui também, caso 'estadoInicial' chegue antes)
         gerarGlobo();
 
         cartelasContainer.innerHTML = ''; 
@@ -428,6 +473,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         cartelaAtualIndex = 0; 
         atualizarVisibilidadeCartela(); 
+        
+        // *** ATUALIZAÇÃO (CORREÇÃO RECONEXÃO) ***
+        // Após desenhar as cartelas, marca os números que já saíram
+        marcarNumerosSorteados(numerosSorteadosDaRodada);
+        // *** FIM DA ATUALIZAÇÃO ***
 
         // Agora que as cartelas estão prontas, registra o jogador no sorteio
         socket.emit('registerPlayer', {
