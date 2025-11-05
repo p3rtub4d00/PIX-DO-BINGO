@@ -56,7 +56,6 @@ async function inicializarBanco() {
         `);
         
         // Tabela "sessions" é criada automaticamente pelo connect-pg-simple
-        // O bloco que a criava foi removido para corrigir o erro.
 
         await db.query(`
             CREATE TABLE IF NOT EXISTS vendas (
@@ -70,6 +69,20 @@ async function inicializarBanco() {
                 timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // *** INÍCIO DA ATUALIZAÇÃO (Adiciona coluna de cartelas) ***
+        try {
+            await db.query('ALTER TABLE vendas ADD COLUMN cartelas_json TEXT');
+            console.log("Coluna 'cartelas_json' adicionada à tabela 'vendas'.");
+        } catch (e) {
+            if (e.code === '42701') {
+                // Código '42701' = column already exists (coluna já existe)
+                console.log("Coluna 'cartelas_json' já existe. Ignorando.");
+            } else {
+                throw e;
+            }
+        }
+        // *** FIM DA ATUALIZAÇÃO ***
         
         // Verifica se o admin existe
         const adminRes = await db.query('SELECT COUNT(*) as count FROM usuarios_admin WHERE usuario = $1', ['admin']);
@@ -154,7 +167,7 @@ app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUnini
 app.use(express.json()); 
 
 // ==========================================================
-// *** WEBHOOK MERCADO PAGO (Atualizado para PG) ***
+// *** WEBHOOK MERCADO PAGO (ATUALIZADO - SALVA CARTELAS) ***
 // ==========================================================
 app.post('/webhook-mercadopago', (req, res) => {
     console.log("Webhook do Mercado Pago recebido!");
@@ -185,25 +198,47 @@ app.post('/webhook-mercadopago', (req, res) => {
                     try {
                         let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
                         
-                        // Convertido para PG (usa $1) e 'await'
                         const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
                         const preco = precoRes.rows[0];
                         
                         const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
                         const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
                         
-                        // Convertido para PG (usa $1, $2, etc.)
-                        const stmtVenda = `INSERT INTO vendas (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda) VALUES ($1, $2, $3, $4, $5, $6)`;
-                        await db.query(stmtVenda, [sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null, dadosCompra.quantidade, valorTotal, 'Online']);
-                        
+                        // *** INÍCIO DA ATUALIZAÇÃO (Salvar Cartelas) ***
                         const cartelasGeradas = [];
                         for (let i = 0; i < dadosCompra.quantidade; i++) {
                             cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
                         }
-                        
-                        console.log(`Webhook: Venda registrada e ${cartelasGeradas.length} cartelas geradas.`);
+                        const cartelasJSON = JSON.stringify(cartelasGeradas); // Converte para JSON
 
-                        socket.emit('pagamentoAprovado', {cartelas: cartelasGeradas, nome: dadosCompra.nome, telefone: dadosCompra.telefone});
+                        // Query atualizada para salvar o JSON e retornar o ID
+                        const stmtVenda = `
+                            INSERT INTO vendas 
+                            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
+                            VALUES ($1, $2, $3, $4, $5, $6, $7) 
+                            RETURNING id`; // RETURNING id pega o ID da venda
+                        
+                        const vendaResult = await db.query(stmtVenda, [
+                            sorteioAlvo, 
+                            dadosCompra.nome, 
+                            dadosCompra.telefone || null, 
+                            dadosCompra.quantidade, 
+                            valorTotal, 
+                            'Online',
+                            cartelasJSON // Salva o JSON das cartelas
+                        ]);
+
+                        const vendaId = vendaResult.rows[0].id; // Pega o ID da venda
+                        
+                        console.log(`Webhook: Venda #${vendaId} registrada e ${cartelasGeradas.length} cartelas salvas.`);
+
+                        // Envia o ID da Venda para o cliente, não as cartelas
+                        socket.emit('pagamentoAprovado', {
+                            vendaId: vendaId, 
+                            nome: dadosCompra.nome, 
+                            telefone: dadosCompra.telefone
+                        });
+                        // *** FIM DA ATUALIZAÇÃO ***
 
                         delete pagamentosPendentes[paymentId];
 
@@ -398,15 +433,27 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     console.log(`Admin ${req.session.usuario} está registrando ${quantidade} cartelas para '${nome}' (Tel: ${telefone}) no Sorteio #${sorteioAlvo}.`);
     if (!quantidade || quantidade < 1 || quantidade > 100) { return res.status(400).json({ success: false, message: 'Quantidade inválida (1-100).' }); }
     try {
-        const precoUnitarioAtual = parseFloat(PRECO_CARTELA); const valorTotal = quantidade * precoUnitarioAtual; const cartelasGeradas = [];
-        for (let i = 0; i < quantidade; i++) { cartelasGeradas.push(gerarDadosCartela(sorteioAlvo)); }
-        const manualPlayerId = `manual_${gerarIdUnico()}`; jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
+        const precoUnitarioAtual = parseFloat(PRECO_CARTELA); const valorTotal = quantidade * precoUnitarioAtual; 
         
-        const stmtVenda = `INSERT INTO vendas (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda) VALUES ($1, $2, $3, $4, $5, $6)`;
-        await db.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, valorTotal, 'Manual']);
+        // *** INÍCIO DA ATUALIZAÇÃO (Salvar Cartelas Manuais) ***
+        const cartelasGeradas = [];
+        for (let i = 0; i < quantidade; i++) { cartelasGeradas.push(gerarDadosCartela(sorteioAlvo)); }
+        const cartelasJSON = JSON.stringify(cartelasGeradas); // Converte para JSON
+        // *** FIM DA ATUALIZAÇÃO ***
+        
+        const manualPlayerId = `manual_${gerarIdUnico()}`; 
+        jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
+        
+        // *** INÍCIO DA ATUALIZAÇÃO (Query do Banco) ***
+        const stmtVenda = `
+            INSERT INTO vendas 
+            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7)`;
+        await db.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, valorTotal, 'Manual', cartelasJSON]);
+        // *** FIM DA ATUALIZAÇÃO ***
         
         console.log(`Geradas e REGISTRADAS ${cartelasGeradas.length} cartelas para '${nome}'. Venda registrada.`); io.emit('contagemJogadores', getContagemJogadores());
-        return res.json(cartelasGeradas);
+        return res.json(cartelasGeradas); // Retorna as cartelas para o admin imprimir
     } catch (error) { console.error("Erro ao gerar/registrar cartelas manuais:", error); return res.status(500).json({ success: false, message: 'Erro interno ao gerar cartelas.' }); }
 });
 
@@ -738,7 +785,7 @@ io.on('connection', async (socket) => {
         });
     } catch (error) { console.error("Erro ao emitir estado inicial:", error); }
     
-    // --- FUNÇÃO DE PAGAMENTO ATUALIZADA ---
+    // --- FUNÇÃO DE PAGAMENTO ATUALIZADA (WEBHOOK CORRIGIDO) ---
     socket.on('criarPagamento', async (dadosCompra, callback) => {
         try {
             const { nome, telefone, quantidade } = dadosCompra;
@@ -765,11 +812,7 @@ io.on('connection', async (socket) => {
                 transaction_amount: valorTotal,
                 description: `Compra de ${quantidade} cartela(s) - Bingo do Pix`,
                 payment_method_id: 'pix',
-                
-                // --- CORREÇÃO APLICADA ---
                 notification_url: `${process.env.BASE_URL}/webhook-mercadopago`,
-                // --- FIM DA CORREÇÃO ---
-
                 payer: {
                     email: `jogador_${telefone}@bingo.com`, 
                     first_name: nome,
@@ -817,6 +860,43 @@ io.on('connection', async (socket) => {
             socket.emit('adminStatusUpdate', { error: 'Falha ao buscar status.' });
         }
     });
+
+    // *** INÍCIO DA ATUALIZAÇÃO (Novo Ouvinte) ***
+    socket.on('buscarMinhasCartelas', async (data) => {
+        try {
+            const { vendaId, nome } = data;
+            if (!vendaId || !nome) {
+                console.warn(`Cliente ${socket.id} pediu cartelas com dados inválidos.`);
+                socket.emit('cartelasNaoEncontradas');
+                return;
+            }
+            
+            // Busca no banco de dados
+            const query = "SELECT cartelas_json, nome_jogador FROM vendas WHERE id = $1";
+            const res = await db.query(query, [vendaId]);
+            
+            if (res.rows.length > 0) {
+                const venda = res.rows[0];
+                // Verificação de segurança simples
+                if (venda.nome_jogador === nome) {
+                    console.log(`Encontrada Venda #${vendaId} para ${nome}. Enviando cartelas.`);
+                    const cartelas = JSON.parse(venda.cartelas_json);
+                    socket.emit('cartelasEncontradas', { cartelas: cartelas });
+                } else {
+                    // Nome não bate com o ID
+                    console.warn(`Cliente ${socket.id} tentou pegar Venda #${vendaId} (Nome: ${venda.nome_jogador}) usando o nome ${nome}. REJEITADO.`);
+                    socket.emit('cartelasNaoEncontradas');
+                }
+            } else {
+                console.warn(`Cliente ${socket.id} pediu Venda #${vendaId}, mas ela não foi encontrada.`);
+                socket.emit('cartelasNaoEncontradas');
+            }
+        } catch (error) {
+            console.error("Erro ao buscar cartelas:", error);
+            socket.emit('cartelasNaoEncontradas');
+        }
+    });
+    // *** FIM DA ATUALIZAÇÃO ***
 });
 // ==========================================================
 
