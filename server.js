@@ -70,7 +70,7 @@ async function inicializarBanco() {
             );
         `);
 
-        // *** INÍCIO DA ATUALIZAÇÃO (Adiciona coluna de cartelas) ***
+        // Adiciona coluna de cartelas
         try {
             await db.query('ALTER TABLE vendas ADD COLUMN cartelas_json TEXT');
             console.log("Coluna 'cartelas_json' adicionada à tabela 'vendas'.");
@@ -82,7 +82,6 @@ async function inicializarBanco() {
                 throw e;
             }
         }
-        // *** FIM DA ATUALIZAÇÃO ***
         
         // Verifica se o admin existe
         const adminRes = await db.query('SELECT COUNT(*) as count FROM usuarios_admin WHERE usuario = $1', ['admin']);
@@ -102,10 +101,14 @@ async function inicializarBanco() {
             { chave: 'sorteio_especial_data', valor: 'Dia 25/10/2026 às 19:00' },
             { chave: 'duracao_espera', valor: '20' },
             { chave: 'min_bots', valor: '80' },
-            { chave: 'max_bots', valor: '150' }
+            { chave: 'max_bots', valor: '150' },
+            // *** ATUALIZAÇÃO SORTEIO ***
+            // Adiciona um valor padrão para o número do sorteio
+            { chave: 'numero_sorteio_atual', valor: '500' }
         ];
 
         // Usamos ON CONFLICT para evitar erros de chave duplicada
+        // ON CONFLICT (chave) DO NOTHING = Só insere se a chave não existir
         const configQuery = 'INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO NOTHING';
         for (const config of configs) {
             await db.query(configQuery, [config.chave, config.valor]);
@@ -115,7 +118,6 @@ async function inicializarBanco() {
 
     } catch (err) {
         console.error("ERRO CRÍTICO AO INICIALIZAR O BANCO DE DADOS:", err);
-        // Se falhar aqui, o app não pode continuar.
         process.exit(1); 
     }
 }
@@ -204,7 +206,7 @@ app.post('/webhook-mercadopago', (req, res) => {
                         const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
                         const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
                         
-                        // *** INÍCIO DA ATUALIZAÇÃO (Salvar Cartelas) ***
+                        // *** ATUALIZAÇÃO (Salvar Cartelas) ***
                         const cartelasGeradas = [];
                         for (let i = 0; i < dadosCompra.quantidade; i++) {
                             cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
@@ -268,12 +270,15 @@ let PREMIO_LINHA = '100.00'; let PREMIO_CHEIA = '500.00'; let PRECO_CARTELA = '5
 let DURACAO_ESPERA_ATUAL = 20; 
 let MIN_BOTS_ATUAL = 80;
 let MAX_BOTS_ATUAL = 150;
+let numeroDoSorteio = 500; // Valor padrão, será sobrescrito
 
 // Convertido para 'async'
 async function carregarConfiguracoes() {
     try {
-        const res = await db.query("SELECT chave, valor FROM configuracoes WHERE chave IN ($1, $2, $3, $4, $5, $6)", 
-            ['premio_linha', 'premio_cheia', 'preco_cartela', 'duracao_espera', 'min_bots', 'max_bots']);
+        // *** ATUALIZAÇÃO SORTEIO ***
+        // Pede também o 'numero_sorteio_atual'
+        const res = await db.query("SELECT chave, valor FROM configuracoes WHERE chave IN ($1, $2, $3, $4, $5, $6, $7)", 
+            ['premio_linha', 'premio_cheia', 'preco_cartela', 'duracao_espera', 'min_bots', 'max_bots', 'numero_sorteio_atual']);
         
         const configs = res.rows.reduce((acc, row) => {
             acc[row.chave] = row.valor;
@@ -291,7 +296,14 @@ async function carregarConfiguracoes() {
         if (isNaN(MIN_BOTS_ATUAL) || MIN_BOTS_ATUAL < 0) MIN_BOTS_ATUAL = 0;
         if (isNaN(MAX_BOTS_ATUAL) || MAX_BOTS_ATUAL < MIN_BOTS_ATUAL) MAX_BOTS_ATUAL = MIN_BOTS_ATUAL;
 
+        // *** ATUALIZAÇÃO SORTEIO ***
+        // Carrega o número do sorteio do banco para a variável global
+        numeroDoSorteio = parseInt(configs.numero_sorteio_atual, 10) || 500;
+        if (isNaN(numeroDoSorteio)) numeroDoSorteio = 500;
+
         console.log(`Configurações de Jogo carregadas: Linha=R$${PREMIO_LINHA}, Cheia=R$${PREMIO_CHEIA}, Cartela=R$${PRECO_CARTELA}, Espera=${DURACAO_ESPERA_ATUAL}s, Bots(${MIN_BOTS_ATUAL}-${MAX_BOTS_ATUAL})`); 
+        console.log(`Servidor: Sorteio atual carregado do banco: #${numeroDoSorteio}`); // Novo log
+
     } catch (err) { console.error("Erro ao carregar configurações do DB:", err); }
 }
 // (Será chamado no final do arquivo, após a inicialização do DB)
@@ -435,7 +447,7 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     try {
         const precoUnitarioAtual = parseFloat(PRECO_CARTELA); const valorTotal = quantidade * precoUnitarioAtual; 
         
-        // *** INÍCIO DA ATUALIZAÇÃO (Salvar Cartelas Manuais) ***
+        // *** ATUALIZAÇÃO (Salvar Cartelas Manuais) ***
         const cartelasGeradas = [];
         for (let i = 0; i < quantidade; i++) { cartelasGeradas.push(gerarDadosCartela(sorteioAlvo)); }
         const cartelasJSON = JSON.stringify(cartelasGeradas); // Converte para JSON
@@ -444,7 +456,7 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
         const manualPlayerId = `manual_${gerarIdUnico()}`; 
         jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
         
-        // *** INÍCIO DA ATUALIZAÇÃO (Query do Banco) ***
+        // *** ATUALIZAÇÃO (Query do Banco) ***
         const stmtVenda = `
             INSERT INTO vendas 
             (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
@@ -555,11 +567,8 @@ function checarVencedorCartelaCheia(cartelaData, numerosSorteados) { const carte
 function contarFaltantesParaCheia(cartelaData, numerosSorteadosSet) { if (!cartelaData || !cartelaData.data) return 99; const cartela = cartelaData.data; let faltantes = 0; for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { const num = cartela[i][j]; if (num !== "FREE" && !numerosSorteadosSet.has(num)) { faltantes++; } } } return faltantes; }
 
 // --- Lógica Principal do Jogo (Convertida para PG) ---
-const TEMPO_ENTRE_NUMEROS = 5000;
-const MAX_VENCEDORES_HISTORICO = 10;
-const MIN_CARTELAS_POR_BOT = 1; const MAX_CARTELAS_POR_BOT = 5;
-const LIMITE_FALTANTES_QUASELA = 5; const MAX_JOGADORES_QUASELA = 5;
-let numeroDoSorteio = 500; let estadoJogo = "ESPERANDO";
+// (Removido 'let numeroDoSorteio = 500;' daqui, pois agora é carregado em carregarConfiguracoes)
+let estadoJogo = "ESPERANDO";
 let tempoRestante = DURACAO_ESPERA_ATUAL; 
 let intervaloSorteio = null; let numerosDisponiveis = []; let numerosSorteados = []; let jogadores = {};
 
@@ -670,11 +679,15 @@ async function salvarVencedorNoDB(vencedorInfo) {
     } catch (err) { console.error("Erro ao salvar vencedor no DB:", err); }
 }
 
-function terminarRodada(vencedor, socketVencedor) {
+// *** ATUALIZAÇÃO SORTEIO ***
+// A função agora é 'async' para salvar no banco
+async function terminarRodada(vencedor, socketVencedor) {
     console.log("DEBUG: Dentro de terminarRodada().");
     if (intervaloSorteio) { clearInterval(intervaloSorteio); intervaloSorteio = null; console.log("DEBUG: Intervalo de sorteio parado em terminarRodada."); }
     else { console.warn("DEBUG: terminarRodada chamada, mas intervaloSorteio já era null."); }
+    
     const idSorteioFinalizado = numeroDoSorteio;
+    
     if (vencedor) { 
         if(socketVencedor && io.sockets.sockets.get(socketVencedor)) { 
             io.to(socketVencedor).emit('voceGanhouCartelaCheia', vencedor); 
@@ -684,11 +697,30 @@ function terminarRodada(vencedor, socketVencedor) {
         } 
     }
     else { io.emit('jogoTerminouSemVencedor'); }
+    
     estadoJogo = "ESPERANDO";
     tempoRestante = DURACAO_ESPERA_ATUAL; 
-    numeroDoSorteio++;
+    
+    // *** ATUALIZAÇÃO SORTEIO ***
+    // Incrementa o número do sorteio e SALVA no banco
+    numeroDoSorteio++; // Incrementa a variável global
+    try {
+        // Salva o NOVO número no banco
+        const query = `
+            INSERT INTO configuracoes (chave, valor) 
+            VALUES ($1, $2) 
+            ON CONFLICT (chave) 
+            DO UPDATE SET valor = EXCLUDED.valor;
+        `;
+        await db.query(query, ['numero_sorteio_atual', numeroDoSorteio.toString()]);
+        console.log(`Servidor: Sorteio #${idSorteioFinalizado} terminado. Próximo será #${numeroDoSorteio} (Salvo no DB).`); 
+    } catch (err) {
+        console.error("ERRO CRÍTICO AO SALVAR NÚMERO DO SORTEIO:", err);
+        // O jogo continua, mas o próximo reinício voltará para o número antigo
+    }
+    // *** FIM DA ATUALIZAÇÃO ***
+
     io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); io.emit('atualizarQuaseLa', []);
-    console.log(`Servidor: Sorteio #${idSorteioFinalizado} terminado. Próximo será #${numeroDoSorteio} em ${DURACAO_ESPERA_ATUAL} segundos.`); 
     console.log("DEBUG: terminarRodada() concluída.");
 }
 
@@ -861,7 +893,7 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // *** INÍCIO DA ATUALIZAÇÃO (Novo Ouvinte) ***
+    // *** ATUALIZAÇÃO (Novo Ouvinte) ***
     socket.on('buscarMinhasCartelas', async (data) => {
         try {
             const { vendaId, nome } = data;
@@ -909,7 +941,7 @@ io.on('connection', async (socket) => {
     // 1. Inicializa o banco de dados (cria tabelas, etc.)
     await inicializarBanco();
     
-    // 2. Carrega as configurações (Prêmios, Preços) do banco
+    // 2. Carrega as configurações (Prêmios, Preços E NÚMERO DO SORTEIO)
     await carregarConfiguracoes();
 
     // 3. Inicia o servidor web
