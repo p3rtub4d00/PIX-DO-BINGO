@@ -55,11 +55,8 @@ async function inicializarBanco() {
             );
         `);
         
-        // --- BLOCO REMOVIDO ---
-        // O bloco de código que criava a tabela "sessions"
-        // foi removido daqui, pois o 'connect-pg-simple'
-        // fará isso automaticamente.
-        // --- FIM DO BLOCO REMOVIDO ---
+        // Tabela "sessions" é criada automaticamente pelo connect-pg-simple
+        // O bloco que a criava foi removido para corrigir o erro.
 
         await db.query(`
             CREATE TABLE IF NOT EXISTS vendas (
@@ -419,8 +416,6 @@ app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
     try {
         // 'strftime' (SQLite) vira 'to_char' (PostgreSQL)
-        // Corrigido: Usar 'America/Sao_Paulo' como exemplo, mas UTC é mais seguro se o servidor estiver em outra zona.
-        // Vamos usar UTC e o cliente formata
         const stmt = `
             SELECT sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, 
                    to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
@@ -699,7 +694,6 @@ async function getAdminStatusData() {
         statusData.proximoSorteioId = proximoSorteioId;
 
         // 'date()' (SQLite) vira '::date' (PostgreSQL)
-        // Corrigido para lidar com Timezones. Assume-se UTC para consistência.
         const receitaDiaRes = await db.query(`
             SELECT SUM(valor_total) as valor_total_dia
             FROM vendas
@@ -744,7 +738,7 @@ io.on('connection', async (socket) => {
         });
     } catch (error) { console.error("Erro ao emitir estado inicial:", error); }
     
-    // Convertido para 'async'
+    // --- FUNÇÃO DE PAGAMENTO ATUALIZADA ---
     socket.on('criarPagamento', async (dadosCompra, callback) => {
         try {
             const { nome, telefone, quantidade } = dadosCompra;
@@ -756,13 +750,26 @@ io.on('connection', async (socket) => {
             
             console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade} cartela(s). Total: R$${valorTotal.toFixed(2)}.`);
 
+            // Verifica se a BASE_URL foi configurada
+            if (!process.env.BASE_URL) {
+                console.error("ERRO GRAVE: BASE_URL não está configurada! O Webhook do MercadoPago falhará.");
+                // Retorna um erro para o usuário imediatamente
+                if (typeof callback === 'function') {
+                    callback({ success: false, message: 'Erro no servidor: URL de pagamento não configurada.' });
+                }
+                return; // Impede a continuação
+            }
+
             const payment = new Payment(mpClient);
             const body = {
                 transaction_amount: valorTotal,
                 description: `Compra de ${quantidade} cartela(s) - Bingo do Pix`,
                 payment_method_id: 'pix',
-                // BASE_URL agora vem das variáveis de ambiente
-                notification_url: `${process.env.BASE_URL || `https://seu-dominio.onrender.com`}/webhook-mercadopago`,
+                
+                // --- CORREÇÃO APLICADA ---
+                notification_url: `${process.env.BASE_URL}/webhook-mercadopago`,
+                // --- FIM DA CORREÇÃO ---
+
                 payer: {
                     email: `jogador_${telefone}@bingo.com`, 
                     first_name: nome,
@@ -770,11 +777,6 @@ io.on('connection', async (socket) => {
                 },
                 date_of_expiration: new Date(Date.now() + (10 * 60 * 1000)).toISOString().replace("Z", "-03:00") // 10 min
             };
-            
-            // Verifica se a BASE_URL foi configurada
-            if (!process.env.BASE_URL) {
-                console.error("ERRO GRAVE: BASE_URL não está configurada! O Webhook do MercadoPago falhará.");
-            }
 
             const response = await payment.create({ body });
             
@@ -800,6 +802,7 @@ io.on('connection', async (socket) => {
             }
         }
     });
+    // --- FIM DA FUNÇÃO DE PAGAMENTO ---
     
     socket.on('registerPlayer', (playerData) => { try { if (playerData && playerData.cartelas && playerData.cartelas.length > 0) { const s_id_cartela = playerData.cartelas[0].s_id; if (s_id_cartela === numeroDoSorteio || (estadoJogo === "ESPERANDO")) { console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio #${numeroDoSorteio}.`); jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; io.emit('contagemJogadores', getContagemJogadores()); } else { console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio #${numeroDoSorteio} com cartela inválida (Sorteio #${s_id_cartela}, Estado: ${estadoJogo}). REJEITADO.`); socket.emit('cartelaAntiga'); } } } catch(error) { console.error("Erro em registerPlayer:", error); } });
     socket.on('disconnect', () => { console.log(`Usuário desconectado: ${socket.id}`); const eraJogadorRegistrado = jogadores[socket.id] && jogadores[socket.id].nome && !jogadores[socket.id].isBot && !jogadores[socket.id].isManual; delete jogadores[socket.id]; if (eraJogadorRegistrado) { try { io.emit('contagemJogadores', getContagemJogadores()); } catch (error) { console.error("Erro ao emitir contagemJogadores no disconnect:", error); } } });
