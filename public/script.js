@@ -12,15 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCloseModal = document.querySelector('.modal-close');
     const btnJogueAgora = document.getElementById('btn-jogue-agora');
     
-    // --- INÍCIO DA MODIFICAÇÃO: Seletores de Etapas do Modal ---
     const etapaDados = document.getElementById('etapa-dados');
     const etapaPix = document.getElementById('etapa-pix');
-    const btnGerarPix = document.getElementById('btn-gerar-pix'); // Novo botão
+    const btnGerarPix = document.getElementById('btn-gerar-pix'); 
     const pixQrCodeImg = document.getElementById('pix-qrcode-img');
     const pixCopiaColaInput = document.getElementById('pix-copia-cola');
     const btnCopiarPix = document.getElementById('btn-copiar-pix');
     const aguardandoPagamentoEl = document.getElementById('aguardando-pagamento');
-    // --- FIM DA MODIFICAÇÃO ---
 
     const modalNome = document.getElementById('modal-nome');
     const modalTelefone = document.getElementById('modal-telefone');
@@ -31,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const indexPrecoCartelaEl = document.getElementById('index-preco-cartela'); // Span no botão
     const modalLabelPrecoEl = document.getElementById('modal-label-preco'); // Span no label do modal
 
-    // --- NOVOS Seletores para Sorteio Especial ---
     const premioEspecialContainer = document.getElementById('premio-especial');
     const especialValorEl = document.getElementById('especial-valor');
     const especialDataEl = document.getElementById('especial-data');
@@ -179,12 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
              }
         });
 
-        // *** INÍCIO DA MODIFICAÇÃO: OUVINTE DE PAGAMENTO APROVADO ***
+        // *** INÍCIO DA ATUALIZAÇÃO (Ouvinte de Pagamento) ***
         socket.on('pagamentoAprovado', (data) => {
-            console.log("Pagamento Aprovado! Recebendo cartelas:", data.cartelas);
+            // data agora é: { vendaId, nome, telefone }
+            console.log(`Pagamento Aprovado! Venda ID: ${data.vendaId}`);
             
             // Salva os dados no sessionStorage para a próxima página
-            sessionStorage.setItem('bingo_cartelas', JSON.stringify(data.cartelas)); 
+            // NÃO salvamos mais as cartelas aqui.
             sessionStorage.setItem('bingo_usuario_nome', data.nome); 
             sessionStorage.setItem('bingo_usuario_telefone', data.telefone);
             
@@ -195,13 +193,14 @@ document.addEventListener('DOMContentLoaded', () => {
             modalTelefone.value = ""; 
             modalQuantidadeInput.value = "1";
             
-            window.location.href = 'espera.html';
+            // Redireciona para a sala de espera, passando o ID da Venda na URL
+            window.location.href = `espera.html?venda=${data.vendaId}`;
         });
+        // *** FIM DA ATUALIZAÇÃO ***
 
         socket.on('pagamentoErro', (data) => {
             alert(`Erro no pagamento: ${data.message}`);
             fecharModal(); // Fecha o modal para o usuário tentar de novo
         });
-        // *** FIM DA MODIFICAÇÃO ***
     }
 });
