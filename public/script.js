@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const especialValorEl = document.getElementById('especial-valor');
     const especialDataEl = document.getElementById('especial-data');
 
+    // *** ATUALIZAÇÃO (POLLING ROBUSTO) ***
+    let pollerInterval = null; // Guarda a referência do interval
+    let currentPaymentId = null; // Guarda o ID do pagamento que estamos verificando
+    // *** FIM DA ATUALIZAÇÃO ***
+
     // --- Função para formatar valor BRL ---
     function formatarBRL(valor) {
         const numero = parseFloat(valor);
@@ -69,6 +74,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- *** ATUALIZAÇÃO (POLLING ROBUSTO) *** ---
+    // Esta é a função que checa o pagamento
+    function checarPagamento() {
+        if (currentPaymentId && socket.connected) {
+            console.log(`Polling: Checando status do pagamento ${currentPaymentId}...`);
+            socket.emit('checarMeuPagamento', { paymentId: currentPaymentId });
+        } else {
+            console.log("Polling: Pulado (sem ID de pagamento ou socket desconectado).");
+        }
+    }
+
+    // Funções para controlar o verificador de pagamento
+    function iniciarVerificadorPagamento(paymentId) {
+        // Limpa qualquer verificador antigo
+        pararVerificadorPagamento();
+
+        console.log(`Iniciando verificador para Payment ID: ${paymentId}`);
+        currentPaymentId = paymentId; // Salva o ID que estamos verificando
+        
+        // Verifica imediatamente
+        checarPagamento();
+
+        // E então começa a verificar a cada 3 segundos
+        pollerInterval = setInterval(checarPagamento, 3000); // Pergunta a cada 3 segundos
+    }
+
+    function pararVerificadorPagamento() {
+        if (pollerInterval) {
+            console.log("Parando verificador de pagamento.");
+            clearInterval(pollerInterval);
+            pollerInterval = null;
+        }
+        currentPaymentId = null; // Limpa o ID
+    }
+    // --- *** FIM DA ATUALIZAÇÃO *** ---
+
+
     // --- Função para Fechar o Modal ---
     function fecharModal() { 
         if(modal) modal.style.display = 'none'; 
@@ -79,6 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
             btnGerarPix.disabled = false; 
             btnGerarPix.textContent = "Gerar PIX"; 
         } 
+        
+        // *** ATUALIZAÇÃO (POLLING ROBUSTO) ***
+        pararVerificadorPagamento(); // Para de checar se o usuário fechar o modal
+        // *** FIM DA ATUALIZAÇÃO ***
     }
 
     // --- Event Listener para ABRIR o Modal ---
@@ -108,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnCloseModal) btnCloseModal.addEventListener('click', fecharModal);
     if(modal) modal.addEventListener('click', (event) => { if (event.target === modal) fecharModal(); });
 
-    // --- Event Listener para GERAR PIX (Substitui a simulação) ---
+    // --- Event Listener para GERAR PIX (Atualizado) ---
     if (btnGerarPix && modalNome && modalTelefone && modalQuantidadeInput && socket) {
         btnGerarPix.addEventListener('click', () => {
             const nome = modalNome.value.trim(); const telefone = modalTelefone.value.trim(); const quantidade = parseInt(modalQuantidadeInput.value);
@@ -122,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             socket.emit('criarPagamento', { nome, telefone, quantidade }, (data) => {
                 
                 if (data && data.success) {
-                    console.log("PIX Recebido:", data);
+                    console.log("PIX Recebido, Payment ID:", data.paymentId);
                     // Preenche os dados do PIX
                     pixQrCodeImg.src = `data:image/png;base64,${data.qrCodeBase64}`;
                     pixCopiaColaInput.value = data.qrCodeCopiaCola;
@@ -131,6 +177,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     etapaDados.style.display = 'none';
                     etapaPix.style.display = 'block';
                     aguardandoPagamentoEl.style.display = 'block';
+                    
+                    // *** ATUALIZAÇÃO (POLLING ROBUSTO) ***
+                    // Salva os dados no sessionStorage para a próxima página
+                    // Fazemos isso AGORA, antes do pagamento ser aprovado
+                    sessionStorage.setItem('bingo_usuario_nome', nome); 
+                    sessionStorage.setItem('bingo_usuario_telefone', telefone);
+                    // Salva o paymentId no session storage (para o caso de reload da página)
+                    sessionStorage.setItem('bingo_payment_id', data.paymentId); 
+                    // Inicia o verificador
+                    iniciarVerificadorPagamento(data.paymentId);
+                    // *** FIM DA ATUALIZAÇÃO ***
 
                 } else {
                     alert(`Erro: ${data.message || 'Não foi possível gerar o PIX.'}`);
@@ -176,15 +233,21 @@ document.addEventListener('DOMContentLoaded', () => {
              }
         });
 
-        // *** INÍCIO DA ATUALIZAÇÃO (Ouvinte de Pagamento) ***
+        // *** ATUALIZAÇÃO (POLLING ROBUSTO) ***
+        // Este ouvinte agora é ativado pelo NOSSO poller
         socket.on('pagamentoAprovado', (data) => {
-            // data agora é: { vendaId, nome, telefone }
+            // data é: { vendaId, nome, telefone }
             console.log(`Pagamento Aprovado! Venda ID: ${data.vendaId}`);
             
-            // Salva os dados no sessionStorage para a próxima página
-            // NÃO salvamos mais as cartelas aqui.
-            sessionStorage.setItem('bingo_usuario_nome', data.nome); 
-            sessionStorage.setItem('bingo_usuario_telefone', data.telefone);
+            pararVerificadorPagamento(); // Para de perguntar ao servidor
+            sessionStorage.removeItem('bingo_payment_id'); // Limpa o ID
+            
+            // Verificamos se o nome salvo é o mesmo (segurança extra)
+            const nomeSalvo = sessionStorage.getItem('bingo_usuario_nome');
+            if (nomeSalvo !== data.nome) {
+                 console.warn("Pagamento aprovado, mas o nome não bate. Ignorando.");
+                 return;
+            }
             
             alert("Pagamento confirmado!\n\nCartelas geradas.\nIndo para a sala de espera.");
             
@@ -199,8 +262,37 @@ document.addEventListener('DOMContentLoaded', () => {
         // *** FIM DA ATUALIZAÇÃO ***
 
         socket.on('pagamentoErro', (data) => {
-            alert(`Erro no pagamento: ${data.message}`);
+            // Este erro agora só é chamado se o *webhook* falhar
+            alert(`Erro no servidor de pagamento: ${data.message}`);
+            pararVerificadorPagamento();
+            sessionStorage.removeItem('bingo_payment_id'); // Limpa o ID
             fecharModal(); // Fecha o modal para o usuário tentar de novo
         });
+
+        // *** ATUALIZAÇÃO (POLLING ROBUSTO) ***
+        // Ouvinte para quando o socket reconectar (ex: trocou de app e voltou)
+        socket.on('connect', () => {
+            console.log("Socket reconectado.");
+            // Tenta checar o pagamento se o usuário estiver na etapa 2 do modal
+            const paymentIdSalvo = sessionStorage.getItem('bingo_payment_id');
+            if (paymentIdSalvo && etapaPix.style.display === 'block') {
+                console.log("Reconectado. Reiniciando verificador.");
+                iniciarVerificadorPagamento(paymentIdSalvo);
+            }
+        });
+        
+        // Ouvinte para quando a ABA do navegador ficar visível
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                console.log("Aba do navegador ficou visível.");
+                // Tenta checar o pagamento se o usuário estiver na etapa 2 do modal
+                const paymentIdSalvo = sessionStorage.getItem('bingo_payment_id');
+                if (paymentIdSalvo && etapaPix.style.display === 'block') {
+                    console.log("Aba visível. Forçando uma checagem de pagamento.");
+                    checarPagamento(); // Força uma checagem imediata
+                }
+            }
+        });
+        // *** FIM DA ATUALIZAÇÃO ***
     }
 });
