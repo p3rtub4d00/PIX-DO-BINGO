@@ -106,6 +106,7 @@ async function inicializarBanco() {
         `);
         console.log("Tabela 'pagamentos_pendentes' verificada.");
 
+        
         // *** ATUALIZAÇÃO (CAMBISTAS) ***
         // 1. Cria a tabela de Cambistas
         await db.query(`
@@ -148,7 +149,7 @@ async function inicializarBanco() {
         // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
         
         
-        // Verifica se o admin existe e qual sua senha
+        // Verifica se o admin existe e qual sua senha (lógica de correção de senha)
         const adminRes = await db.query('SELECT senha FROM usuarios_admin WHERE usuario = $1', ['admin']);
         
         const saltRounds = 10;
@@ -161,12 +162,10 @@ async function inicializarBanco() {
         } else {
             // Admin existe, checa a senha
             const senhaAtual = adminRes.rows[0].senha;
-            // Se a senha NÃO começar com '$2' (prefixo do bcrypt), ela é plaintext e precisa ser atualizada
             if (!senhaAtual.startsWith('$2')) {
                 await db.query('UPDATE usuarios_admin SET senha = $1 WHERE usuario = $2', [senhaHash, 'admin']);
                 console.log("Senha do 'admin' atualizada para formato criptografado.");
             } else {
-                // A senha já está criptografada, tudo certo.
                 console.log("Usuário 'admin' já possui senha criptografada.");
             }
         }
@@ -515,23 +514,19 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     try {
         const precoUnitarioAtual = parseFloat(PRECO_CARTELA); const valorTotal = quantidade * precoUnitarioAtual; 
         
-        // *** ATUALIZAÇÃO (Salvar Cartelas Manuais) ***
         const cartelasGeradas = [];
         for (let i = 0; i < quantidade; i++) { cartelasGeradas.push(gerarDadosCartela(sorteioAlvo)); }
-        const cartelasJSON = JSON.stringify(cartelasGeradas); // Converte para JSON
-        // *** FIM DA ATUALIZAÇÃO ***
+        const cartelasJSON = JSON.stringify(cartelasGeradas); 
         
         const manualPlayerId = `manual_${gerarIdUnico()}`; 
         jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
         
-        // *** ATUALIZAÇÃO (Query do Banco) ***
         const stmtVenda = `
             INSERT INTO vendas 
             (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
             VALUES ($1, $2, $3, $4, $5, $6, $7)`;
-        // O payment_id de uma venda manual é null
+        // O payment_id e cambista_id de uma venda manual são null
         await db.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, valorTotal, 'Manual', cartelasJSON]);
-        // *** FIM DA ATUALIZAÇÃO ***
         
         console.log(`Geradas e REGISTRADAS ${cartelasGeradas.length} cartelas para '${nome}'. Venda registrada.`); io.emit('contagemJogadores', getContagemJogadores());
         return res.json(cartelasGeradas); // Retorna as cartelas para o admin imprimir
@@ -619,6 +614,98 @@ app.post('/admin/api/vencedores/limpar', checkAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro interno ao limpar relatório.' });
     }
 });
+
+
+// *** ATUALIZAÇÃO (CAMBISTAS) ***
+// Novas rotas de API para o Admin gerenciar cambistas
+app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
+    try {
+        const result = await db.query('SELECT id, usuario, saldo_creditos, ativo FROM cambistas ORDER BY usuario');
+        res.json({ success: true, cambistas: result.rows });
+    } catch (err) {
+        console.error("Erro ao buscar cambistas:", err);
+        res.status(500).json({ success: false, message: "Erro ao buscar cambistas." });
+    }
+});
+
+app.post('/admin/api/cambistas/criar', checkAdmin, async (req, res) => {
+    const { usuario, senha } = req.body;
+    if (!usuario || !senha) {
+        return res.status(400).json({ success: false, message: "Usuário e Senha são obrigatórios." });
+    }
+
+    try {
+        const saltRounds = 10;
+        const senhaHash = await bcrypt.hash(senha, saltRounds);
+        
+        const query = "INSERT INTO cambistas (usuario, senha) VALUES ($1, $2) RETURNING id";
+        const result = await db.query(query, [usuario, senhaHash]);
+        
+        console.log(`Admin ${req.session.usuario} criou o cambista ${usuario} (ID: ${result.rows[0].id})`);
+        res.status(201).json({ success: true, message: "Cambista criado com sucesso!", id: result.rows[0].id });
+        
+    } catch (err) {
+        if (err.code === '23505') { // Erro de 'unique violation'
+             console.error("Erro ao criar cambista: Usuário já existe.");
+             res.status(409).json({ success: false, message: "Este nome de usuário já está em uso." });
+        } else {
+             console.error("Erro ao criar cambista:", err);
+             res.status(500).json({ success: false, message: "Erro interno ao criar cambista." });
+        }
+    }
+});
+
+app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, async (req, res) => {
+    const { cambistaId, valor } = req.body;
+    const valorNum = parseFloat(valor);
+    const adminUsuario = req.session.usuario; // Pega o admin logado
+
+    if (!cambistaId || !valorNum || valorNum <= 0) {
+        return res.status(400).json({ success: false, message: "ID do cambista e valor válido são obrigatórios." });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Adiciona o saldo na tabela 'cambistas' e retorna o novo saldo
+        const saldoQuery = `
+            UPDATE cambistas 
+            SET saldo_creditos = saldo_creditos + $1 
+            WHERE id = $2 
+            RETURNING saldo_creditos, usuario
+        `;
+        const saldoResult = await client.query(saldoQuery, [valorNum, cambistaId]);
+        
+        if (saldoResult.rows.length === 0) {
+            throw new Error("Cambista não encontrado.");
+        }
+        
+        const novoSaldo = saldoResult.rows[0].saldo_creditos;
+        const cambistaUsuario = saldoResult.rows[0].usuario;
+
+        // 2. Registra a transação no histórico
+        const logQuery = `
+            INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo)
+            VALUES ($1, $2, $3, 'recarga')
+        `;
+        await client.query(logQuery, [cambistaId, adminUsuario, valorNum]);
+        
+        await client.query('COMMIT');
+        
+        console.log(`Admin ${adminUsuario} adicionou ${valorNum} créditos para ${cambistaUsuario}. Novo saldo: ${novoSaldo}`);
+        res.json({ success: true, message: "Créditos adicionados!", novoSaldo: novoSaldo });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Erro ao adicionar créditos:", err);
+        res.status(500).json({ success: false, message: err.message || "Erro interno ao adicionar créditos." });
+    } finally {
+        client.release();
+    }
+});
+// *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
+
 
 app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'admin')));
 // ==========================================================
