@@ -4,6 +4,7 @@ const http = require('http');
 const { Server } = require("socket.io");
 const session = require('express-session');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
+const bcrypt = require('bcrypt'); // *** ATUALIZAÇÃO (SENHA HASH) ***
 
 // --- INÍCIO DAS MUDANÇAS NO BANCO DE DADOS ---
 const { Pool } = require('pg');
@@ -108,9 +109,15 @@ async function inicializarBanco() {
         // Verifica se o admin existe
         const adminRes = await db.query('SELECT COUNT(*) as count FROM usuarios_admin WHERE usuario = $1', ['admin']);
         if (adminRes.rows[0].count == 0) {
-            // ATENÇÃO: A senha 'admin123' AINDA É INSEGURA. Devemos corrigir isso depois.
-            await db.query('INSERT INTO usuarios_admin (usuario, senha) VALUES ($1, $2)', ['admin', 'admin123']);
-            console.log("Usuário 'admin' criado.");
+            
+            // *** ATUALIZAÇÃO (SENHA HASH) ***
+            // Criptografa a senha 'admin123'
+            const saltRounds = 10;
+            const senhaHash = await bcrypt.hash('admin123', saltRounds);
+            await db.query('INSERT INTO usuarios_admin (usuario, senha) VALUES ($1, $2)', ['admin', senhaHash]);
+            console.log("Usuário 'admin' criado com senha criptografada.");
+            // *** FIM DA ATUALIZAÇÃO ***
+
         }
 
         // Insere configurações padrão
@@ -198,7 +205,6 @@ app.post('/webhook-mercadopago', (req, res) => {
                 const status = pagamento.status;
                 console.log(`Webhook: Status do Pagamento ${paymentId} é: ${status}`);
 
-                // *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
                 if (status === 'approved') {
                     // 1. Busca o pagamento pendente no BANCO DE DADOS
                     console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
@@ -207,7 +213,6 @@ app.post('/webhook-mercadopago', (req, res) => {
 
                     if (pendingPaymentResult.rows.length > 0) {
                         const pendingPayment = pendingPaymentResult.rows[0];
-                        // const socketId = pendingPayment.socket_id; // Não precisamos mais disso
                         const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
                         
                         console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
@@ -246,13 +251,10 @@ app.post('/webhook-mercadopago', (req, res) => {
 
                         } catch (dbError) {
                             console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
-                            // Se der erro aqui, o pagamento fica no 'pagamentos_pendentes' para análise manual
                         }
                     } else {
                          console.warn(`Webhook: Pagamento ${paymentId} aprovado, mas NÃO FOI ENCONTRADO no banco 'pagamentos_pendentes'. (Pode ser um pagamento antigo ou um erro)`);
                     }
-                // *** FIM DA ATUALIZAÇÃO ***
-
                 } else if (status === 'cancelled' || status === 'rejected') {
                     // Se foi cancelado ou rejeitado, limpa do banco
                     await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
@@ -336,17 +338,19 @@ app.get('/api/config', async (req, res) => {
 app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'anuncio.html')); });
 app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/dashboard.html', (req, res) => { res.redirect('/dashboard'); });
+
+// *** ATUALIZAÇÃO (PING) ***
 // Rota de "ping" para manter o servidor do Render Hobby acordado
 app.get('/ping', (req, res) => {
     console.log("Ping recebido, mantendo o servidor acordado.");
     res.status(200).send('pong');
 });
+// *** FIM DA ATUALIZAÇÃO ***
 
-// (A linha app.use(express.static... deve ficar logo abaixo disto)
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==========================================================
-// *** ROTAS DE ADMINISTRAÇÃO (Atualizado para PG) ***
+// *** ROTAS DE ADMINISTRAÇÃO (ATUALIZADO - LOGIN HASH) ***
 // ==========================================================
 
 // Convertido para 'async'
@@ -354,14 +358,20 @@ app.post('/admin/login', async (req, res) => {
     const { usuario, senha } = req.body; console.log(`Tentativa de login admin para usuário: ${usuario}`);
     if (!usuario || !senha) return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
     try {
+        // *** ATUALIZAÇÃO (SENHA HASH) ***
         const stmt = 'SELECT * FROM usuarios_admin WHERE usuario = $1';
         const resDB = await db.query(stmt, [usuario]);
-        const adminUser = resDB.rows[0]; // .get() vira .rows[0]
+        const adminUser = resDB.rows[0];
 
-        if (adminUser && adminUser.senha === senha) { // Lembrete: Usar bcrypt
+        // Compara a senha digitada com o hash salvo no banco
+        if (adminUser && (await bcrypt.compare(senha, adminUser.senha))) {
             req.session.isAdmin = true; req.session.usuario = adminUser.usuario; console.log(`Login admin bem-sucedido para: ${adminUser.usuario}`);
             req.session.save(err => { if (err) { console.error("Erro ao salvar sessão:", err); return res.status(500).json({ success: false, message: 'Erro interno ao iniciar sessão.' }); } return res.json({ success: true }); });
-        } else { console.log(`Falha no login admin para: ${usuario}`); return res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' }); }
+        } else {
+            console.log(`Falha no login admin para: ${usuario}`); return res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' });
+        }
+        // *** FIM DA ATUALIZAÇÃO ***
+
     } catch (error) { console.error("Erro durante o login admin:", error); return res.status(500).json({ success: false, message: 'Erro interno do servidor.' }); }
 });
 
@@ -662,7 +672,7 @@ async function sortearNumero() { // Convertido para 'async'
         } } if (vencedorLinhaEncontrado) break; }
     }
 
-    // *** ATUALIZAÇÃO (CORREÇÃO DO BUG DO DELAY) ***
+    // ATUALIZAÇÃO (CORREÇÃO DO BUG DO DELAY)
     if (estadoJogo === "JOGANDO_CHEIA") {
         for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; 
             
@@ -711,13 +721,11 @@ async function sortearNumero() { // Convertido para 'async'
                     // 6. TERMINA A RODADA (e emite 'alguemGanhouCartelaCheia' para o jogo.html)
                     terminarRodada(dadosVencedor, socketVencedor); 
                 }, TEMPO_DELAY_ANUNCIO);
-                // *** FIM DA ATUALIZAÇÃO (CORREÇÃO DO BUG DO DELAY) ***
                 
                 return; // Para o loop de checagem de vencedores
             } 
         } }
     }
-    // *** FIM DA ATUALIZAÇÃO ***
 
 
     if (estadoJogo === "JOGANDO_LINHA" || estadoJogo === "JOGANDO_CHEIA") {
@@ -1064,4 +1072,3 @@ process.on('exit', () => pool.end());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
-
