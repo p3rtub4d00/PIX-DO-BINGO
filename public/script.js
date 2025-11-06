@@ -1,7 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     let socket;
-    try { socket = io(); console.log("Conectado ao servidor Socket.IO."); }
+    try { 
+        // Voltamos a usar o script local, já que o painel admin funciona
+        socket = io(); 
+        console.log("Conectado ao servidor Socket.IO."); 
+    }
     catch (err) { console.error("Erro ao conectar ao Socket.IO:", err); alert("Erro de conexão com o servidor. Recarregue."); }
 
     // --- Variável Global para Preço (será atualizada) ---
@@ -16,15 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const etapaPix = document.getElementById('etapa-pix');
     const btnGerarPix = document.getElementById('btn-gerar-pix'); 
     
-    // --- LINHA CORRIGIDA ABAIXO ---
+    // --- CORREÇÃO DE SINTAXE (btnCopiarPix) ---
     const btnCopiarPix = document.getElementById('btn-copiar-pix'); 
-
-    // --- (INÍCIO) Seletores para Correção ---
     const pixQrCodeImg = document.getElementById('pix-qrcode-img');
     const pixQrContainer = document.getElementById('pix-qrcode-container'); // Container da imagem
     const pixCopiaColaInput = document.getElementById('pix-copia-cola');
     const pixCopiaContainer = pixCopiaColaInput.closest('.form-grupo'); // Container do Copia/Cola
-    // --- (FIM) Seletores para Correção ---
+    // --- FIM DA CORREÇÃO ---
     
     const aguardandoPagamentoEl = document.getElementById('aguardando-pagamento');
 
@@ -202,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(modal) modal.addEventListener('click', (event) => { if (event.target === modal) fecharModal(); });
 
     // ==========================================================
-    // --- CORREÇÃO (1/2): LÓGICA DE GERAR PIX ---
+    // --- LÓGICA DE GERAR PIX (VOLTANDO AO ORIGINAL) ---
     // ==========================================================
     if (btnGerarPix && modalNome && modalTelefone && modalQuantidadeInput && socket) {
         btnGerarPix.addEventListener('click', () => {
@@ -220,14 +222,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             socket.emit('criarPagamento', { nome, telefone, quantidade }, (data) => {
                 
-                if (data && data.success && data.qrCodeCopiaCola) { // <-- Verificamos se qrCodeCopiaCola existe
+                // --- VOLTANDO À LÓGICA ORIGINAL QUE USA Base64 ---
+                if (data && data.success) {
                     console.log("PIX Recebido, Payment ID:", data.paymentId);
 
                     // --- INÍCIO DA CORREÇÃO ---
-                    // Geramos o QR Code usando a string 'Copia e Cola'
-                    const qrCodeString = encodeURIComponent(data.qrCodeCopiaCola);
-                    pixQrCodeImg.src = `https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=${qrCodeString}`;
-                    pixQrCodeImg.style.display = 'block'; // Garante que está visível
+                    // Usando o 'qrCodeBase64' original
+                    pixQrCodeImg.src = `data:image/png;base64,${data.qrCodeBase64}`;
+                    pixQrCodeImg.style.display = 'block';
                     // --- FIM DA CORREÇÃO ---
 
                     pixCopiaColaInput.value = data.qrCodeCopiaCola;
@@ -251,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else { console.error("Erro: Elementos do modal ou socket não encontrados para 'Gerar PIX'."); }
     
+    // CORRIGIDO (btnCopiarPix agora está definido)
     if(btnCopiarPix && pixCopiaColaInput) {
         btnCopiarPix.addEventListener('click', () => {
             pixCopiaColaInput.select();
@@ -353,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // ==========================================================
-    // --- CORREÇÃO (2/2): LÓGICA DE RECARREGAMENTO DE PÁGINA ---
+    // --- LÓGICA DE RECARREGAMENTO DE PÁGINA (CORRIGIDA) ---
     // ==========================================================
     const paymentIdSalvo = sessionStorage.getItem('bingo_payment_id');
     if (paymentIdSalvo) {
