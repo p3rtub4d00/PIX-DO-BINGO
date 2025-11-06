@@ -34,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function carregarCambistas() {
         if (!tabelaCorpo || !selectCambistaRecarga) return;
 
-        tabelaCorpo.innerHTML = `<tr><td colspan="4" style="text-align: center;">Carregando...</td></tr>`;
+        // *** COLSPAN ATUALIZADO PARA 5 ***
+        tabelaCorpo.innerHTML = `<tr><td colspan="5" style="text-align: center;">Carregando...</td></tr>`;
         selectCambistaRecarga.innerHTML = '<option value="">Carregando...</option>';
         selectCambistaRecarga.disabled = true;
 
@@ -51,18 +52,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectCambistaRecarga.innerHTML = '<option value="">Selecione um cambista</option>';
                 
                 if (data.cambistas.length === 0) {
-                     tabelaCorpo.innerHTML = `<tr><td colspan="4" style="text-align: center;">Nenhum cambista criado.</td></tr>`;
+                    // *** COLSPAN ATUALIZADO PARA 5 ***
+                     tabelaCorpo.innerHTML = `<tr><td colspan="5" style="text-align: center;">Nenhum cambista criado.</td></tr>`;
                 }
 
                 data.cambistas.forEach(c => {
                     // Adiciona na tabela
                     const linha = document.createElement('tr');
+                    
+                    // *** INÍCIO DA ATUALIZAÇÃO (Lógica do Botão) ***
+                    const statusTexto = c.ativo ? 'Ativo' : 'Inativo';
+                    const statusClasse = c.ativo ? 'status-pago' : 'status-pendente'; // Reusa classes CSS
+                    const botaoTexto = c.ativo ? 'Desativar' : 'Ativar';
+                    // Reusa classes de botão: 'btn-perigo' (vermelho) e 'btn-pagar' (verde)
+                    const botaoClasse = c.ativo ? 'btn-perigo' : 'btn-pagar'; 
+                    
                     linha.innerHTML = `
                         <td>${c.id}</td>
                         <td>${c.usuario}</td>
                         <td>${formatarBRL(c.saldo_creditos)}</td>
-                        <td><span class="status-pagamento ${c.ativo ? 'status-pago' : 'status-pendente'}">${c.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                        <td><span class="status-pagamento ${statusClasse}">${statusTexto}</span></td>
+                        <td class="col-acao">
+                            <button class="btn-toggle-status ${botaoClasse}" data-id="${c.id}" style="font-size: 0.85em; padding: 5px 10px; width: 80px;">
+                                ${botaoTexto}
+                            </button>
+                        </td>
                     `;
+                    // *** FIM DA ATUALIZAÇÃO ***
+
                     tabelaCorpo.appendChild(linha);
 
                     // Adiciona no select (apenas se estiver ativo)
@@ -79,7 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error(error);
-            tabelaCorpo.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">${error.message}</td></tr>`;
+            // *** COLSPAN ATUALIZADO PARA 5 ***
+            tabelaCorpo.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">${error.message}</td></tr>`;
             selectCambistaRecarga.innerHTML = '<option value="">Erro ao carregar</option>';
         }
     }
@@ -163,6 +181,74 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.textContent = 'Adicionar Créditos';
         }
     });
+
+    // ==========================================================
+    // *** NOVO CÓDIGO (LÓGICA PARA O BOTÃO ATIVAR/DESATIVAR) ***
+    // ==========================================================
+    
+    // Delegação de evento para os botões na tabela
+    tabelaCorpo.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-toggle-status')) {
+            const id = e.target.dataset.id;
+            const cambistaUsuario = e.target.closest('tr').cells[1].textContent;
+            const acao = e.target.textContent;
+
+            if (confirm(`Tem certeza que deseja ${acao.toLowerCase()} o cambista "${cambistaUsuario}"?`)) {
+                toggleCambistaStatus(id, e.target);
+            }
+        }
+    });
+
+    async function toggleCambistaStatus(id, botao) {
+        const acaoOriginal = botao.textContent;
+        botao.disabled = true;
+        botao.textContent = '...';
+
+        try {
+            const response = await fetch('/admin/api/cambistas/toggle-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ cambistaId: id }),
+            });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                // Atualizar a UI
+                const novoStatus = data.novoStatus; // true ou false
+                const linha = botao.closest('tr');
+                const statusSpan = linha.querySelector('.status-pagamento');
+
+                if (novoStatus === true) {
+                    statusSpan.textContent = 'Ativo';
+                    statusSpan.className = 'status-pagamento status-pago';
+                    botao.textContent = 'Desativar';
+                    botao.className = 'btn-toggle-status btn-perigo';
+                } else {
+                    statusSpan.textContent = 'Inativo';
+                    statusSpan.className = 'status-pagamento status-pendente';
+                    botao.textContent = 'Ativar';
+                    botao.className = 'btn-toggle-status btn-pagar';
+                }
+                
+                // Recarrega a lista para atualizar o dropdown de Recarga (remover/adicionar o nome)
+                // Usamos um pequeno delay para o admin ver a mudança antes da lista recarregar
+                setTimeout(carregarCambistas, 500);
+                
+            } else {
+                throw new Error(data.message || 'Erro ao atualizar status.');
+            }
+        } catch (err) {
+            // Reusa o status box da recarga para exibir o erro
+            mostrarStatus(recargaStatus, err.message, false); 
+            botao.textContent = acaoOriginal;
+        } finally {
+            botao.disabled = false;
+        }
+    }
+    // ==========================================================
+    // *** FIM DO NOVO CÓDIGO ***
+    // ==========================================================
+
 
     // Carrega tudo ao iniciar
     carregarCambistas();
