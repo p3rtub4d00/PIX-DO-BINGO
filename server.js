@@ -5,7 +5,6 @@ const { Server } = require("socket.io");
 const session = require('express-session');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const bcrypt = require('bcrypt'); // Importa o bcrypt
-const crypto = require('crypto'); // <-- 1. ADICIONADO para a validação
 const crypto = require('crypto'); // <-- ADICIONADO para a validação
 
 // --- INÍCIO DAS MUDANÇAS NO BANCO DE DADOS ---
@@ -31,47 +30,47 @@ async function inicializarBanco() {
 console.log("Verificando estrutura do banco de dados...");
 try {
 await db.query(`
-          CREATE TABLE IF NOT EXISTS configuracoes (
-              chave TEXT PRIMARY KEY, 
-              valor TEXT
-          );
-      `);
+           CREATE TABLE IF NOT EXISTS configuracoes (
+               chave TEXT PRIMARY KEY, 
+               valor TEXT
+           );
+       `);
 
 await db.query(`
-          CREATE TABLE IF NOT EXISTS vencedores (
-              id SERIAL PRIMARY KEY, 
-              sorteio_id INTEGER NOT NULL, 
-              premio TEXT NOT NULL, 
-              nome TEXT NOT NULL, 
-              telefone TEXT, 
-              cartela_id TEXT, 
-              timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, 
-              status_pagamento TEXT DEFAULT 'Pendente' NOT NULL 
-          );
-      `);
+           CREATE TABLE IF NOT EXISTS vencedores (
+               id SERIAL PRIMARY KEY, 
+               sorteio_id INTEGER NOT NULL, 
+               premio TEXT NOT NULL, 
+               nome TEXT NOT NULL, 
+               telefone TEXT, 
+               cartela_id TEXT, 
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, 
+               status_pagamento TEXT DEFAULT 'Pendente' NOT NULL 
+           );
+       `);
 
 await db.query(`
-          CREATE TABLE IF NOT EXISTS usuarios_admin (
-              id SERIAL PRIMARY KEY, 
-              usuario TEXT UNIQUE NOT NULL, 
-              senha TEXT NOT NULL
-          );
-      `);
+           CREATE TABLE IF NOT EXISTS usuarios_admin (
+               id SERIAL PRIMARY KEY, 
+               usuario TEXT UNIQUE NOT NULL, 
+               senha TEXT NOT NULL
+           );
+       `);
 
 // Tabela "sessions" é criada automaticamente pelo connect-pg-simple
 
 await db.query(`
-          CREATE TABLE IF NOT EXISTS vendas (
-              id SERIAL PRIMARY KEY, 
-              sorteio_id INTEGER NOT NULL, 
-              nome_jogador TEXT NOT NULL, 
-              telefone TEXT, 
-              quantidade_cartelas INTEGER NOT NULL, 
-              valor_total REAL NOT NULL, 
-              tipo_venda TEXT NOT NULL, 
-              timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-          );
-      `);
+           CREATE TABLE IF NOT EXISTS vendas (
+               id SERIAL PRIMARY KEY, 
+               sorteio_id INTEGER NOT NULL, 
+               nome_jogador TEXT NOT NULL, 
+               telefone TEXT, 
+               quantidade_cartelas INTEGER NOT NULL, 
+               valor_total REAL NOT NULL, 
+               tipo_venda TEXT NOT NULL, 
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+           );
+       `);
 
 // Adiciona coluna de cartelas
 try {
@@ -99,42 +98,42 @@ throw e;
 
 // Cria a tabela para pagamentos pendentes
 await db.query(`
-          CREATE TABLE IF NOT EXISTS pagamentos_pendentes (
-              payment_id TEXT PRIMARY KEY,
-              socket_id TEXT NOT NULL,
-              dados_compra_json TEXT NOT NULL,
-              timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-          );
-      `);
+           CREATE TABLE IF NOT EXISTS pagamentos_pendentes (
+               payment_id TEXT PRIMARY KEY,
+               socket_id TEXT NOT NULL,
+               dados_compra_json TEXT NOT NULL,
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+           );
+       `);
 console.log("Tabela 'pagamentos_pendentes' verificada.");
 
 
-// *** ATUALIZAÇÃO (CAMBISTAS) ***
+        // *** ATUALIZAÇÃO (CAMBISTAS) ***
 // 1. Cria a tabela de Cambistas
 await db.query(`
-          CREATE TABLE IF NOT EXISTS cambistas (
-              id SERIAL PRIMARY KEY,
-              usuario TEXT UNIQUE NOT NULL,
-              senha TEXT NOT NULL,
-              saldo_creditos REAL DEFAULT 0 NOT NULL,
-              ativo BOOLEAN DEFAULT true NOT NULL,
-              timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-          );
-      `);
+           CREATE TABLE IF NOT EXISTS cambistas (
+               id SERIAL PRIMARY KEY,
+               usuario TEXT UNIQUE NOT NULL,
+               senha TEXT NOT NULL,
+               saldo_creditos REAL DEFAULT 0 NOT NULL,
+               ativo BOOLEAN DEFAULT true NOT NULL,
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+           );
+       `);
 console.log("Tabela 'cambistas' verificada.");
 
 // 2. Cria a tabela de Transações de Créditos (histórico)
 await db.query(`
-          CREATE TABLE IF NOT EXISTS transacoes_creditos (
-              id SERIAL PRIMARY KEY,
-              cambista_id INTEGER NOT NULL REFERENCES cambistas(id),
-              admin_usuario TEXT NOT NULL,
-              valor_alteracao REAL NOT NULL,
-              tipo TEXT NOT NULL, -- 'recarga' ou 'venda'
-              venda_id INTEGER NULL, -- ID da venda (se for do tipo 'venda')
-              timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-          );
-      `);
+           CREATE TABLE IF NOT EXISTS transacoes_creditos (
+               id SERIAL PRIMARY KEY,
+               cambista_id INTEGER NOT NULL REFERENCES cambistas(id),
+               admin_usuario TEXT NOT NULL,
+               valor_alteracao REAL NOT NULL,
+               tipo TEXT NOT NULL, -- 'recarga' ou 'venda'
+               venda_id INTEGER NULL, -- ID da venda (se for do tipo 'venda')
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+           );
+       `);
 console.log("Tabela 'transacoes_creditos' verificada.");
 
 // 3. Adiciona a coluna 'cambista_id' na tabela 'vendas'
@@ -148,7 +147,7 @@ console.log("Coluna 'cambista_id' já existe. Ignorando.");
 throw e;
 }
 }
-// *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
+        // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
 
 
 // Verifica se o admin existe e qual sua senha (lógica de correção de senha)
@@ -221,10 +220,9 @@ if (!MERCADOPAGO_ACCESS_TOKEN) {
 console.warn("AVISO: MERCADOPAGO_ACCESS_TOKEN não foi configurado nas variáveis de ambiente.");
 }
 
-// <-- 2. ADICIONADO Bloco de Chave Secreta -->
 const MERCADOPAGO_WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET; 
 if (!MERCADOPAGO_WEBHOOK_SECRET) {
-console.warn("AVISO DE SEGURANÇA: MERCADOPAGO_WEBHOOK_SECRET não configurado. Pagamentos NÃO SERÃO validados!");
+    console.warn("AVISO DE SEGURANÇA: MERCADOPAGO_WEBHOOK_SECRET não configurado. Pagamentos NÃO SERÃO validados!");
 }
 // ==========================================================
 
@@ -243,15 +241,12 @@ if (SESSION_SECRET === 'seu_segredo_muito_secreto_e_longo_troque_isso!') { conso
 app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true, sameSite: 'lax' } }));
 
 // ==========================================================
-// *** <-- 3. WEBHOOK MOVIDO E ATUALIZADO ***
 // *** WEBHOOK CORRIGIDO ***
 // Esta rota deve vir ANTES de 'app.use(express.json())'
-// Usamos 'express.raw' para pegar o body como buffer
 // ==========================================================
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req, res) => {
-console.log("Webhook do Mercado Pago recebido!");
+    console.log("Webhook do Mercado Pago recebido!");
 
-    // 1. Validar a assinatura
     // --- 1. Parsear o body ANTES de tudo ---
     let reqBody;
     try {
@@ -262,18 +257,16 @@ console.log("Webhook do Mercado Pago recebido!");
     }
 
     // --- 2. Validar a assinatura ---
-const signature = req.headers['x-signature'];
-const requestId = req.headers['x-request-id'];
+    const signature = req.headers['x-signature'];
+    const requestId = req.headers['x-request-id'];
 
-if (!signature || !requestId) {
-console.warn("Webhook REJEITADO: Cabeçalhos de assinatura ausentes.");
-return res.sendStatus(400); // Bad Request
-}
+    if (!signature || !requestId) {
+        console.warn("Webhook REJEITADO: Cabeçalhos de assinatura ausentes.");
+        return res.sendStatus(400); // Bad Request
+    }
 
-    // Só validamos se a chave secreta foi configurada
-if (MERCADOPAGO_WEBHOOK_SECRET) {
-try {
-            // Extrai o timestamp (ts) e o hash (v1) da assinatura
+    if (MERCADOPAGO_WEBHOOK_SECRET) {
+        try {
             // --- CORREÇÃO: Checa se é um webhook de pagamento real ---
             // Se não tiver 'data.id', é um teste ou notificação diferente.
             if (!reqBody.data || !reqBody.data.id) {
@@ -284,123 +277,108 @@ try {
             const dataId = reqBody.data.id; // ID do recurso (pagamento)
             // --- FIM DA CORREÇÃO ---
             
-const parts = signature.split(',').reduce((acc, part) => {
-const [key, value] = part.split('=');
-acc[key.trim()] = value.trim();
-return acc;
-}, {});
+            const parts = signature.split(',').reduce((acc, part) => {
+                const [key, value] = part.split('=');
+                acc[key.trim()] = value.trim();
+                return acc;
+            }, {});
 
-const ts = parts.ts;
-const hash = parts.v1;
+            const ts = parts.ts;
+            const hash = parts.v1;
 
-if (!ts || !hash) {
-console.warn("Webhook REJEITADO: Formato de assinatura inválido.");
-return res.sendStatus(400);
-}
-
-            // Cria o template da assinatura
-            const template = `id:${JSON.parse(req.body.toString()).data.id};request-id:${requestId};ts:${ts};`;
+            if (!ts || !hash) {
+                 console.warn("Webhook REJEITADO: Formato de assinatura inválido.");
+                 return res.sendStatus(400);
+            }
+            
             // --- CORREÇÃO: Template usa o 'dataId' ---
             const template = `id:${dataId};request-id:${requestId};ts:${ts};`;
+            
+            const hmac = crypto.createHmac('sha256', MERCADOPAGO_WEBHOOK_SECRET);
+            hmac.update(template);
+            const calculatedHash = hmac.digest('hex');
 
-            // Calcula o HMAC
-const hmac = crypto.createHmac('sha256', MERCADOPAGO_WEBHOOK_SECRET);
-hmac.update(template);
-const calculatedHash = hmac.digest('hex');
+            if (calculatedHash !== hash) {
+                console.error("Webhook REJEITADO: Assinatura inválida. (Calculado: %s, Recebido: %s)", calculatedHash, hash);
+                return res.sendStatus(403); // Forbidden
+            }
+            console.log("Assinatura do Webhook validada com sucesso.");
 
-            // Compara o hash calculado com o hash recebido
-if (calculatedHash !== hash) {
-console.error("Webhook REJEITADO: Assinatura inválida. (Calculado: %s, Recebido: %s)", calculatedHash, hash);
-return res.sendStatus(403); // Forbidden
-}
-console.log("Assinatura do Webhook validada com sucesso.");
-
-} catch (err) {
-console.error("Webhook ERRO: Falha ao calcular ou validar assinatura:", err.message);
-return res.sendStatus(400); // Bad Request por erro no processamento
-}
-} else {
-console.warn("AVISO: Processando Webhook SEM VALIDAÇÃO (MERCADOPAGO_WEBHOOK_SECRET não definida)");
-}
-
-    // 2. Parsear o JSON (que veio como buffer 'raw')
-    let reqBody;
-    try {
-        reqBody = JSON.parse(req.body.toString());
-    } catch (e) {
-        console.error("Webhook ERRO: Falha ao parsear JSON do body.");
-        return res.sendStatus(400); // Bad Request
+        } catch (err) {
+            console.error("Webhook ERRO: Falha ao calcular ou validar assinatura:", err.message);
+            return res.sendStatus(400); // Bad Request por erro no processamento
+        }
+    } else {
+        console.warn("AVISO: Processando Webhook SEM VALIDAÇÃO (MERCADOPAGO_WEBHOOK_SECRET não definida)");
     }
 
-    // 3. Lógica do Jogo (código antigo, agora usando 'reqBody')
     // --- 3. Lógica do Jogo (código antigo, agora usando 'reqBody') ---
-if (reqBody.type === 'payment') {
-const paymentId = reqBody.data.id;
-        console.log(`Webhook: ID de Pagamento recebido: ${paymentId}`);
+    if (reqBody.type === 'payment') {
+        const paymentId = reqBody.data.id;
         console.log(`Webhook: ID de Pagamento (data.id) recebido: ${paymentId}`);
 
-const payment = new Payment(mpClient);
-payment.get({ id: paymentId })
-.then(async (pagamento) => {
-const status = pagamento.status;
-console.log(`Webhook: Status do Pagamento ${paymentId} é: ${status}`);
+        const payment = new Payment(mpClient);
+        payment.get({ id: paymentId })
+            .then(async (pagamento) => {
+                const status = pagamento.status;
+                console.log(`Webhook: Status do Pagamento ${paymentId} é: ${status}`);
 
-if (status === 'approved') {
-console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
-const query = "SELECT * FROM pagamentos_pendentes WHERE payment_id = $1";
-const pendingPaymentResult = await db.query(query, [paymentId]);
+                if (status === 'approved') {
+                    console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
+                    const query = "SELECT * FROM pagamentos_pendentes WHERE payment_id = $1";
+                    const pendingPaymentResult = await db.query(query, [paymentId]);
 
-if (pendingPaymentResult.rows.length > 0) {
-const pendingPayment = pendingPaymentResult.rows[0];
-const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
-console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
+                    if (pendingPaymentResult.rows.length > 0) {
+                        const pendingPayment = pendingPaymentResult.rows[0];
+                        const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
+                        console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
 
-try {
-let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
-const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
-const preco = precoRes.rows[0];
-const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
-const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
+                        try {
+                            let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+                            const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
+                            const preco = precoRes.rows[0];
+                            const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
+                            const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
 
-const cartelasGeradas = [];
-for (let i = 0; i < dadosCompra.quantidade; i++) {
-cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
-}
-const cartelasJSON = JSON.stringify(cartelasGeradas);
+                            const cartelasGeradas = [];
+                            for (let i = 0; i < dadosCompra.quantidade; i++) {
+                                cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+                            }
+                            const cartelasJSON = JSON.stringify(cartelasGeradas);
 
-const stmtVenda = `
-                               INSERT INTO vendas 
-                               (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id) 
-                               VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-                               RETURNING id`;
+                            const stmtVenda = `
+                                INSERT INTO vendas 
+                                (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id) 
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+                                RETURNING id`;
 
-const vendaResult = await db.query(stmtVenda, [
-sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null,
-dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
-]);
-const vendaId = vendaResult.rows[0].id;
-console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
+                            const vendaResult = await db.query(stmtVenda, [
+                                sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null,
+                                dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
+                            ]);
+                            const vendaId = vendaResult.rows[0].id;
+                            console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
 
-await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
-console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
+                            await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+                            console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
 
-} catch (dbError) {
-console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
-}
-} else {
-console.warn(`Webhook: Pagamento ${paymentId} aprovado, mas NÃO FOI ENCONTRADO no banco 'pagamentos_pendentes'. (Pode ser um pagamento antigo ou um erro)`);
-}
-} else if (status === 'cancelled' || status === 'rejected') {
-await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
-console.log(`Pagamento ${paymentId} (${status}) removido do DB.`);
-}
-})
-.catch(error => {
-console.error("Webhook ERRO: Falha ao buscar pagamento no Mercado Pago:", error);
-});
-}
+                        } catch (dbError) {
+                            console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
+                        }
+                    } else {
+                        console.warn(`Webhook: Pagamento ${paymentId} aprovado, mas NÃO FOI ENCONTRADO no banco 'pagamentos_pendentes'. (Pode ser um pagamento antigo ou um erro)`);
+                    }
+                } else if (status === 'cancelled' || status === 'rejected') {
+                    await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+                    console.log(`Pagamento ${paymentId} (${status}) removido do DB.`);
+                }
+            })
+            .catch(error => {
+                console.error("Webhook ERRO: Falha ao buscar pagamento no Mercado Pago:", error);
+            });
+    }
 
-res.sendStatus(200);
+    res.sendStatus(200);
 });
 
 // ==========================================================
@@ -568,11 +546,11 @@ await client.query('BEGIN'); // Inicia a transação
 
 // 'INSERT OR REPLACE' vira 'INSERT ... ON CONFLICT ... DO UPDATE'
 const query = `
-          INSERT INTO configuracoes (chave, valor) 
-          VALUES ($1, $2) 
-          ON CONFLICT (chave) 
-          DO UPDATE SET valor = EXCLUDED.valor;
-      `;
+           INSERT INTO configuracoes (chave, valor) 
+           VALUES ($1, $2) 
+           ON CONFLICT (chave) 
+           DO UPDATE SET valor = EXCLUDED.valor;
+       `;
 
 await client.query(query, ['premio_linha', linhaNum.toFixed(2)]);
 await client.query(query, ['premio_cheia', cheiaNum.toFixed(2)]);
@@ -623,9 +601,9 @@ const manualPlayerId = `manual_${gerarIdUnico()}`;
 jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
 
 const stmtVenda = `
-          INSERT INTO vendas 
-          (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
-          VALUES ($1, $2, $3, $4, $5, $6, $7)`;
+           INSERT INTO vendas 
+           (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`;
 // O payment_id e cambista_id de uma venda manual são null
 await db.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, valorTotal, 'Manual', cartelasJSON]);
 
@@ -641,11 +619,11 @@ app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
 try {
 // 'strftime' (SQLite) vira 'to_char' (PostgreSQL)
 const stmt = `
-          SELECT sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, 
-                 to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
-          FROM vendas 
-          ORDER BY timestamp DESC
-      `;
+           SELECT sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, 
+                  to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
+           FROM vendas 
+           ORDER BY timestamp DESC
+       `;
 const vendasRes = await db.query(stmt);
 const vendas = vendasRes.rows;
 
@@ -676,11 +654,11 @@ app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.
 app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
 try {
 const stmt = `
-          SELECT id, sorteio_id, premio, nome, telefone, status_pagamento, 
-                 to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
-          FROM vencedores 
-          ORDER BY timestamp DESC
-      `;
+           SELECT id, sorteio_id, premio, nome, telefone, status_pagamento, 
+                  to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
+           FROM vencedores 
+           ORDER BY timestamp DESC
+       `;
 const resDB = await db.query(stmt);
 const vencedores = resDB.rows;
 res.json({ success: true, vencedores: vencedores });
@@ -775,11 +753,11 @@ await client.query('BEGIN');
 
 // 1. Adiciona o saldo na tabela 'cambistas' e retorna o novo saldo
 const saldoQuery = `
-          UPDATE cambistas 
-          SET saldo_creditos = saldo_creditos + $1 
-          WHERE id = $2 
-          RETURNING saldo_creditos, usuario
-      `;
+           UPDATE cambistas 
+           SET saldo_creditos = saldo_creditos + $1 
+           WHERE id = $2 
+           RETURNING saldo_creditos, usuario
+       `;
 const saldoResult = await client.query(saldoQuery, [valorNum, cambistaId]);
 
 if (saldoResult.rows.length === 0) {
@@ -791,9 +769,9 @@ const cambistaUsuario = saldoResult.rows[0].usuario;
 
 // 2. Registra a transação no histórico
 const logQuery = `
-          INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo)
-          VALUES ($1, $2, $3, 'recarga')
-      `;
+           INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo)
+           VALUES ($1, $2, $3, 'recarga')
+       `;
 await client.query(logQuery, [cambistaId, adminUsuario, valorNum]);
 
 await client.query('COMMIT');
@@ -815,35 +793,35 @@ client.release();
 // *** ROTA ADICIONADA: ATIVAR/DESATIVAR CAMBISTA ***
 // ==========================================================
 app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
-const { cambistaId } = req.body;
-if (!cambistaId) {
-return res.status(400).json({ success: false, message: "ID do cambista é obrigatório." });
-}
+    const { cambistaId } = req.body;
+    if (!cambistaId) {
+        return res.status(400).json({ success: false, message: "ID do cambista é obrigatório." });
+    }
 
-try {
-// O comando SQL inverte o valor booleano 'ativo' (de true para false, ou false para true)
-const query = `
-           UPDATE cambistas 
-           SET ativo = NOT ativo 
-           WHERE id = $1 
-           RETURNING id, ativo, usuario
-       `;
-const result = await db.query(query, [cambistaId]);
+    try {
+        // O comando SQL inverte o valor booleano 'ativo' (de true para false, ou false para true)
+        const query = `
+            UPDATE cambistas 
+            SET ativo = NOT ativo 
+            WHERE id = $1 
+            RETURNING id, ativo, usuario
+        `;
+        const result = await db.query(query, [cambistaId]);
 
-if (result.rows.length === 0) {
-return res.status(404).json({ success: false, message: "Cambista não encontrado." });
-}
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Cambista não encontrado." });
+        }
 
-const novoStatus = result.rows[0].ativo;
-const usuario = result.rows[0].usuario;
-console.log(`Admin ${req.session.usuario} ${novoStatus ? 'ATIVOU' : 'DESATIVOU'} o cambista ${usuario} (ID: ${cambistaId})`);
+        const novoStatus = result.rows[0].ativo;
+        const usuario = result.rows[0].usuario;
+        console.log(`Admin ${req.session.usuario} ${novoStatus ? 'ATIVOU' : 'DESATIVOU'} o cambista ${usuario} (ID: ${cambistaId})`);
 
-res.json({ success: true, novoStatus: novoStatus });
+        res.json({ success: true, novoStatus: novoStatus });
 
-} catch (err) {
-console.error("Erro ao alterar status do cambista:", err);
-res.status(500).json({ success: false, message: "Erro interno do servidor." });
-}
+    } catch (err) {
+        console.error("Erro ao alterar status do cambista:", err);
+        res.status(500).json({ success: false, message: "Erro interno do servidor." });
+    }
 });
 // ==========================================================
 // *** FIM DA NOVA ROTA ***
@@ -861,163 +839,163 @@ app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'adm
 
 // Middleware para checar se o cambista está logado na sessão
 function checkCambista(req, res, next) {
-if (req.session && req.session.isCambista) {
-return next();
-} else {
-console.log("Acesso negado à área do cambista.");
-if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
-return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' });
-}
-return res.redirect('/cambista/login.html');
-}
+    if (req.session && req.session.isCambista) {
+        return next();
+    } else {
+        console.log("Acesso negado à área do cambista.");
+        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' });
+        }
+        return res.redirect('/cambista/login.html');
+    }
 }
 
 // Rota de Login do Cambista
 app.post('/cambista/login', async (req, res) => {
-const { usuario, senha } = req.body;
-if (!usuario || !senha) {
-return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
-}
+    const { usuario, senha } = req.body;
+    if (!usuario || !senha) {
+        return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
+    }
+    
+    try {
+        const stmt = 'SELECT * FROM cambistas WHERE usuario = $1 AND ativo = true';
+        const resDB = await db.query(stmt, [usuario]);
+        const cambistaUser = resDB.rows[0];
 
-try {
-const stmt = 'SELECT * FROM cambistas WHERE usuario = $1 AND ativo = true';
-const resDB = await db.query(stmt, [usuario]);
-const cambistaUser = resDB.rows[0];
-
-if (cambistaUser && (await bcrypt.compare(senha, cambistaUser.senha))) {
-// Logado! Salva na sessão
-req.session.isCambista = true;
-req.session.cambistaId = cambistaUser.id;
-req.session.cambistaUsuario = cambistaUser.usuario;
-console.log(`Login de cambista bem-sucedido para: ${cambistaUser.usuario}`);
-req.session.save(err => {
-if (err) {
-console.error("Erro ao salvar sessão do cambista:", err);
-return res.status(500).json({ success: false, message: 'Erro interno ao iniciar sessão.' });
-}
-return res.json({ success: true });
-});
-} else {
-console.log(`Falha no login de cambista para: ${usuario}`);
-return res.status(401).json({ success: false, message: 'Usuário, senha ou conta inativa.' });
-}
-} catch (error) {
-console.error("Erro durante o login do cambista:", error);
-return res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-}
+        if (cambistaUser && (await bcrypt.compare(senha, cambistaUser.senha))) {
+            // Logado! Salva na sessão
+            req.session.isCambista = true;
+            req.session.cambistaId = cambistaUser.id;
+            req.session.cambistaUsuario = cambistaUser.usuario;
+            console.log(`Login de cambista bem-sucedido para: ${cambistaUser.usuario}`);
+            req.session.save(err => {
+                if (err) {
+                    console.error("Erro ao salvar sessão do cambista:", err);
+                    return res.status(500).json({ success: false, message: 'Erro interno ao iniciar sessão.' });
+                }
+                return res.json({ success: true });
+            });
+        } else {
+            console.log(`Falha no login de cambista para: ${usuario}`);
+            return res.status(401).json({ success: false, message: 'Usuário, senha ou conta inativa.' });
+        }
+    } catch (error) {
+        console.error("Erro durante o login do cambista:", error);
+        return res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
 });
 
 // Rota de Logout do Cambista
 app.get('/cambista/logout', (req, res) => {
-req.session.destroy((err) => {
-if (err) {
-console.error("Erro ao fazer logout do cambista:", err);
-return res.status(500).send("Erro ao sair.");
-}
-console.log("Usuário cambista deslogado.");
-res.clearCookie('connect.sid');
-res.redirect('/cambista/login.html');
-});
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Erro ao fazer logout do cambista:", err);
+            return res.status(500).send("Erro ao sair.");
+        }
+        console.log("Usuário cambista deslogado.");
+        res.clearCookie('connect.sid');
+        res.redirect('/cambista/login.html');
+    });
 });
 
 // Rota do Painel (protegida)
 app.get('/cambista/painel.html', checkCambista, (req, res) => {
-res.sendFile(path.join(__dirname, 'public', 'cambista', 'painel.html'));
+    res.sendFile(path.join(__dirname, 'public', 'cambista', 'painel.html'));
 });
 
 // Rota para o Cambista ver seu status (protegida)
 app.get('/cambista/meu-status', checkCambista, async (req, res) => {
-try {
-const query = "SELECT saldo_creditos FROM cambistas WHERE id = $1";
-const result = await db.query(query, [req.session.cambistaId]);
-
-res.json({
-success: true,
-usuario: req.session.cambistaUsuario,
-saldo: result.rows[0].saldo_creditos,
-precoCartela: PRECO_CARTELA // Envia o preço atual da cartela
-});
-} catch (err) {
-res.status(500).json({ success: false, message: "Erro ao buscar status." });
-}
+    try {
+        const query = "SELECT saldo_creditos FROM cambistas WHERE id = $1";
+        const result = await db.query(query, [req.session.cambistaId]);
+        
+        res.json({
+            success: true,
+            usuario: req.session.cambistaUsuario,
+            saldo: result.rows[0].saldo_creditos,
+            precoCartela: PRECO_CARTELA // Envia o preço atual da cartela
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Erro ao buscar status." });
+    }
 });
 
 // Rota para o Cambista gerar cartelas (protegida)
 app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
-const { quantidade, nome, telefone } = req.body;
-const cambistaId = req.session.cambistaId;
-const cambistaUsuario = req.session.cambistaUsuario;
+    const { quantidade, nome, telefone } = req.body;
+    const cambistaId = req.session.cambistaId;
+    const cambistaUsuario = req.session.cambistaUsuario;
 
-if (!nome || !quantidade || quantidade < 1) {
-return res.status(400).json({ success: false, message: 'Nome do jogador e quantidade são obrigatórios.' });
-}
+    if (!nome || !quantidade || quantidade < 1) {
+        return res.status(400).json({ success: false, message: 'Nome do jogador e quantidade são obrigatórios.' });
+    }
 
-const precoUnitario = parseFloat(PRECO_CARTELA);
-const custoTotal = quantidade * precoUnitario;
-let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+    const precoUnitario = parseFloat(PRECO_CARTELA);
+    const custoTotal = quantidade * precoUnitario;
+    let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
 
-const client = await pool.connect();
-try {
-await client.query('BEGIN');
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
 
-// 1. Pega o saldo do cambista e TRAVA A LINHA (FOR UPDATE)
-const saldoQuery = "SELECT saldo_creditos FROM cambistas WHERE id = $1 FOR UPDATE";
-const saldoResult = await client.query(saldoQuery, [cambistaId]);
+        // 1. Pega o saldo do cambista e TRAVA A LINHA (FOR UPDATE)
+        const saldoQuery = "SELECT saldo_creditos FROM cambistas WHERE id = $1 FOR UPDATE";
+        const saldoResult = await client.query(saldoQuery, [cambistaId]);
+        
+        if (saldoResult.rows.length === 0) throw new Error("Cambista não encontrado.");
+        
+        const saldoAtual = parseFloat(saldoResult.rows[0].saldo_creditos);
+        
+        // 2. Verifica se tem saldo
+        if (saldoAtual < custoTotal) {
+            throw new Error(`Saldo insuficiente. Você tem ${saldoAtual.toFixed(2)} e a venda custa ${custoTotal.toFixed(2)}.`);
+        }
 
-if (saldoResult.rows.length === 0) throw new Error("Cambista não encontrado.");
+        // 3. Deduz o saldo
+        const novoSaldo = saldoAtual - custoTotal;
+        await client.query("UPDATE cambistas SET saldo_creditos = $1 WHERE id = $2", [novoSaldo, cambistaId]);
 
-const saldoAtual = parseFloat(saldoResult.rows[0].saldo_creditos);
+        // 4. Gera as cartelas
+        const cartelasGeradas = [];
+        for (let i = 0; i < quantidade; i++) {
+            cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+        }
+        const cartelasJSON = JSON.stringify(cartelasGeradas);
 
-// 2. Verifica se tem saldo
-if (saldoAtual < custoTotal) {
-throw new Error(`Saldo insuficiente. Você tem ${saldoAtual.toFixed(2)} e a venda custa ${custoTotal.toFixed(2)}.`);
-}
+        // 5. Registra a Venda
+        const stmtVenda = `
+            INSERT INTO vendas 
+            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, cambista_id) 
+            VALUES ($1, $2, $3, $4, $5, 'Cambista', $6, $7)
+            RETURNING id
+        `;
+        const vendaResult = await client.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, custoTotal, cartelasJSON, cambistaId]);
+        const vendaId = vendaResult.rows[0].id;
 
-// 3. Deduz o saldo
-const novoSaldo = saldoAtual - custoTotal;
-await client.query("UPDATE cambistas SET saldo_creditos = $1 WHERE id = $2", [novoSaldo, cambistaId]);
+        // 6. Registra a Transação de Crédito
+        const logQuery = `
+            INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo, venda_id)
+            VALUES ($1, $2, $3, 'venda', $4)
+        `;
+        await client.query(logQuery, [cambistaId, cambistaUsuario, -custoTotal, vendaId]);
 
-// 4. Gera as cartelas
-const cartelasGeradas = [];
-for (let i = 0; i < quantidade; i++) {
-cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
-}
-const cartelasJSON = JSON.stringify(cartelasGeradas);
+        await client.query('COMMIT');
 
-// 5. Registra a Venda
-const stmtVenda = `
-           INSERT INTO vendas 
-           (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, cambista_id) 
-           VALUES ($1, $2, $3, $4, $5, 'Cambista', $6, $7)
-           RETURNING id
-       `;
-const vendaResult = await client.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, custoTotal, cartelasJSON, cambistaId]);
-const vendaId = vendaResult.rows[0].id;
+        // 7. Adiciona na memória do jogo (igual ao admin manual)
+        const manualPlayerId = `manual_${gerarIdUnico()}`; 
+        jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
+        io.emit('contagemJogadores', getContagemJogadores());
+        
+        console.log(`Cambista ${cambistaUsuario} vendeu ${quantidade} cartelas para ${nome}. Saldo restante: ${novoSaldo}`);
+        res.json({ success: true, message: "Venda registrada!", cartelas: cartelasGeradas, novoSaldo: novoSaldo });
 
-// 6. Registra a Transação de Crédito
-const logQuery = `
-           INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo, venda_id)
-           VALUES ($1, $2, $3, 'venda', $4)
-       `;
-await client.query(logQuery, [cambistaId, cambistaUsuario, -custoTotal, vendaId]);
-
-await client.query('COMMIT');
-
-// 7. Adiciona na memória do jogo (igual ao admin manual)
-const manualPlayerId = `manual_${gerarIdUnico()}`; 
-jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
-io.emit('contagemJogadores', getContagemJogadores());
-
-console.log(`Cambista ${cambistaUsuario} vendeu ${quantidade} cartelas para ${nome}. Saldo restante: ${novoSaldo}`);
-res.json({ success: true, message: "Venda registrada!", cartelas: cartelasGeradas, novoSaldo: novoSaldo });
-
-} catch (err) {
-await client.query('ROLLBACK');
-console.error(`Erro na venda do cambista ${cambistaUsuario}:`, err);
-res.status(500).json({ success: false, message: err.message || "Erro interno ao processar venda." });
-} finally {
-client.release();
-}
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`Erro na venda do cambista ${cambistaUsuario}:`, err);
+        res.status(500).json({ success: false, message: err.message || "Erro interno ao processar venda." });
+    } finally {
+        client.release();
+    }
 });
 // ==========================================================
 
@@ -1227,11 +1205,11 @@ numeroDoSorteio++; // Incrementa a variável global
 try {
 // Salva o NOVO número no banco
 const query = `
-          INSERT INTO configuracoes (chave, valor) 
-          VALUES ($1, $2) 
-          ON CONFLICT (chave) 
-          DO UPDATE SET valor = EXCLUDED.valor;
-      `;
+           INSERT INTO configuracoes (chave, valor) 
+           VALUES ($1, $2) 
+           ON CONFLICT (chave) 
+           DO UPDATE SET valor = EXCLUDED.valor;
+       `;
 await db.query(query, ['numero_sorteio_atual', numeroDoSorteio.toString()]);
 console.log(`Servidor: Sorteio #${idSorteioFinalizado} terminado. Próximo será #${numeroDoSorteio} (Salvo no DB).`); 
 } catch (err) {
@@ -1283,20 +1261,20 @@ try {
 const proximoSorteioId = estadoJogo === 'ESPERANDO' ? numeroDoSorteio : numeroDoSorteio + 1;
 
 const vendasProximoRes = await db.query(`
-          SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
-          FROM vendas 
-          WHERE sorteio_id = $1
-      `, [proximoSorteioId]);
+           SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
+           FROM vendas 
+           WHERE sorteio_id = $1
+       `, [proximoSorteioId]);
 
 statusData.vendasProximoSorteio = vendasProximoRes.rows[0] || { qtd_cartelas: 0, valor_total: 0 };
 statusData.proximoSorteioId = proximoSorteioId;
 
 // 'date()' (SQLite) vira '::date' (PostgreSQL)
 const receitaDiaRes = await db.query(`
-          SELECT SUM(valor_total) as valor_total_dia
-          FROM vendas
-          WHERE (timestamp AT TIME ZONE 'UTC')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date
-      `);
+           SELECT SUM(valor_total) as valor_total_dia
+           FROM vendas
+           WHERE (timestamp AT TIME ZONE 'UTC')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date
+       `);
 statusData.receitaDoDia = receitaDiaRes.rows[0].valor_total_dia || 0;
 
 } catch (error) {
@@ -1380,13 +1358,13 @@ const paymentId = response.id.toString();
 // Salva o pagamento pendente no DB, não na variável
 const dadosCompraJSON = JSON.stringify(dadosCompra);
 const query = `
-              INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
-              VALUES ($1, $2, $3)
-              ON CONFLICT (payment_id) DO UPDATE SET
-                  socket_id = EXCLUDED.socket_id,
-                  dados_compra_json = EXCLUDED.dados_compra_json,
-                  timestamp = CURRENT_TIMESTAMP
-          `;
+               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
+               VALUES ($1, $2, $3)
+               ON CONFLICT (payment_id) DO UPDATE SET
+                   socket_id = EXCLUDED.socket_id,
+                   dados_compra_json = EXCLUDED.dados_compra_json,
+                   timestamp = CURRENT_TIMESTAMP
+           `;
 await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
 console.log(`Pagamento PIX ${paymentId} salvo no DB para socket ${socket.id}.`);
 // *** FIM DA ATUALIZAÇÃO ***
