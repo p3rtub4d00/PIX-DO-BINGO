@@ -218,4 +218,27 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('disconnect', (reason) => { console.warn(`Dashboard desconectado do servidor: ${reason}`); if(estadoHeaderEl) estadoHeaderEl.textContent = "DESCONECTADO"; if(estadoHeaderEl) estadoHeaderEl.className = 'estado-texto estado-esperando'; if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.remove('oculto'); ultimoEstadoConhecido = 'DESCONECTADO'; });
     socket.on('connect_error', (err) => { console.error(`Dashboard falhou ao conectar: ${err.message}`); });
 
+    // --- INÍCIO DA ATUALIZAÇÃO (PING DE ATIVIDADE) ---
+// Envia um "ping" para o servidor a cada 10 minutos para
+// impedir que o plano Render Hobby "durma" por inatividade.
+const PING_INTERVALO = 10 * 60 * 1000; // 10 minutos
+
+async function pingServidor() {
+    try {
+        await fetch('/ping');
+        console.log("Ping enviado ao servidor (Keep-Alive).");
+    } catch (err) {
+        console.error("Erro ao enviar ping:", err);
+    }
+}
+
+// Inicia o timer
+setInterval(pingServidor, PING_INTERVALO);
+// Envia um ping inicial 10 segundos após carregar a página
+setTimeout(pingServidor, 10000); 
+// --- FIM DA ATUALIZAÇÃO ---
+
+// (A última linha do seu arquivo deve ser }); )
+
 });
+
