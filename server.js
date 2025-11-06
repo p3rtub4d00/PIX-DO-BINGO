@@ -336,6 +336,13 @@ app.get('/api/config', async (req, res) => {
 app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'anuncio.html')); });
 app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/dashboard.html', (req, res) => { res.redirect('/dashboard'); });
+// Rota de "ping" para manter o servidor do Render Hobby acordado
+app.get('/ping', (req, res) => {
+    console.log("Ping recebido, mantendo o servidor acordado.");
+    res.status(200).send('pong');
+});
+
+// (A linha app.use(express.static... deve ficar logo abaixo disto)
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==========================================================
@@ -1057,3 +1064,4 @@ process.on('exit', () => pool.end());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
+
