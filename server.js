@@ -241,7 +241,7 @@ if (SESSION_SECRET === 'seu_segredo_muito_secreto_e_longo_troque_isso!') { conso
 app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true, sameSite: 'lax' } }));
 
 // ==========================================================
-// *** WEBHOOK CORRIGIDO ***
+// *** WEBHOOK CORRIGIDO (VERSÃO FINAL) ***
 // Esta rota deve vir ANTES de 'app.use(express.json())'
 // ==========================================================
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req, res) => {
@@ -258,9 +258,10 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
     // --- 2. Validar a assinatura ---
     const signature = req.headers['x-signature'];
+    const requestId = req.headers['x-request-id']; // <-- PRECISAMOS DESTE
 
-    if (!signature) {
-        console.warn("Webhook REJEITADO: Cabeçalho 'x-signature' ausente.");
+    if (!signature || !requestId) { // <-- VALIDAMOS OS DOIS
+        console.warn("Webhook REJEITADO: Cabeçalhos 'x-signature' ou 'x-request-id' ausentes.");
         return res.sendStatus(400); // Bad Request
     }
 
@@ -288,9 +289,9 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                  return res.sendStatus(400);
             }
             
-            // --- ESTA É A LINHA CRÍTICA QUE FOI CORRIGIDA ---
-            // O template correto é 'id:' e 'ts:', sem 'data.'
-            const template = `id:${dataId};ts:${ts};`;
+            // --- ESTA É A LINHA CRÍTICA QUE FOI CORRIGIDA (DE NOVO) ---
+            // O template correto USA o request-id do header
+            const template = `id:${dataId};request-id:${requestId};ts:${ts};`;
             // --- FIM DA CORREÇÃO ---
             
             const hmac = crypto.createHmac('sha256', MERCADOPAGO_WEBHOOK_SECRET);
