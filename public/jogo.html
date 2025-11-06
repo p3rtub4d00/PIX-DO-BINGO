@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="jogo.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
     </head>
 <body>
@@ -15,9 +16,10 @@
     </header>
 
     <main class="jogo-main">
-        
+
         <section id="painel-sorteio" class="card">
-            
+            <h2 id="sorteio-id-display" class="text-pix">Sorteio #...</h2>
+
             <div class="painel-header-flex">
                 <h2 id="sorteio-id-display" class="text-pix">Sorteio #...</h2>
                 <button id="btn-toggle-som" title="Ativar/Desativar Som">
@@ -33,7 +35,7 @@
         </section>
 
         <section id="area-jogador" class="card">
-            
+
             <div id="cartela-switcher">
                 <button id="btn-cartela-anterior" class="btn-switch" disabled>&lt;</button>
                 <div class="cartela-titulo-wrapper">
@@ -56,10 +58,10 @@
 
     <div id="modal-resultado" class="modal-overlay">
         <div class="modal-content" id="modal-vencedor-conteudo">
-            
+
             <div id="area-comprovante">
                 <h2 id="resultado-titulo" class="title-gradient">Resultado</h2>
-                
+
                 <div class="comprovante-ids">
                     <span id="comprovante-sorteio-id">Sorteio: #...</span>
                     <span id="comprovante-cartela-id">Cartela: ...</span>
@@ -74,7 +76,7 @@
                 </div>
 
                 <p id="resultado-mensagem">O vencedor foi...</p>
-                
+
                 <div id="resultado-prova-cartela" style="display: none;">
                     <h4>Sua Cartela Vencedora:</h4>
                     <div id="cartela-vencedora-display" class="cartela-jogador">
@@ -93,11 +95,11 @@
         </div>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
+    <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
+
     <script src="jogo.js"></script>
 </body>
+</html>
 </html>
