@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const etapaPix = document.getElementById('etapa-pix');
     const btnGerarPix = document.getElementById('btn-gerar-pix'); 
     
+    // --- LINHA CORRIGIDA ABAIXO ---
+    const btnCopiarPix = document.getElementById('btn-copiar-pix'); 
+
     // --- (INÍCIO) Seletores para Correção ---
     const pixQrCodeImg = document.getElementById('pix-qrcode-img');
     const pixQrContainer = document.getElementById('pix-qrcode-container'); // Container da imagem
