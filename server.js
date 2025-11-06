@@ -720,6 +720,44 @@ client.release();
 });
 // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
 
+// ==========================================================
+// *** ROTA ADICIONADA: ATIVAR/DESATIVAR CAMBISTA ***
+// ==========================================================
+app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
+    const { cambistaId } = req.body;
+    if (!cambistaId) {
+        return res.status(400).json({ success: false, message: "ID do cambista é obrigatório." });
+    }
+
+    try {
+        // O comando SQL inverte o valor booleano 'ativo' (de true para false, ou false para true)
+        const query = `
+            UPDATE cambistas 
+            SET ativo = NOT ativo 
+            WHERE id = $1 
+            RETURNING id, ativo, usuario
+        `;
+        const result = await db.query(query, [cambistaId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Cambista não encontrado." });
+        }
+
+        const novoStatus = result.rows[0].ativo;
+        const usuario = result.rows[0].usuario;
+        console.log(`Admin ${req.session.usuario} ${novoStatus ? 'ATIVOU' : 'DESATIVOU'} o cambista ${usuario} (ID: ${cambistaId})`);
+
+        res.json({ success: true, novoStatus: novoStatus });
+
+    } catch (err) {
+        console.error("Erro ao alterar status do cambista:", err);
+        res.status(500).json({ success: false, message: "Erro interno do servidor." });
+    }
+});
+// ==========================================================
+// *** FIM DA NOVA ROTA ***
+// ==========================================================
+
 
 app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'admin')));
 // ==========================================================
