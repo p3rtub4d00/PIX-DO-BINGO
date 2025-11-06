@@ -107,7 +107,6 @@ async function inicializarBanco() {
         console.log("Tabela 'pagamentos_pendentes' verificada.");
 
         
-        // *** ATUALIZAÇÃO (CAMBISTAS) ***
         // 1. Cria a tabela de Cambistas
         await db.query(`
             CREATE TABLE IF NOT EXISTS cambistas (
@@ -146,7 +145,6 @@ async function inicializarBanco() {
                 throw e;
             }
         }
-        // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
         
         
         // Verifica se o admin existe e qual sua senha (lógica de correção de senha)
@@ -395,6 +393,16 @@ app.get('/ping', (req, res) => {
     res.status(200).send('pong');
 });
 
+// ==========================================================
+// *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
+// Adiciona o /cambista/login.html E o /public/cambista
+// ==========================================================
+app.get('/cambista/login', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')); });
+app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')); });
+// Serve os arquivos estáticos (login.js, painel.js) da pasta /cambista
+app.use('/cambista', express.static(path.join(__dirname, 'public', 'cambista')));
+// ==========================================================
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==========================================================
@@ -616,7 +624,10 @@ app.post('/admin/api/vencedores/limpar', checkAdmin, async (req, res) => {
 });
 
 
-// *** ATUALIZAÇÃO (CAMBISTAS) ***
+// *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
+// Adiciona a nova página de gerenciamento de cambistas
+app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'cambistas.html')); });
+
 // Novas rotas de API para o Admin gerenciar cambistas
 app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
     try {
@@ -706,9 +717,177 @@ app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, async (req, res)
 });
 // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
 
-
 app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'admin')));
 // ==========================================================
+
+
+// ==========================================================
+// *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
+// Define as rotas para o painel do cambista
+// ==========================================================
+
+// Middleware para checar se o cambista está logado na sessão
+function checkCambista(req, res, next) {
+    if (req.session && req.session.isCambista) {
+        return next();
+    } else {
+        console.log("Acesso negado à área do cambista.");
+        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' });
+        }
+        return res.redirect('/cambista/login.html');
+    }
+}
+
+// Rota de Login do Cambista
+app.post('/cambista/login', async (req, res) => {
+    const { usuario, senha } = req.body;
+    if (!usuario || !senha) {
+        return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
+    }
+    
+    try {
+        const stmt = 'SELECT * FROM cambistas WHERE usuario = $1 AND ativo = true';
+        const resDB = await db.query(stmt, [usuario]);
+        const cambistaUser = resDB.rows[0];
+
+        if (cambistaUser && (await bcrypt.compare(senha, cambistaUser.senha))) {
+            // Logado! Salva na sessão
+            req.session.isCambista = true;
+            req.session.cambistaId = cambistaUser.id;
+            req.session.cambistaUsuario = cambistaUser.usuario;
+            console.log(`Login de cambista bem-sucedido para: ${cambistaUser.usuario}`);
+            req.session.save(err => {
+                if (err) {
+                    console.error("Erro ao salvar sessão do cambista:", err);
+                    return res.status(500).json({ success: false, message: 'Erro interno ao iniciar sessão.' });
+                }
+                return res.json({ success: true });
+            });
+        } else {
+            console.log(`Falha no login de cambista para: ${usuario}`);
+            return res.status(401).json({ success: false, message: 'Usuário, senha ou conta inativa.' });
+        }
+    } catch (error) {
+        console.error("Erro durante o login do cambista:", error);
+        return res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
+});
+
+// Rota de Logout do Cambista
+app.get('/cambista/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Erro ao fazer logout do cambista:", err);
+            return res.status(500).send("Erro ao sair.");
+        }
+        console.log("Usuário cambista deslogado.");
+        res.clearCookie('connect.sid');
+        res.redirect('/cambista/login.html');
+    });
+});
+
+// Rota do Painel (protegida)
+app.get('/cambista/painel.html', checkCambista, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'cambista', 'painel.html'));
+});
+
+// Rota para o Cambista ver seu status (protegida)
+app.get('/cambista/meu-status', checkCambista, async (req, res) => {
+    try {
+        const query = "SELECT saldo_creditos FROM cambistas WHERE id = $1";
+        const result = await db.query(query, [req.session.cambistaId]);
+        
+        res.json({
+            success: true,
+            usuario: req.session.cambistaUsuario,
+            saldo: result.rows[0].saldo_creditos,
+            precoCartela: PRECO_CARTELA // Envia o preço atual da cartela
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Erro ao buscar status." });
+    }
+});
+
+// Rota para o Cambista gerar cartelas (protegida)
+app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
+    const { quantidade, nome, telefone } = req.body;
+    const cambistaId = req.session.cambistaId;
+    const cambistaUsuario = req.session.cambistaUsuario;
+
+    if (!nome || !quantidade || quantidade < 1) {
+        return res.status(400).json({ success: false, message: 'Nome do jogador e quantidade são obrigatórios.' });
+    }
+
+    const precoUnitario = parseFloat(PRECO_CARTELA);
+    const custoTotal = quantidade * precoUnitario;
+    let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Pega o saldo do cambista e TRAVA A LINHA (FOR UPDATE)
+        const saldoQuery = "SELECT saldo_creditos FROM cambistas WHERE id = $1 FOR UPDATE";
+        const saldoResult = await client.query(saldoQuery, [cambistaId]);
+        
+        if (saldoResult.rows.length === 0) throw new Error("Cambista não encontrado.");
+        
+        const saldoAtual = parseFloat(saldoResult.rows[0].saldo_creditos);
+        
+        // 2. Verifica se tem saldo
+        if (saldoAtual < custoTotal) {
+            throw new Error(`Saldo insuficiente. Você tem ${saldoAtual.toFixed(2)} e a venda custa ${custoTotal.toFixed(2)}.`);
+        }
+
+        // 3. Deduz o saldo
+        const novoSaldo = saldoAtual - custoTotal;
+        await client.query("UPDATE cambistas SET saldo_creditos = $1 WHERE id = $2", [novoSaldo, cambistaId]);
+
+        // 4. Gera as cartelas
+        const cartelasGeradas = [];
+        for (let i = 0; i < quantidade; i++) {
+            cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+        }
+        const cartelasJSON = JSON.stringify(cartelasGeradas);
+
+        // 5. Registra a Venda
+        const stmtVenda = `
+            INSERT INTO vendas 
+            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, cambista_id) 
+            VALUES ($1, $2, $3, $4, $5, 'Cambista', $6, $7)
+            RETURNING id
+        `;
+        const vendaResult = await client.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, custoTotal, cartelasJSON, cambistaId]);
+        const vendaId = vendaResult.rows[0].id;
+
+        // 6. Registra a Transação de Crédito
+        const logQuery = `
+            INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo, venda_id)
+            VALUES ($1, $2, $3, 'venda', $4)
+        `;
+        await client.query(logQuery, [cambistaId, cambistaUsuario, -custoTotal, vendaId]);
+
+        await client.query('COMMIT');
+
+        // 7. Adiciona na memória do jogo (igual ao admin manual)
+        const manualPlayerId = `manual_${gerarIdUnico()}`; 
+        jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
+        io.emit('contagemJogadores', getContagemJogadores());
+        
+        console.log(`Cambista ${cambistaUsuario} vendeu ${quantidade} cartelas para ${nome}. Saldo restante: ${novoSaldo}`);
+        res.json({ success: true, message: "Venda registrada!", cartelas: cartelasGeradas, novoSaldo: novoSaldo });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`Erro na venda do cambista ${cambistaUsuario}:`, err);
+        res.status(500).json({ success: false, message: err.message || "Erro interno ao processar venda." });
+    } finally {
+        client.release();
+    }
+});
+// ==========================================================
+
 
 // ==========================================================
 // *** LÓGICA DO JOGO (SOCKET.IO) (Funções auxiliares) ***
