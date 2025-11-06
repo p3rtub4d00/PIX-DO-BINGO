@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require("socket.io");
 const session = require('express-session');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
-const bcrypt = require('bcrypt'); // *** ATUALIZAÇÃO (SENHA HASH) ***
+const bcrypt = require('bcrypt'); // Importa o bcrypt
 
 // --- INÍCIO DAS MUDANÇAS NO BANCO DE DADOS ---
 const { Pool } = require('pg');
@@ -106,19 +106,30 @@ async function inicializarBanco() {
         `);
         console.log("Tabela 'pagamentos_pendentes' verificada.");
         
-        // Verifica se o admin existe
-        const adminRes = await db.query('SELECT COUNT(*) as count FROM usuarios_admin WHERE usuario = $1', ['admin']);
-        if (adminRes.rows[0].count == 0) {
-            
-            // *** ATUALIZAÇÃO (SENHA HASH) ***
-            // Criptografa a senha 'admin123'
-            const saltRounds = 10;
-            const senhaHash = await bcrypt.hash('admin123', saltRounds);
+        // *** ATUALIZAÇÃO (SENHA HASH - CORREÇÃO) ***
+        // Verifica se o admin existe e qual sua senha
+        const adminRes = await db.query('SELECT senha FROM usuarios_admin WHERE usuario = $1', ['admin']);
+        
+        const saltRounds = 10;
+        const senhaHash = await bcrypt.hash('admin123', saltRounds);
+
+        if (adminRes.rows.length == 0) {
+            // Admin não existe, cria um novo
             await db.query('INSERT INTO usuarios_admin (usuario, senha) VALUES ($1, $2)', ['admin', senhaHash]);
             console.log("Usuário 'admin' criado com senha criptografada.");
-            // *** FIM DA ATUALIZAÇÃO ***
-
+        } else {
+            // Admin existe, checa a senha
+            const senhaAtual = adminRes.rows[0].senha;
+            // Se a senha NÃO começar com '$2' (prefixo do bcrypt), ela é plaintext e precisa ser atualizada
+            if (!senhaAtual.startsWith('$2')) {
+                await db.query('UPDATE usuarios_admin SET senha = $1 WHERE usuario = $2', [senhaHash, 'admin']);
+                console.log("Senha do 'admin' atualizada para formato criptografado.");
+            } else {
+                // A senha já está criptografada, tudo certo.
+                console.log("Usuário 'admin' já possui senha criptografada.");
+            }
         }
+        // *** FIM DA ATUALIZAÇÃO ***
 
         // Insere configurações padrão
         const configs = [
