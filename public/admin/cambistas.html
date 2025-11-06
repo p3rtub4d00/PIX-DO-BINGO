@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Cambistas - Admin</title>
+    <link rel="stylesheet" href="admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-panel-body">
+
+    <aside class="admin-sidebar">
+        <div class="logo">Bingo PIX</div>
+        <nav class="admin-nav">
+            <ul>
+                <li><a href="/admin/painel.html">Painel & Status</a></li>
+                <li><a href="/admin/vencedores.html">Gestão Vencedores</a></li>
+                <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
+                <li><a href="/admin/cambistas.html" class="ativo">Gerenciar Cambistas</a></li>
+            </ul>
+        </nav>
+        <div class="logout-link">
+             <a href="/admin/logout">Sair</a>
+        </div>
+    </aside>
+
+    <main class="admin-content">
+         <header class="content-header">
+             <h1>Gerenciar Cambistas (Revendedores)</h1>
+        </header>
+
+        <section class="card admin-section">
+            <h2>Criar Novo Cambista</h2>
+            <p>Crie uma nova conta de revendedor. A senha deve ser forte.</p>
+            <form id="form-criar-cambista">
+                <div class="form-grupo-inline">
+                    <label for="cambista-usuario">Usuário (login):</label>
+                    <input type="text" id="cambista-usuario" placeholder="Ex: joao_revendedor" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="cambista-senha">Senha:</label>
+                    <input type="password" id="cambista-senha" placeholder="Crie uma senha forte" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label></label> <button type="submit" class="btn-comprar btn-comprar-azul">Criar Cambista</button>
+                </div>
+            </form>
+            <p id="criar-status" class="status-message" style="display: none;"></p>
+        </section>
+
+        <section class="card admin-section">
+            <h2>Adicionar Créditos</h2>
+            <p>Adicione créditos (R$) ao saldo de um cambista.</p>
+            <form id="form-add-creditos">
+                 <div class="form-grupo-inline">
+                    <label for="select-cambista-recarga">Selecionar Cambista:</label>
+                    <select id="select-cambista-recarga" required>
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+                 <div class="form-grupo-inline">
+                    <label for="valor-recarga">Valor a Adicionar (R$):</label>
+                    <input type="number" id="valor-recarga" step="0.01" min="1" placeholder="Ex: 100.00" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label></label> <button type="submit" class="btn-comprar btn-destaque">Adicionar Créditos</button>
+                </div>
+            </form>
+            <p id="recarga-status" class="status-message" style="display: none;"></p>
+        </section>
+
+        <section class="card admin-section">
+            <h2>Saldos dos Cambistas</h2>
+            <p>Lista de todos os cambistas e seus saldos atuais.</p>
+            <div class="tabela-relatorio-container">
+                <table class="relatorio-vendas">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuário</th>
+                            <th>Saldo (Créditos)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-cambistas-corpo">
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 20px;">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="cambistas.js"></script>
+</body>
+</html>
