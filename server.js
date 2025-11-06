@@ -361,9 +361,15 @@ async function carregarConfiguracoes() {
 // (Será chamado no final do arquivo, após a inicialização do DB)
 
 // ==========================================================
-// *** ROTAS PÚBLICAS (Atualizado para PG) ***
+// *** ROTAS PÚBLICAS (ATUALIZADO - CAMINHO CORRIGIDO) ***
 // ==========================================================
-app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
+
+// *** CORREÇÃO DO CAMINHO (Render /src folder) ***
+const publicPath = path.join(__dirname, '..', 'public');
+console.log(`Pasta 'public' definida como: ${publicPath}`);
+// *** FIM DA CORREÇÃO ***
+
+app.get('/', (req, res) => { res.sendFile(path.join(publicPath, 'index.html')); });
 
 // Convertido para 'async'
 app.get('/api/config', async (req, res) => {
@@ -383,8 +389,8 @@ app.get('/api/config', async (req, res) => {
     }
 });
 
-app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'anuncio.html')); });
-app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
+app.get('/dashboard', (req, res) => { res.sendFile(path.join(publicPath, 'anuncio.html')); });
+app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(publicPath, 'dashboard.html')); });
 app.get('/dashboard.html', (req, res) => { res.redirect('/dashboard'); });
 
 // Rota de "ping" para manter o servidor do Render Hobby acordado
@@ -393,20 +399,21 @@ app.get('/ping', (req, res) => {
     res.status(200).send('pong');
 });
 
-// ==========================================================
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
-// Adiciona o /cambista/login.html E o /public/cambista
-// ==========================================================
-app.get('/cambista/login', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')); });
-app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')); });
+// Adiciona o /cambista/login.html
+app.get('/cambista/login', (req, res) => { res.sendFile(path.join(publicPath, 'cambista', 'login.html')); });
+app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(publicPath, 'cambista', 'login.html')); });
 // Serve os arquivos estáticos (login.js, painel.js) da pasta /cambista
-app.use('/cambista', express.static(path.join(__dirname, 'public', 'cambista')));
-// ==========================================================
+app.use('/cambista', express.static(path.join(publicPath, 'cambista')));
+// *** FIM DA ATUALIZAÇÃO ***
 
-app.use(express.static(path.join(__dirname, 'public')));
+// *** CORREÇÃO DO CAMINHO (Render /src folder) ***
+// Esta deve ser a ÚLTIMA rota 'app.use' para arquivos estáticos
+app.use(express.static(publicPath));
+// *** FIM DA CORREÇÃO ***
 
 // ==========================================================
-// *** ROTAS DE ADMINISTRAÇÃO (ATUALIZADO - LOGIN HASH) ***
+// *** ROTAS DE ADMINISTRAÇÃO (ATUALIZADO - CAMINHO CORRIGIDO) ***
 // ==========================================================
 
 // Convertido para 'async'
@@ -414,7 +421,6 @@ app.post('/admin/login', async (req, res) => {
     const { usuario, senha } = req.body; console.log(`Tentativa de login admin para usuário: ${usuario}`);
     if (!usuario || !senha) return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
     try {
-        // *** ATUALIZAÇÃO (SENHA HASH) ***
         const stmt = 'SELECT * FROM usuarios_admin WHERE usuario = $1';
         const resDB = await db.query(stmt, [usuario]);
         const adminUser = resDB.rows[0];
@@ -426,7 +432,6 @@ app.post('/admin/login', async (req, res) => {
         } else {
             console.log(`Falha no login admin para: ${usuario}`); return res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' });
         }
-        // *** FIM DA ATUALIZAÇÃO ***
 
     } catch (error) { console.error("Erro durante o login admin:", error); return res.status(500).json({ success: false, message: 'Erro interno do servidor.' }); }
 });
@@ -435,7 +440,11 @@ function checkAdmin(req, res, next) {
     if (req.session && req.session.isAdmin) { return next(); }
     else { console.log("Acesso negado à área admin. Redirecionando para login."); if (req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('json'))) { return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' }); } return res.redirect('/admin/login.html'); }
 }
-app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'painel.html')); });
+
+// *** CORREÇÃO DO CAMINHO (Render /src folder) ***
+app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(publicPath, 'admin', 'painel.html')); });
+// *** FIM DA CORREÇÃO ***
+
 app.get('/admin/logout', (req, res) => { req.session.destroy((err) => { if (err) { console.error("Erro ao fazer logout:", err); return res.status(500).send("Erro ao sair."); } console.log("Usuário admin deslogado."); res.clearCookie('connect.sid'); res.redirect('/admin/login.html'); }); });
 
 // Convertido para 'async'
@@ -541,7 +550,9 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     } catch (error) { console.error("Erro ao gerar/registrar cartelas manuais:", error); return res.status(500).json({ success: false, message: 'Erro interno ao gerar cartelas.' }); }
 });
 
-app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'relatorios.html')); });
+// *** CORREÇÃO DO CAMINHO (Render /src folder) ***
+app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.join(publicPath, 'admin', 'relatorios.html')); });
+// *** FIM DA CORREÇÃO ***
 
 // Convertido para 'async' e sintaxe PG
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
@@ -577,7 +588,9 @@ app.post('/admin/api/vendas/limpar', checkAdmin, async (req, res) => {
     }
 });
 
-app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'vencedores.html')); });
+// *** CORREÇÃO DO CAMINHO (Render /src folder) ***
+app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.join(publicPath, 'admin', 'vencedores.html')); });
+// *** FIM DA CORREÇÃO ***
 
 // Convertido para 'async' e sintaxe PG
 app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
@@ -625,8 +638,9 @@ app.post('/admin/api/vencedores/limpar', checkAdmin, async (req, res) => {
 
 
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
-// Adiciona a nova página de gerenciamento de cambistas
-app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'cambistas.html')); });
+// *** CORREÇÃO DO CAMINHO (Render /src folder) ***
+app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(publicPath, 'admin', 'cambistas.html')); });
+// *** FIM DA CORREÇÃO ***
 
 // Novas rotas de API para o Admin gerenciar cambistas
 app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
@@ -717,7 +731,9 @@ app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, async (req, res)
 });
 // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
 
-app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'admin')));
+// *** CORREÇÃO DO CAMINHO (Render /src folder) ***
+app.use('/admin', checkAdmin, express.static(path.join(publicPath, 'admin')));
+// *** FIM DA CORREÇÃO ***
 // ==========================================================
 
 
@@ -788,9 +804,11 @@ app.get('/cambista/logout', (req, res) => {
 });
 
 // Rota do Painel (protegida)
+// *** CORREÇÃO DO CAMINHO (Render /src folder) ***
 app.get('/cambista/painel.html', checkCambista, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'cambista', 'painel.html'));
+    res.sendFile(path.join(publicPath, 'cambista', 'painel.html'));
 });
+// *** FIM DA CORREÇÃO ***
 
 // Rota para o Cambista ver seu status (protegida)
 app.get('/cambista/meu-status', checkCambista, async (req, res) => {
@@ -905,7 +923,7 @@ function gerarNumerosAleatorios(quantidade, min, max) { const numeros = new Set(
 function gerarDadosCartela(sorteioId) { const cartela = []; const colunas = [ gerarNumerosAleatorios(5, 1, 15), gerarNumerosAleatorios(5, 16, 30), gerarNumerosAleatorios(4, 31, 45), gerarNumerosAleatorios(5, 46, 60), gerarNumerosAleatorios(5, 61, 75) ]; for (let i = 0; i < 5; i++) { const linha = []; for (let j = 0; j < 5; j++) { if (j === 2 && i === 2) { linha.push("FREE"); } else if (j === 2) { linha.push(colunas[j][i > 2 ? i - 1 : i]); } else { linha.push(colunas[j][i]); } } cartela.push(linha); } return { c_id: gerarIdUnico(), s_id: sorteioId, data: cartela }; }
 function checarVencedorLinha(cartelaData, numerosSorteados) { const cartela = cartelaData.data; const numerosComFree = new Set(numerosSorteados); numerosComFree.add("FREE"); for (let i = 0; i < 5; i++) { if (cartela[i].every(num => numerosComFree.has(num))) return true; } for (let i = 0; i < 5; i++) { if (cartela.every(linha => numerosComFree.has(linha[i]))) return true; } if (cartela.every((linha, i) => numerosComFree.has(linha[i]))) return true; if (cartela.every((linha, i) => numerosComFree.has(linha[4-i]))) return true; return false; }
 function checarVencedorCartelaCheia(cartelaData, numerosSorteados) { const cartela = cartelaData.data; const numerosComFree = new Set(numerosSorteados); numerosComFree.add("FREE"); for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { if (!numerosComFree.has(cartela[i][j])) return false; } } return true; }
-function contarFaltantesParaCheia(cartelaData, numerosSorteadosSet) { if (!cartelaData || !cartelaData.data) return 99; const cartela = cartelaData.data; let faltantes = 0; for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { const num = cartela[i][j]; if (num !== "FREE" && !numerosSorteadosSet.has(num)) { faltantes++; } } } return faltantes; }
+function contarFaltantesParaCheia(cartelaData, numerosSorteadosSet) { if (!cartelaData || !cartelaData.data) return 99; const cartela = cartelaData.data; let faltantes = 0; for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { const num = cartela[i][j]; if (num !== "FREE" && !numerosSNorteadosSet.has(num)) { faltantes++; } } } return faltantes; }
 
 // --- Lógica Principal do Jogo (Convertida para PG) ---
 let estadoJogo = "ESPERANDO";
@@ -1387,3 +1405,129 @@ process.on('exit', () => pool.end());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
+}
+
+{
+type: uploaded file
+fileName: index.html
+fullContent:
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo do Pix - Jogue e Ganhe!</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .loader-pix {
+            border: 6px solid #f3f3f3; /* Cinza claro */
+            border-top: 6px solid var(--color-pix-green); /* Verde Pix */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1.5s linear infinite;
+            margin: 20px auto 10px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1 class="title-gradient">BINGO DO PIX</h1>
+        <p class="slogan">Sua sorte em um clique!</p>
+    </header>
+
+    <main>
+
+        <section id="status-sorteio-box" class="card status-esperando"> 
+            <h3 id="status-titulo">CARREGANDO STATUS...</h3>
+            <div id="status-cronometro">--:--</div>
+            <p id="status-subtexto">Garanta já sua cartela!</p>
+            <a href="/dashboard" id="btn-assistir-vivo" class="btn-comprar btn-comprar-azul" style="display: none;">Assistir ao Vivo!</a>
+        </section>
+        <section id="premio-especial" class="card destaque-especial" style="display: none;">
+             <h2>✨ SORTEIO ESPECIAL ✨</h2>
+            <div class="premio-destaque-especial">
+                <span class="premio-valor premio-valor-especial text-pix" id="especial-valor">R$ ...</span>
+                <p class="premio-sub">Cartela Cheia no Pix!</p>
+            </div>
+            <p class="data-sorteio data-especial" id="especial-data">🗓️ ... 🕖</p>
+            <p class="info-especial">(Compre cartelas para os sorteios regulares e concorra também!)</p>
+        </section>
+
+        <section id="premio-info" class="card">
+            <h2>Próximo Sorteio Regular:</h2>
+            <div class="premios-container">
+                <div class="premio-item premio-principal">
+                    <span class="premio-label">Cartela Cheia</span>
+                    <span class="premio-valor premio-valor-cheia text-pix" id="index-premio-cheia">R$ ...</span>
+                    <span class="premio-sub">no Pix!</span>
+                </div>
+                <div class="premio-divisor"></div>
+                <div class="premio-item premio-secundario">
+                     <span class="premio-label">Linha</span>
+                     <span class="premio-valor premio-valor-linha text-pix" id="index-premio-linha">R$ ...</span>
+                    <span class="premio-sub">no Pix!</span>
+                </div>
+            </div>
+            <button id="btn-jogue-agora" class="btn-comprar btn-destaque btn-jogue">
+                Comprar Cartela (<span id="index-preco-cartela">R$ ...</span>)
+            </button>
+            <p class="aviso-preco">*Preço por cartela individual.</p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+    </footer>
+
+    <div id="modal-checkout" class="modal-overlay">
+        <div class="modal-content">
+             <span class="modal-close">&times;</span>
+            
+            <div id="etapa-dados">
+                <h2 class="title-gradient">Complete seu Pedido</h2>
+                <form id="form-checkout">
+                    <div class="form-grupo"><label for="modal-nome">Seu Nome Completo:</label><input type="text" id="modal-nome" placeholder="Nome para o prêmio" required></div>
+                    <div class="form-grupo"><label for="modal-telefone">Telefone (c/ DDD):</label><input type="tel" id="modal-telefone" placeholder="Ex: 69912345678 (para o Pix)" required></div>
+                    <div class="form-grupo"><label for="modal-quantidade">Quantidade de Cartelas (<span id="modal-label-preco">R$ ...</span> cada):</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
+                </form>
+                <div id="resumo-preco"><p>Valor total: <strong id="modal-preco" class="text-pix">R$ ...</strong></p></div>
+                <p class="modal-info">Um QR Code Pix será gerado para pagamento.</p>
+                <button id="btn-gerar-pix" class="btn-comprar btn-destaque">Gerar PIX</button>
+            </div>
+
+            <div id="etapa-pix" style="display: none;">
+                <h2 class="title-gradient">Pague com PIX</h2>
+                <p>Escaneie o QR Code ou use o "Copia e Cola".</p>
+                <div id="pix-qrcode-container">
+                    <img id="pix-qrcode-img" src="" alt="QR Code PIX" style="max-width: 250px; width: 100%; border: 2px solid #ddd; border-radius: 8px;">
+                </div>
+                <div class="form-grupo" style="margin-top: 15px;">
+                    <label>PIX Copia e Cola:</label>
+                    <input type="text" id="pix-copia-cola" readonly style="font-size: 0.9em; padding: 8px; text-align: center;">
+                    <button id="btn-copiar-pix" class="btn-comprar btn-comprar-azul" style="font-size: 0.9em; padding: 8px; margin-top: 5px;">Copiar Código</button>
+                </div>
+                <div id="aguardando-pagamento">
+                    <div class="loader-pix"></div>
+                    <strong>Aguardando Pagamento...</strong>
+                    <p class="modal-info">Não feche esta janela. Você será redirecionado automaticamente após a confirmação.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+}
+
+{
+type: uploaded file
+fileName: image_36c2db.png
