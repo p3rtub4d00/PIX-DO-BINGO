@@ -258,9 +258,6 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
     // --- 2. Validar a assinatura ---
     const signature = req.headers['x-signature'];
-    const requestId = req.headers['x-request-id']; // <-- Não usamos mais, mas mantemos
-    
-    // --- CORREÇÃO (NOVO): 'x-request-id' NÃO É USADO, USAMOS 'data.id' ---
 
     if (!signature) {
         console.warn("Webhook REJEITADO: Cabeçalho 'x-signature' ausente.");
@@ -292,8 +289,8 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
             }
             
             // --- ESTA É A LINHA CRÍTICA QUE FOI CORRIGIDA ---
-            // O template correto usa 'data.id' e 'ts', e não 'request-id'
-            const template = `data.id:${dataId};ts:${ts};`;
+            // O template correto é 'id:' e 'ts:', sem 'data.'
+            const template = `id:${dataId};ts:${ts};`;
             // --- FIM DA CORREÇÃO ---
             
             const hmac = crypto.createHmac('sha256', MERCADOPAGO_WEBHOOK_SECRET);
