@@ -105,8 +105,49 @@ async function inicializarBanco() {
             );
         `);
         console.log("Tabela 'pagamentos_pendentes' verificada.");
+
+        // *** ATUALIZAÇÃO (CAMBISTAS) ***
+        // 1. Cria a tabela de Cambistas
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS cambistas (
+                id SERIAL PRIMARY KEY,
+                usuario TEXT UNIQUE NOT NULL,
+                senha TEXT NOT NULL,
+                saldo_creditos REAL DEFAULT 0 NOT NULL,
+                ativo BOOLEAN DEFAULT true NOT NULL,
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log("Tabela 'cambistas' verificada.");
+
+        // 2. Cria a tabela de Transações de Créditos (histórico)
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS transacoes_creditos (
+                id SERIAL PRIMARY KEY,
+                cambista_id INTEGER NOT NULL REFERENCES cambistas(id),
+                admin_usuario TEXT NOT NULL,
+                valor_alteracao REAL NOT NULL,
+                tipo TEXT NOT NULL, -- 'recarga' ou 'venda'
+                venda_id INTEGER NULL, -- ID da venda (se for do tipo 'venda')
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log("Tabela 'transacoes_creditos' verificada.");
         
-        // *** ATUALIZAÇÃO (SENHA HASH - CORREÇÃO) ***
+        // 3. Adiciona a coluna 'cambista_id' na tabela 'vendas'
+        try {
+            await db.query('ALTER TABLE vendas ADD COLUMN cambista_id INTEGER NULL REFERENCES cambistas(id)');
+            console.log("Coluna 'cambista_id' adicionada à tabela 'vendas'.");
+        } catch (e) {
+            if (e.code === '42701') {
+                console.log("Coluna 'cambista_id' já existe. Ignorando.");
+            } else {
+                throw e;
+            }
+        }
+        // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
+        
+        
         // Verifica se o admin existe e qual sua senha
         const adminRes = await db.query('SELECT senha FROM usuarios_admin WHERE usuario = $1', ['admin']);
         
@@ -129,7 +170,6 @@ async function inicializarBanco() {
                 console.log("Usuário 'admin' já possui senha criptografada.");
             }
         }
-        // *** FIM DA ATUALIZAÇÃO ***
 
         // Insere configurações padrão
         const configs = [
@@ -350,13 +390,11 @@ app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'public'
 app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/dashboard.html', (req, res) => { res.redirect('/dashboard'); });
 
-// *** ATUALIZAÇÃO (PING) ***
 // Rota de "ping" para manter o servidor do Render Hobby acordado
 app.get('/ping', (req, res) => {
     console.log("Ping recebido, mantendo o servidor acordado.");
     res.status(200).send('pong');
 });
-// *** FIM DA ATUALIZAÇÃO ***
 
 app.use(express.static(path.join(__dirname, 'public')));
 
