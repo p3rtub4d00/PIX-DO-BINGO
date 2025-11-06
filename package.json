@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "connect-pg-simple": "^9.0.1",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
