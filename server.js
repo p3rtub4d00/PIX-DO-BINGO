@@ -258,24 +258,24 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
     // --- 2. Validar a assinatura ---
     const signature = req.headers['x-signature'];
-    const requestId = req.headers['x-request-id'];
+    const requestId = req.headers['x-request-id']; // <-- Não usamos mais, mas mantemos
+    
+    // --- CORREÇÃO (NOVO): 'x-request-id' NÃO É USADO, USAMOS 'data.id' ---
 
-    if (!signature || !requestId) {
-        console.warn("Webhook REJEITADO: Cabeçalhos de assinatura ausentes.");
+    if (!signature) {
+        console.warn("Webhook REJEITADO: Cabeçalho 'x-signature' ausente.");
         return res.sendStatus(400); // Bad Request
     }
 
     if (MERCADOPAGO_WEBHOOK_SECRET) {
         try {
-            // --- CORREÇÃO: Checa se é um webhook de pagamento real ---
             // Se não tiver 'data.id', é um teste ou notificação diferente.
             if (!reqBody.data || !reqBody.data.id) {
                 console.log("Webhook recebido sem 'data.id' (provavelmente um teste). Respondendo 200 OK.");
                 return res.sendStatus(200); // Responde OK para o MP parar de enviar.
             }
             
-            const dataId = reqBody.data.id; // ID do recurso (pagamento)
-            // --- FIM DA CORREÇÃO ---
+            const dataId = String(reqBody.data.id); // ID do recurso (pagamento)
             
             const parts = signature.split(',').reduce((acc, part) => {
                 const [key, value] = part.split('=');
@@ -291,8 +291,10 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                  return res.sendStatus(400);
             }
             
-            // --- CORREÇÃO: Template usa o 'dataId' ---
-            const template = `id:${dataId};request-id:${requestId};ts:${ts};`;
+            // --- ESTA É A LINHA CRÍTICA QUE FOI CORRIGIDA ---
+            // O template correto usa 'data.id' e 'ts', e não 'request-id'
+            const template = `data.id:${dataId};ts:${ts};`;
+            // --- FIM DA CORREÇÃO ---
             
             const hmac = crypto.createHmac('sha256', MERCADOPAGO_WEBHOOK_SECRET);
             hmac.update(template);
