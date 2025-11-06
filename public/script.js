@@ -15,9 +15,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const etapaDados = document.getElementById('etapa-dados');
     const etapaPix = document.getElementById('etapa-pix');
     const btnGerarPix = document.getElementById('btn-gerar-pix'); 
+    
+    // --- (INÍCIO) Seletores para Correção ---
     const pixQrCodeImg = document.getElementById('pix-qrcode-img');
+    const pixQrContainer = document.getElementById('pix-qrcode-container'); // Container da imagem
     const pixCopiaColaInput = document.getElementById('pix-copia-cola');
-    const btnCopiarPix = document.getElementById('btn-copiar-pix');
+    const pixCopiaContainer = pixCopiaColaInput.closest('.form-grupo'); // Container do Copia/Cola
+    // --- (FIM) Seletores para Correção ---
+    
     const aguardandoPagamentoEl = document.getElementById('aguardando-pagamento');
 
     const modalNome = document.getElementById('modal-nome');
@@ -160,6 +165,11 @@ document.addEventListener('DOMContentLoaded', () => {
             btnGerarPix.disabled = false; 
             btnGerarPix.textContent = "Gerar PIX"; 
         } 
+        
+        // --- CORREÇÃO: Garante que os campos reapareçam ---
+        if(pixQrContainer) pixQrContainer.style.display = 'block';
+        if(pixCopiaContainer) pixCopiaContainer.style.display = 'block';
+        
         pararVerificadorPagamento(); 
     }
 
@@ -188,6 +198,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnCloseModal) btnCloseModal.addEventListener('click', fecharModal);
     if(modal) modal.addEventListener('click', (event) => { if (event.target === modal) fecharModal(); });
 
+    // ==========================================================
+    // --- CORREÇÃO (1/2): LÓGICA DE GERAR PIX ---
+    // ==========================================================
     if (btnGerarPix && modalNome && modalTelefone && modalQuantidadeInput && socket) {
         btnGerarPix.addEventListener('click', () => {
             const nome = modalNome.value.trim(); const telefone = modalTelefone.value.trim(); const quantidade = parseInt(modalQuantidadeInput.value);
@@ -197,12 +210,23 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Solicitando PIX..."); 
             btnGerarPix.textContent = "Gerando..."; 
             btnGerarPix.disabled = true;
+            
+            // Garante que os campos estão visíveis
+            if(pixQrContainer) pixQrContainer.style.display = 'block';
+            if(pixCopiaContainer) pixCopiaContainer.style.display = 'block';
 
             socket.emit('criarPagamento', { nome, telefone, quantidade }, (data) => {
                 
-                if (data && data.success) {
+                if (data && data.success && data.qrCodeCopiaCola) { // <-- Verificamos se qrCodeCopiaCola existe
                     console.log("PIX Recebido, Payment ID:", data.paymentId);
-                    pixQrCodeImg.src = `data:image/png;base64,${data.qrCodeBase64}`;
+
+                    // --- INÍCIO DA CORREÇÃO ---
+                    // Geramos o QR Code usando a string 'Copia e Cola'
+                    const qrCodeString = encodeURIComponent(data.qrCodeCopiaCola);
+                    pixQrCodeImg.src = `https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=${qrCodeString}`;
+                    pixQrCodeImg.style.display = 'block'; // Garante que está visível
+                    // --- FIM DA CORREÇÃO ---
+
                     pixCopiaColaInput.value = data.qrCodeCopiaCola;
                     
                     etapaDados.style.display = 'none';
@@ -325,7 +349,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Polling Robusto (Ao carregar a página)
+    // ==========================================================
+    // --- CORREÇÃO (2/2): LÓGICA DE RECARREGAMENTO DE PÁGINA ---
+    // ==========================================================
     const paymentIdSalvo = sessionStorage.getItem('bingo_payment_id');
     if (paymentIdSalvo) {
         console.log(`Encontrado paymentId ${paymentIdSalvo} no sessionStorage ao carregar. Iniciando verificador.`);
@@ -333,8 +359,13 @@ document.addEventListener('DOMContentLoaded', () => {
         etapaDados.style.display = 'none';
         etapaPix.style.display = 'block';
         aguardandoPagamentoEl.style.display = 'block';
-        pixQrCodeImg.style.display = 'none';
-        pixCopiaColaInput.value = "Verificando seu pagamento anterior...";
+
+        // --- INÍCIO DA CORREÇÃO ---
+        // Oculta a área do QR Code e Copia/Cola, mostrando apenas o spinner,
+        // pois não salvamos o código no sessionStorage (apenas o paymentId).
+        if(pixQrContainer) pixQrContainer.style.display = 'none';
+        if(pixCopiaContainer) pixCopiaContainer.style.display = 'none';
+        // --- FIM DA CORREÇÃO ---
         
         iniciarVerificadorPagamento(paymentIdSalvo);
     }
