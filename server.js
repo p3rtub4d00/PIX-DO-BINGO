@@ -11,188 +11,188 @@ const { Pool } = require('pg');
 const PgStore = require('connect-pg-simple')(session);
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    // (Opcional) Descomente se o Render reclamar de SSL
-    // ssl: {
-    //   rejectUnauthorized: false
-    // }
+connectionString: process.env.DATABASE_URL,
+// (Opcional) Descomente se o Render reclamar de SSL
+// ssl: {
+//   rejectUnauthorized: false
+// }
 });
 
 const db = {
-    query: (text, params) => pool.query(text, params),
+query: (text, params) => pool.query(text, params),
 };
 
 console.log("Conectando ao banco de dados PostgreSQL...");
 
 // Função assíncrona para criar as tabelas se não existirem
 async function inicializarBanco() {
-    console.log("Verificando estrutura do banco de dados...");
-    try {
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS configuracoes (
-                chave TEXT PRIMARY KEY, 
-                valor TEXT
-            );
-        `);
-        
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS vencedores (
-                id SERIAL PRIMARY KEY, 
-                sorteio_id INTEGER NOT NULL, 
-                premio TEXT NOT NULL, 
-                nome TEXT NOT NULL, 
-                telefone TEXT, 
-                cartela_id TEXT, 
-                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, 
-                status_pagamento TEXT DEFAULT 'Pendente' NOT NULL 
-            );
-        `);
+console.log("Verificando estrutura do banco de dados...");
+try {
+await db.query(`
+           CREATE TABLE IF NOT EXISTS configuracoes (
+               chave TEXT PRIMARY KEY, 
+               valor TEXT
+           );
+       `);
 
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS usuarios_admin (
-                id SERIAL PRIMARY KEY, 
-                usuario TEXT UNIQUE NOT NULL, 
-                senha TEXT NOT NULL
-            );
-        `);
-        
-        // Tabela "sessions" é criada automaticamente pelo connect-pg-simple
+await db.query(`
+           CREATE TABLE IF NOT EXISTS vencedores (
+               id SERIAL PRIMARY KEY, 
+               sorteio_id INTEGER NOT NULL, 
+               premio TEXT NOT NULL, 
+               nome TEXT NOT NULL, 
+               telefone TEXT, 
+               cartela_id TEXT, 
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, 
+               status_pagamento TEXT DEFAULT 'Pendente' NOT NULL 
+           );
+       `);
 
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS vendas (
-                id SERIAL PRIMARY KEY, 
-                sorteio_id INTEGER NOT NULL, 
-                nome_jogador TEXT NOT NULL, 
-                telefone TEXT, 
-                quantidade_cartelas INTEGER NOT NULL, 
-                valor_total REAL NOT NULL, 
-                tipo_venda TEXT NOT NULL, 
-                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
+await db.query(`
+           CREATE TABLE IF NOT EXISTS usuarios_admin (
+               id SERIAL PRIMARY KEY, 
+               usuario TEXT UNIQUE NOT NULL, 
+               senha TEXT NOT NULL
+           );
+       `);
 
-        // Adiciona coluna de cartelas
-        try {
-            await db.query('ALTER TABLE vendas ADD COLUMN cartelas_json TEXT');
-            console.log("Coluna 'cartelas_json' adicionada à tabela 'vendas'.");
-        } catch (e) {
-            if (e.code === '42701') {
-                console.log("Coluna 'cartelas_json' já existe. Ignorando.");
-            } else {
-                throw e;
-            }
-        }
-        
-        // Adiciona coluna 'payment_id' na tabela 'vendas'
-        try {
-            await db.query('ALTER TABLE vendas ADD COLUMN payment_id TEXT');
-            console.log("Coluna 'payment_id' adicionada à tabela 'vendas'.");
-        } catch (e) {
-            if (e.code === '42701') {
-                console.log("Coluna 'payment_id' já existe. Ignorando.");
-            } else {
-                throw e;
-            }
-        }
+// Tabela "sessions" é criada automaticamente pelo connect-pg-simple
 
-        // Cria a tabela para pagamentos pendentes
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS pagamentos_pendentes (
-                payment_id TEXT PRIMARY KEY,
-                socket_id TEXT NOT NULL,
-                dados_compra_json TEXT NOT NULL,
-                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log("Tabela 'pagamentos_pendentes' verificada.");
+await db.query(`
+           CREATE TABLE IF NOT EXISTS vendas (
+               id SERIAL PRIMARY KEY, 
+               sorteio_id INTEGER NOT NULL, 
+               nome_jogador TEXT NOT NULL, 
+               telefone TEXT, 
+               quantidade_cartelas INTEGER NOT NULL, 
+               valor_total REAL NOT NULL, 
+               tipo_venda TEXT NOT NULL, 
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+           );
+       `);
 
-        
-        // 1. Cria a tabela de Cambistas
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS cambistas (
-                id SERIAL PRIMARY KEY,
-                usuario TEXT UNIQUE NOT NULL,
-                senha TEXT NOT NULL,
-                saldo_creditos REAL DEFAULT 0 NOT NULL,
-                ativo BOOLEAN DEFAULT true NOT NULL,
-                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log("Tabela 'cambistas' verificada.");
+// Adiciona coluna de cartelas
+try {
+await db.query('ALTER TABLE vendas ADD COLUMN cartelas_json TEXT');
+console.log("Coluna 'cartelas_json' adicionada à tabela 'vendas'.");
+} catch (e) {
+if (e.code === '42701') {
+console.log("Coluna 'cartelas_json' já existe. Ignorando.");
+} else {
+throw e;
+}
+}
 
-        // 2. Cria a tabela de Transações de Créditos (histórico)
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS transacoes_creditos (
-                id SERIAL PRIMARY KEY,
-                cambista_id INTEGER NOT NULL REFERENCES cambistas(id),
-                admin_usuario TEXT NOT NULL,
-                valor_alteracao REAL NOT NULL,
-                tipo TEXT NOT NULL, -- 'recarga' ou 'venda'
-                venda_id INTEGER NULL, -- ID da venda (se for do tipo 'venda')
-                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log("Tabela 'transacoes_creditos' verificada.");
-        
-        // 3. Adiciona a coluna 'cambista_id' na tabela 'vendas'
-        try {
-            await db.query('ALTER TABLE vendas ADD COLUMN cambista_id INTEGER NULL REFERENCES cambistas(id)');
-            console.log("Coluna 'cambista_id' adicionada à tabela 'vendas'.");
-        } catch (e) {
-            if (e.code === '42701') {
-                console.log("Coluna 'cambista_id' já existe. Ignorando.");
-            } else {
-                throw e;
-            }
-        }
-        
-        
-        // Verifica se o admin existe e qual sua senha (lógica de correção de senha)
-        const adminRes = await db.query('SELECT senha FROM usuarios_admin WHERE usuario = $1', ['admin']);
-        
-        const saltRounds = 10;
-        const senhaHash = await bcrypt.hash('admin123', saltRounds);
+// Adiciona coluna 'payment_id' na tabela 'vendas'
+try {
+await db.query('ALTER TABLE vendas ADD COLUMN payment_id TEXT');
+console.log("Coluna 'payment_id' adicionada à tabela 'vendas'.");
+} catch (e) {
+if (e.code === '42701') {
+console.log("Coluna 'payment_id' já existe. Ignorando.");
+} else {
+throw e;
+}
+}
 
-        if (adminRes.rows.length == 0) {
-            // Admin não existe, cria um novo
-            await db.query('INSERT INTO usuarios_admin (usuario, senha) VALUES ($1, $2)', ['admin', senhaHash]);
-            console.log("Usuário 'admin' criado com senha criptografada.");
-        } else {
-            // Admin existe, checa a senha
-            const senhaAtual = adminRes.rows[0].senha;
-            if (!senhaAtual.startsWith('$2')) {
-                await db.query('UPDATE usuarios_admin SET senha = $1 WHERE usuario = $2', [senhaHash, 'admin']);
-                console.log("Senha do 'admin' atualizada para formato criptografado.");
-            } else {
-                console.log("Usuário 'admin' já possui senha criptografada.");
-            }
-        }
+// Cria a tabela para pagamentos pendentes
+await db.query(`
+           CREATE TABLE IF NOT EXISTS pagamentos_pendentes (
+               payment_id TEXT PRIMARY KEY,
+               socket_id TEXT NOT NULL,
+               dados_compra_json TEXT NOT NULL,
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+           );
+       `);
+console.log("Tabela 'pagamentos_pendentes' verificada.");
 
-        // Insere configurações padrão
-        const configs = [
-            { chave: 'premio_linha', valor: '100.00' },
-            { chave: 'premio_cheia', valor: '500.00' },
-            { chave: 'preco_cartela', valor: '5.00' },
-            { chave: 'sorteio_especial_ativo', valor: 'true' },
-            { chave: 'sorteio_especial_valor', valor: '1000.00' },
-            { chave: 'sorteio_especial_data', valor: 'Dia 25/10/2026 às 19:00' },
-            { chave: 'duracao_espera', valor: '20' },
-            { chave: 'min_bots', valor: '80' },
-            { chave: 'max_bots', valor: '150' },
-            { chave: 'numero_sorteio_atual', valor: '500' }
-        ];
 
-        const configQuery = 'INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO NOTHING';
-        for (const config of configs) {
-            await db.query(configQuery, [config.chave, config.valor]);
-        }
-        
-        console.log("Estrutura do banco de dados verificada e configurada.");
+// 1. Cria a tabela de Cambistas
+await db.query(`
+           CREATE TABLE IF NOT EXISTS cambistas (
+               id SERIAL PRIMARY KEY,
+               usuario TEXT UNIQUE NOT NULL,
+               senha TEXT NOT NULL,
+               saldo_creditos REAL DEFAULT 0 NOT NULL,
+               ativo BOOLEAN DEFAULT true NOT NULL,
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+           );
+       `);
+console.log("Tabela 'cambistas' verificada.");
 
-    } catch (err) {
-        console.error("ERRO CRÍTICO AO INICIALIZAR O BANCO DE DADOS:", err);
-        process.exit(1); 
-    }
+// 2. Cria a tabela de Transações de Créditos (histórico)
+await db.query(`
+           CREATE TABLE IF NOT EXISTS transacoes_creditos (
+               id SERIAL PRIMARY KEY,
+               cambista_id INTEGER NOT NULL REFERENCES cambistas(id),
+               admin_usuario TEXT NOT NULL,
+               valor_alteracao REAL NOT NULL,
+               tipo TEXT NOT NULL, -- 'recarga' ou 'venda'
+               venda_id INTEGER NULL, -- ID da venda (se for do tipo 'venda')
+               timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+           );
+       `);
+console.log("Tabela 'transacoes_creditos' verificada.");
+
+// 3. Adiciona a coluna 'cambista_id' na tabela 'vendas'
+try {
+await db.query('ALTER TABLE vendas ADD COLUMN cambista_id INTEGER NULL REFERENCES cambistas(id)');
+console.log("Coluna 'cambista_id' adicionada à tabela 'vendas'.");
+} catch (e) {
+if (e.code === '42701') {
+console.log("Coluna 'cambista_id' já existe. Ignorando.");
+} else {
+throw e;
+}
+}
+
+
+// Verifica se o admin existe e qual sua senha (lógica de correção de senha)
+const adminRes = await db.query('SELECT senha FROM usuarios_admin WHERE usuario = $1', ['admin']);
+
+const saltRounds = 10;
+const senhaHash = await bcrypt.hash('admin123', saltRounds);
+
+if (adminRes.rows.length == 0) {
+// Admin não existe, cria um novo
+await db.query('INSERT INTO usuarios_admin (usuario, senha) VALUES ($1, $2)', ['admin', senhaHash]);
+console.log("Usuário 'admin' criado com senha criptografada.");
+} else {
+// Admin existe, checa a senha
+const senhaAtual = adminRes.rows[0].senha;
+if (!senhaAtual.startsWith('$2')) {
+await db.query('UPDATE usuarios_admin SET senha = $1 WHERE usuario = $2', [senhaHash, 'admin']);
+console.log("Senha do 'admin' atualizada para formato criptografado.");
+} else {
+console.log("Usuário 'admin' já possui senha criptografada.");
+}
+}
+
+// Insere configurações padrão
+const configs = [
+{ chave: 'premio_linha', valor: '100.00' },
+{ chave: 'premio_cheia', valor: '500.00' },
+{ chave: 'preco_cartela', valor: '5.00' },
+{ chave: 'sorteio_especial_ativo', valor: 'true' },
+{ chave: 'sorteio_especial_valor', valor: '1000.00' },
+{ chave: 'sorteio_especial_data', valor: 'Dia 25/10/2026 às 19:00' },
+{ chave: 'duracao_espera', valor: '20' },
+{ chave: 'min_bots', valor: '80' },
+{ chave: 'max_bots', valor: '150' },
+{ chave: 'numero_sorteio_atual', valor: '500' }
+];
+
+const configQuery = 'INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO NOTHING';
+for (const config of configs) {
+await db.query(configQuery, [config.chave, config.valor]);
+}
+
+console.log("Estrutura do banco de dados verificada e configurada.");
+
+} catch (err) {
+console.error("ERRO CRÍTICO AO INICIALIZAR O BANCO DE DADOS:", err);
+process.exit(1); 
+}
 }
 // --- FIM DAS MUDANÇAS NO BANCO DE DADOS ---
 
@@ -209,12 +209,12 @@ const PORTA = process.env.PORT || 3000;
 const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN; 
 
 const mpClient = new MercadoPagoConfig({ 
-    accessToken: MERCADOPAGO_ACCESS_TOKEN,
-    options: { timeout: 5000 }
+accessToken: MERCADOPAGO_ACCESS_TOKEN,
+options: { timeout: 5000 }
 });
 
 if (!MERCADOPAGO_ACCESS_TOKEN) {
-    console.warn("AVISO: MERCADOPAGO_ACCESS_TOKEN não foi configurado nas variáveis de ambiente.");
+console.warn("AVISO: MERCADOPAGO_ACCESS_TOKEN não foi configurado nas variáveis de ambiente.");
 }
 // ==========================================================
 
@@ -223,9 +223,9 @@ if (!MERCADOPAGO_ACCESS_TOKEN) {
 // *** CONFIGURAÇÃO DE SESSÃO (Atualizada para PG) ***
 // ==========================================================
 const store = new PgStore({
-    pool: pool, // Usa o pool de conexão do PG
-    tableName: 'sessions', // Nome da tabela
-    pruneSessionInterval: 60 // Limpa sessões expiradas a cada 60s
+pool: pool, // Usa o pool de conexão do PG
+tableName: 'sessions', // Nome da tabela
+pruneSessionInterval: 60 // Limpa sessões expiradas a cada 60s
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'seu_segredo_muito_secreto_e_longo_troque_isso!';
@@ -241,80 +241,80 @@ app.use(express.json());
 // *** WEBHOOK MERCADO PAGO (ATUALIZADO - SEM SOCKET) ***
 // ==========================================================
 app.post('/webhook-mercadopago', (req, res) => {
-    console.log("Webhook do Mercado Pago recebido!");
-    
-    if (req.body.type === 'payment') {
-        const paymentId = req.body.data.id;
-        console.log(`Webhook: ID de Pagamento recebido: ${paymentId}`);
+console.log("Webhook do Mercado Pago recebido!");
 
-        const payment = new Payment(mpClient);
-        payment.get({ id: paymentId })
-            .then(async (pagamento) => { // Trocado para 'async'
-                const status = pagamento.status;
-                console.log(`Webhook: Status do Pagamento ${paymentId} é: ${status}`);
+if (req.body.type === 'payment') {
+const paymentId = req.body.data.id;
+console.log(`Webhook: ID de Pagamento recebido: ${paymentId}`);
 
-                if (status === 'approved') {
-                    // 1. Busca o pagamento pendente no BANCO DE DADOS
-                    console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
-                    const query = "SELECT * FROM pagamentos_pendentes WHERE payment_id = $1";
-                    const pendingPaymentResult = await db.query(query, [paymentId]);
+const payment = new Payment(mpClient);
+payment.get({ id: paymentId })
+.then(async (pagamento) => { // Trocado para 'async'
+const status = pagamento.status;
+console.log(`Webhook: Status do Pagamento ${paymentId} é: ${status}`);
 
-                    if (pendingPaymentResult.rows.length > 0) {
-                        const pendingPayment = pendingPaymentResult.rows[0];
-                        const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
-                        
-                        console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
-                        
-                        try {
-                            let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
-                            const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
-                            const preco = precoRes.rows[0];
-                            const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
-                            const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
-                            
-                            const cartelasGeradas = [];
-                            for (let i = 0; i < dadosCompra.quantidade; i++) {
-                                cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
-                            }
-                            const cartelasJSON = JSON.stringify(cartelasGeradas); 
+if (status === 'approved') {
+// 1. Busca o pagamento pendente no BANCO DE DADOS
+console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
+const query = "SELECT * FROM pagamentos_pendentes WHERE payment_id = $1";
+const pendingPaymentResult = await db.query(query, [paymentId]);
 
-                            // Query atualizada para salvar o JSON e o payment_id
-                            const stmtVenda = `
-                                INSERT INTO vendas 
-                                (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id) 
-                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-                                RETURNING id`; 
-                            
-                            const vendaResult = await db.query(stmtVenda, [
-                                sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null, 
-                                dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
-                            ]);
-                            const vendaId = vendaResult.rows[0].id; 
-                            
-                            console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
+if (pendingPaymentResult.rows.length > 0) {
+const pendingPayment = pendingPaymentResult.rows[0];
+const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
 
-                            // 2. Deleta o pagamento pendente do banco, pois foi processado
-                            await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
-                            console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
+console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
 
-                        } catch (dbError) {
-                            console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
-                        }
-                    } else {
-                         console.warn(`Webhook: Pagamento ${paymentId} aprovado, mas NÃO FOI ENCONTRADO no banco 'pagamentos_pendentes'. (Pode ser um pagamento antigo ou um erro)`);
-                    }
-                } else if (status === 'cancelled' || status === 'rejected') {
-                    // Se foi cancelado ou rejeitado, limpa do banco
-                    await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
-                    console.log(`Pagamento ${paymentId} (${status}) removido do DB.`);
-                }
-            })
-            .catch(error => {
-                console.error("Webhook ERRO: Falha ao buscar pagamento no Mercado Pago:", error);
-            });
-    }
+try {
+let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
+const preco = precoRes.rows[0];
+const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
+const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
 
-    res.sendStatus(200);
+const cartelasGeradas = [];
+for (let i = 0; i < dadosCompra.quantidade; i++) {
+cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+}
+const cartelasJSON = JSON.stringify(cartelasGeradas); 
+
+// Query atualizada para salvar o JSON e o payment_id
+const stmtVenda = `
+                               INSERT INTO vendas 
+                               (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id) 
+                               VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+                               RETURNING id`; 
+
+const vendaResult = await db.query(stmtVenda, [
+sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null, 
+dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
+]);
+const vendaId = vendaResult.rows[0].id; 
+
+console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
+
+// 2. Deleta o pagamento pendente do banco, pois foi processado
+await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
+
+} catch (dbError) {
+console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
+}
+} else {
+console.warn(`Webhook: Pagamento ${paymentId} aprovado, mas NÃO FOI ENCONTRADO no banco 'pagamentos_pendentes'. (Pode ser um pagamento antigo ou um erro)`);
+}
+} else if (status === 'cancelled' || status === 'rejected') {
+// Se foi cancelado ou rejeitado, limpa do banco
+await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+console.log(`Pagamento ${paymentId} (${status}) removido do DB.`);
+}
+})
+.catch(error => {
+console.error("Webhook ERRO: Falha ao buscar pagamento no Mercado Pago:", error);
+});
+}
+
+res.sendStatus(200);
 });
 
 // ==========================================================
@@ -328,44 +328,45 @@ let numeroDoSorteio = 500; // Valor padrão, será sobrescrito
 
 // Convertido para 'async'
 async function carregarConfiguracoes() {
-    try {
-        // Pede também o 'numero_sorteio_atual'
-        const res = await db.query("SELECT chave, valor FROM configuracoes WHERE chave IN ($1, $2, $3, $4, $5, $6, $7)", 
-            ['premio_linha', 'premio_cheia', 'preco_cartela', 'duracao_espera', 'min_bots', 'max_bots', 'numero_sorteio_atual']);
-        
-        const configs = res.rows.reduce((acc, row) => {
-            acc[row.chave] = row.valor;
-            return acc;
-        }, {});
+try {
+// Pede também o 'numero_sorteio_atual'
+const res = await db.query("SELECT chave, valor FROM configuracoes WHERE chave IN ($1, $2, $3, $4, $5, $6, $7)", 
+['premio_linha', 'premio_cheia', 'preco_cartela', 'duracao_espera', 'min_bots', 'max_bots', 'numero_sorteio_atual']);
 
-        PREMIO_LINHA = configs.premio_linha || '100.00';
-        PREMIO_CHEIA = configs.premio_cheia || '500.00';
-        PRECO_CARTELA = configs.preco_cartela || '5.00';
-        DURACAO_ESPERA_ATUAL = parseInt(configs.duracao_espera, 10) || 20;
-        if (isNaN(DURACAO_ESPERA_ATUAL) || DURACAO_ESPERA_ATUAL < 10) DURACAO_ESPERA_ATUAL = 10; 
+const configs = res.rows.reduce((acc, row) => {
+acc[row.chave] = row.valor;
+return acc;
+}, {});
 
-        MIN_BOTS_ATUAL = parseInt(configs.min_bots, 10) || 80;
-        MAX_BOTS_ATUAL = parseInt(configs.max_bots, 10) || 150;
-        if (isNaN(MIN_BOTS_ATUAL) || MIN_BOTS_ATUAL < 0) MIN_BOTS_ATUAL = 0;
-        if (isNaN(MAX_BOTS_ATUAL) || MAX_BOTS_ATUAL < MIN_BOTS_ATUAL) MAX_BOTS_ATUAL = MIN_BOTS_ATUAL;
+PREMIO_LINHA = configs.premio_linha || '100.00';
+PREMIO_CHEIA = configs.premio_cheia || '500.00';
+PRECO_CARTELA = configs.preco_cartela || '5.00';
+DURACAO_ESPERA_ATUAL = parseInt(configs.duracao_espera, 10) || 20;
+if (isNaN(DURACAO_ESPERA_ATUAL) || DURACAO_ESPERA_ATUAL < 10) DURACAO_ESPERA_ATUAL = 10; 
 
-        // Carrega o número do sorteio do banco para a variável global
-        numeroDoSorteio = parseInt(configs.numero_sorteio_atual, 10) || 500;
-        if (isNaN(numeroDoSorteio)) numeroDoSorteio = 500;
+MIN_BOTS_ATUAL = parseInt(configs.min_bots, 10) || 80;
+MAX_BOTS_ATUAL = parseInt(configs.max_bots, 10) || 150;
+if (isNaN(MIN_BOTS_ATUAL) || MIN_BOTS_ATUAL < 0) MIN_BOTS_ATUAL = 0;
+if (isNaN(MAX_BOTS_ATUAL) || MAX_BOTS_ATUAL < MIN_BOTS_ATUAL) MAX_BOTS_ATUAL = MIN_BOTS_ATUAL;
 
-        console.log(`Configurações de Jogo carregadas: Linha=R$${PREMIO_LINHA}, Cheia=R$${PREMIO_CHEIA}, Cartela=R$${PRECO_CARTELA}, Espera=${DURACAO_ESPERA_ATUAL}s, Bots(${MIN_BOTS_ATUAL}-${MAX_BOTS_ATUAL})`); 
-        console.log(`Servidor: Sorteio atual carregado do banco: #${numeroDoSorteio}`); // Novo log
+// Carrega o número do sorteio do banco para a variável global
+numeroDoSorteio = parseInt(configs.numero_sorteio_atual, 10) || 500;
+if (isNaN(numeroDoSorteio)) numeroDoSorteio = 500;
 
-    } catch (err) { console.error("Erro ao carregar configurações do DB:", err); }
+console.log(`Configurações de Jogo carregadas: Linha=R$${PREMIO_LINHA}, Cheia=R$${PREMIO_CHEIA}, Cartela=R$${PRECO_CARTELA}, Espera=${DURACAO_ESPERA_ATUAL}s, Bots(${MIN_BOTS_ATUAL}-${MAX_BOTS_ATUAL})`); 
+console.log(`Servidor: Sorteio atual carregado do banco: #${numeroDoSorteio}`); // Novo log
+
+} catch (err) { console.error("Erro ao carregar configurações do DB:", err); }
 }
 // (Será chamado no final do arquivo, após a inicialização do DB)
 
 // ==========================================================
+// *** ROTAS PÚBLICAS (Atualizado para PG) ***
 // *** ROTAS PÚBLICAS (ATUALIZADO - CAMINHO CORRIGIDO) ***
 // ==========================================================
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
 // *** CORREÇÃO DO CAMINHO (Render /src folder) ***
-// Define o caminho para a pasta 'public', que está um nível ACIMA da pasta 'src'
 const publicPath = path.join(__dirname, '..', 'public');
 console.log(`Pasta 'public' definida como: ${publicPath}`);
 // *** FIM DA CORREÇÃO ***
@@ -374,73 +375,87 @@ app.get('/', (req, res) => { res.sendFile(path.join(publicPath, 'index.html')); 
 
 // Convertido para 'async'
 app.get('/api/config', async (req, res) => {
-    try {
-        const stmt = "SELECT chave, valor FROM configuracoes";
-        const resDB = await db.query(stmt);
-        const configs = resDB.rows;
-        
-        const configMap = configs.reduce((acc, config) => {
-            acc[config.chave] = config.valor;
-            return acc;
-        }, {});
-        res.json(configMap);
-    } catch (error) {
-        console.error("Erro ao buscar /api/config:", error);
-        res.status(500).json({ success: false, message: "Erro ao buscar configurações." });
-    }
+try {
+const stmt = "SELECT chave, valor FROM configuracoes";
+const resDB = await db.query(stmt);
+const configs = resDB.rows;
+
+const configMap = configs.reduce((acc, config) => {
+acc[config.chave] = config.valor;
+return acc;
+}, {});
+res.json(configMap);
+} catch (error) {
+console.error("Erro ao buscar /api/config:", error);
+res.status(500).json({ success: false, message: "Erro ao buscar configurações." });
+}
 });
 
+app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'anuncio.html')); });
+app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/dashboard', (req, res) => { res.sendFile(path.join(publicPath, 'anuncio.html')); });
 app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(publicPath, 'dashboard.html')); });
 app.get('/dashboard.html', (req, res) => { res.redirect('/dashboard'); });
 
 // Rota de "ping" para manter o servidor do Render Hobby acordado
 app.get('/ping', (req, res) => {
-    console.log("Ping recebido, mantendo o servidor acordado.");
-    res.status(200).send('pong');
+console.log("Ping recebido, mantendo o servidor acordado.");
+res.status(200).send('pong');
 });
 
+// ==========================================================
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
+// Adiciona o /cambista/login.html E o /public/cambista
+// ==========================================================
+app.get('/cambista/login', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')); });
+app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')); });
 // Adiciona o /cambista/login.html
 app.get('/cambista/login', (req, res) => { res.sendFile(path.join(publicPath, 'cambista', 'login.html')); });
 app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(publicPath, 'cambista', 'login.html')); });
 // Serve os arquivos estáticos (login.js, painel.js) da pasta /cambista
+app.use('/cambista', express.static(path.join(__dirname, 'public', 'cambista')));
+// ==========================================================
 app.use('/cambista', express.static(path.join(publicPath, 'cambista')));
 // *** FIM DA ATUALIZAÇÃO ***
 
+app.use(express.static(path.join(__dirname, 'public')));
 // *** CORREÇÃO DO CAMINHO (Render /src folder) ***
 // Esta deve ser a ÚLTIMA rota 'app.use' para arquivos estáticos
 app.use(express.static(publicPath));
 // *** FIM DA CORREÇÃO ***
 
 // ==========================================================
+// *** ROTAS DE ADMINISTRAÇÃO (ATUALIZADO - LOGIN HASH) ***
 // *** ROTAS DE ADMINISTRAÇÃO (ATUALIZADO - CAMINHO CORRIGIDO) ***
 // ==========================================================
 
 // Convertido para 'async'
 app.post('/admin/login', async (req, res) => {
-    const { usuario, senha } = req.body; console.log(`Tentativa de login admin para usuário: ${usuario}`);
-    if (!usuario || !senha) return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
-    try {
-        const stmt = 'SELECT * FROM usuarios_admin WHERE usuario = $1';
-        const resDB = await db.query(stmt, [usuario]);
-        const adminUser = resDB.rows[0];
+const { usuario, senha } = req.body; console.log(`Tentativa de login admin para usuário: ${usuario}`);
+if (!usuario || !senha) return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
+try {
+        // *** ATUALIZAÇÃO (SENHA HASH) ***
+const stmt = 'SELECT * FROM usuarios_admin WHERE usuario = $1';
+const resDB = await db.query(stmt, [usuario]);
+const adminUser = resDB.rows[0];
 
-        // Compara a senha digitada com o hash salvo no banco
-        if (adminUser && (await bcrypt.compare(senha, adminUser.senha))) {
-            req.session.isAdmin = true; req.session.usuario = adminUser.usuario; console.log(`Login admin bem-sucedido para: ${adminUser.usuario}`);
-            req.session.save(err => { if (err) { console.error("Erro ao salvar sessão:", err); return res.status(500).json({ success: false, message: 'Erro interno ao iniciar sessão.' }); } return res.json({ success: true }); });
-        } else {
-            console.log(`Falha no login admin para: ${usuario}`); return res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' });
-        }
+// Compara a senha digitada com o hash salvo no banco
+if (adminUser && (await bcrypt.compare(senha, adminUser.senha))) {
+req.session.isAdmin = true; req.session.usuario = adminUser.usuario; console.log(`Login admin bem-sucedido para: ${adminUser.usuario}`);
+req.session.save(err => { if (err) { console.error("Erro ao salvar sessão:", err); return res.status(500).json({ success: false, message: 'Erro interno ao iniciar sessão.' }); } return res.json({ success: true }); });
+} else {
+console.log(`Falha no login admin para: ${usuario}`); return res.status(401).json({ success: false, message: 'Usuário ou senha inválidos.' });
+}
+        // *** FIM DA ATUALIZAÇÃO ***
 
-    } catch (error) { console.error("Erro durante o login admin:", error); return res.status(500).json({ success: false, message: 'Erro interno do servidor.' }); }
+} catch (error) { console.error("Erro durante o login admin:", error); return res.status(500).json({ success: false, message: 'Erro interno do servidor.' }); }
 });
 
 function checkAdmin(req, res, next) {
-    if (req.session && req.session.isAdmin) { return next(); }
-    else { console.log("Acesso negado à área admin. Redirecionando para login."); if (req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('json'))) { return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' }); } return res.redirect('/admin/login.html'); }
+if (req.session && req.session.isAdmin) { return next(); }
+else { console.log("Acesso negado à área admin. Redirecionando para login."); if (req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('json'))) { return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' }); } return res.redirect('/admin/login.html'); }
 }
+app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'painel.html')); });
 
 // *** CORREÇÃO DO CAMINHO (Render /src folder) ***
 app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(publicPath, 'admin', 'painel.html')); });
@@ -450,288 +465,293 @@ app.get('/admin/logout', (req, res) => { req.session.destroy((err) => { if (err)
 
 // Convertido para 'async'
 app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
-    try {
-        const stmt = "SELECT chave, valor FROM configuracoes";
-        const resDB = await db.query(stmt);
-        const configs = resDB.rows; // .all() vira .rows
-        const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
-        res.json(configMap);
-    } catch (error) { console.error("Erro ao buscar configs admin:", error); res.status(500).json({ success: false, message: "Erro ao buscar configurações." }); }
+try {
+const stmt = "SELECT chave, valor FROM configuracoes";
+const resDB = await db.query(stmt);
+const configs = resDB.rows; // .all() vira .rows
+const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
+res.json(configMap);
+} catch (error) { console.error("Erro ao buscar configs admin:", error); res.status(500).json({ success: false, message: "Erro ao buscar configurações." }); }
 });
 
 // Convertido para 'async' e Transação PG
 app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
-    const {
-        premio_linha, premio_cheia, preco_cartela, duracao_espera,
-        min_bots, max_bots,
-        sorteio_especial_ativo, sorteio_especial_valor, sorteio_especial_data
-    } = req.body;
-    console.log(`Admin ${req.session.usuario} está atualizando configurações.`);
-    
-    // (Validação continua a mesma)
-    const linhaNum = parseFloat(premio_linha); const cheiaNum = parseFloat(premio_cheia); const precoNum = parseFloat(preco_cartela);
-    const esperaNum = parseInt(duracao_espera, 10); 
-    const minBotsNum = parseInt(min_bots, 10);
-    const maxBotsNum = parseInt(max_bots, 10);
-    if (isNaN(linhaNum) || isNaN(cheiaNum) || isNaN(precoNum) || linhaNum < 0 || cheiaNum < 0 || precoNum <= 0) { return res.status(400).json({ success: false, message: 'Valores de prêmio/preço inválidos.' }); }
-    if (isNaN(esperaNum) || esperaNum < 10) { return res.status(400).json({ success: false, message: 'Tempo de Espera inválido (mínimo 10 segundos).' }); } 
-    if (isNaN(minBotsNum) || minBotsNum < 0 || isNaN(maxBotsNum) || maxBotsNum < minBotsNum) { return res.status(400).json({ success: false, message: 'Valores de Bots inválidos (Mínimo deve ser >= 0 e Máximo deve ser >= Mínimo).' }); }
-    const valorEspecialNum = parseFloat(sorteio_especial_valor) || 0.00;
+const {
+premio_linha, premio_cheia, preco_cartela, duracao_espera,
+min_bots, max_bots,
+sorteio_especial_ativo, sorteio_especial_valor, sorteio_especial_data
+} = req.body;
+console.log(`Admin ${req.session.usuario} está atualizando configurações.`);
 
-    // Transação em PostgreSQL
-    const client = await pool.connect(); // Pega uma conexão do pool
-    try {
-        await client.query('BEGIN'); // Inicia a transação
-        
-        // 'INSERT OR REPLACE' vira 'INSERT ... ON CONFLICT ... DO UPDATE'
-        const query = `
-            INSERT INTO configuracoes (chave, valor) 
-            VALUES ($1, $2) 
-            ON CONFLICT (chave) 
-            DO UPDATE SET valor = EXCLUDED.valor;
-        `;
-        
-        await client.query(query, ['premio_linha', linhaNum.toFixed(2)]);
-        await client.query(query, ['premio_cheia', cheiaNum.toFixed(2)]);
-        await client.query(query, ['preco_cartela', precoNum.toFixed(2)]);
-        await client.query(query, ['duracao_espera', esperaNum.toString()]);
-        await client.query(query, ['min_bots', minBotsNum.toString()]);
-        await client.query(query, ['max_bots', maxBotsNum.toString()]);
-        await client.query(query, ['sorteio_especial_ativo', sorteio_especial_ativo]);
-        await client.query(query, ['sorteio_especial_valor', valorEspecialNum.toFixed(2)]);
-        await client.query(query, ['sorteio_especial_data', sorteio_especial_data]);
-        
-        await client.query('COMMIT'); // Confirma a transação
-        
-        await carregarConfiguracoes(); // Recarrega variáveis globais (agora é async)
-        
-        const resDB = await db.query("SELECT chave, valor FROM configuracoes");
-        const configs = resDB.rows;
-        const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
-        
-        io.emit('configAtualizada', configMap);
-        console.log("Configurações atualizadas no banco de dados e emitidas.");
-        return res.json({ success: true, message: 'Configurações atualizadas com sucesso!' });
+// (Validação continua a mesma)
+const linhaNum = parseFloat(premio_linha); const cheiaNum = parseFloat(premio_cheia); const precoNum = parseFloat(preco_cartela);
+const esperaNum = parseInt(duracao_espera, 10); 
+const minBotsNum = parseInt(min_bots, 10);
+const maxBotsNum = parseInt(max_bots, 10);
+if (isNaN(linhaNum) || isNaN(cheiaNum) || isNaN(precoNum) || linhaNum < 0 || cheiaNum < 0 || precoNum <= 0) { return res.status(400).json({ success: false, message: 'Valores de prêmio/preço inválidos.' }); }
+if (isNaN(esperaNum) || esperaNum < 10) { return res.status(400).json({ success: false, message: 'Tempo de Espera inválido (mínimo 10 segundos).' }); } 
+if (isNaN(minBotsNum) || minBotsNum < 0 || isNaN(maxBotsNum) || maxBotsNum < minBotsNum) { return res.status(400).json({ success: false, message: 'Valores de Bots inválidos (Mínimo deve ser >= 0 e Máximo deve ser >= Mínimo).' }); }
+const valorEspecialNum = parseFloat(sorteio_especial_valor) || 0.00;
 
-    } catch (error) {
-        await client.query('ROLLBACK'); // Desfaz a transação em caso de erro
-        console.error("Erro ao salvar configurações:", error); 
-        return res.status(500).json({ success: false, message: 'Erro interno ao salvar configurações.' });
-    } finally {
-        client.release(); // Libera a conexão de volta para o pool
-    }
+// Transação em PostgreSQL
+const client = await pool.connect(); // Pega uma conexão do pool
+try {
+await client.query('BEGIN'); // Inicia a transação
+
+// 'INSERT OR REPLACE' vira 'INSERT ... ON CONFLICT ... DO UPDATE'
+const query = `
+           INSERT INTO configuracoes (chave, valor) 
+           VALUES ($1, $2) 
+           ON CONFLICT (chave) 
+           DO UPDATE SET valor = EXCLUDED.valor;
+       `;
+
+await client.query(query, ['premio_linha', linhaNum.toFixed(2)]);
+await client.query(query, ['premio_cheia', cheiaNum.toFixed(2)]);
+await client.query(query, ['preco_cartela', precoNum.toFixed(2)]);
+await client.query(query, ['duracao_espera', esperaNum.toString()]);
+await client.query(query, ['min_bots', minBotsNum.toString()]);
+await client.query(query, ['max_bots', maxBotsNum.toString()]);
+await client.query(query, ['sorteio_especial_ativo', sorteio_especial_ativo]);
+await client.query(query, ['sorteio_especial_valor', valorEspecialNum.toFixed(2)]);
+await client.query(query, ['sorteio_especial_data', sorteio_especial_data]);
+
+await client.query('COMMIT'); // Confirma a transação
+
+await carregarConfiguracoes(); // Recarrega variáveis globais (agora é async)
+
+const resDB = await db.query("SELECT chave, valor FROM configuracoes");
+const configs = resDB.rows;
+const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
+
+io.emit('configAtualizada', configMap);
+console.log("Configurações atualizadas no banco de dados e emitidas.");
+return res.json({ success: true, message: 'Configurações atualizadas com sucesso!' });
+
+} catch (error) {
+await client.query('ROLLBACK'); // Desfaz a transação em caso de erro
+console.error("Erro ao salvar configurações:", error); 
+return res.status(500).json({ success: false, message: 'Erro interno ao salvar configurações.' });
+} finally {
+client.release(); // Libera a conexão de volta para o pool
+}
 });
 
 // Convertido para 'async'
 app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
-    const { quantidade, nome, telefone } = req.body;
-    if (!nome || nome.trim() === '') { return res.status(400).json({ success: false, message: 'O Nome do Jogador é obrigatório.' }); }
-    let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
-    console.log(`Admin ${req.session.usuario} está registrando ${quantidade} cartelas para '${nome}' (Tel: ${telefone}) no Sorteio #${sorteioAlvo}.`);
-    if (!quantidade || quantidade < 1 || quantidade > 100) { return res.status(400).json({ success: false, message: 'Quantidade inválida (1-100).' }); }
-    try {
-        const precoUnitarioAtual = parseFloat(PRECO_CARTELA); const valorTotal = quantidade * precoUnitarioAtual; 
-        
-        const cartelasGeradas = [];
-        for (let i = 0; i < quantidade; i++) { cartelasGeradas.push(gerarDadosCartela(sorteioAlvo)); }
-        const cartelasJSON = JSON.stringify(cartelasGeradas); 
-        
-        const manualPlayerId = `manual_${gerarIdUnico()}`; 
-        jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
-        
-        const stmtVenda = `
-            INSERT INTO vendas 
-            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7)`;
-        // O payment_id e cambista_id de uma venda manual são null
-        await db.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, valorTotal, 'Manual', cartelasJSON]);
-        
-        console.log(`Geradas e REGISTRADAS ${cartelasGeradas.length} cartelas para '${nome}'. Venda registrada.`); io.emit('contagemJogadores', getContagemJogadores());
-        return res.json(cartelasGeradas); // Retorna as cartelas para o admin imprimir
-    } catch (error) { console.error("Erro ao gerar/registrar cartelas manuais:", error); return res.status(500).json({ success: false, message: 'Erro interno ao gerar cartelas.' }); }
+const { quantidade, nome, telefone } = req.body;
+if (!nome || nome.trim() === '') { return res.status(400).json({ success: false, message: 'O Nome do Jogador é obrigatório.' }); }
+let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+console.log(`Admin ${req.session.usuario} está registrando ${quantidade} cartelas para '${nome}' (Tel: ${telefone}) no Sorteio #${sorteioAlvo}.`);
+if (!quantidade || quantidade < 1 || quantidade > 100) { return res.status(400).json({ success: false, message: 'Quantidade inválida (1-100).' }); }
+try {
+const precoUnitarioAtual = parseFloat(PRECO_CARTELA); const valorTotal = quantidade * precoUnitarioAtual; 
+
+const cartelasGeradas = [];
+for (let i = 0; i < quantidade; i++) { cartelasGeradas.push(gerarDadosCartela(sorteioAlvo)); }
+const cartelasJSON = JSON.stringify(cartelasGeradas); 
+
+const manualPlayerId = `manual_${gerarIdUnico()}`; 
+jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
+
+const stmtVenda = `
+           INSERT INTO vendas 
+           (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`;
+// O payment_id e cambista_id de uma venda manual são null
+await db.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, valorTotal, 'Manual', cartelasJSON]);
+
+console.log(`Geradas e REGISTRADAS ${cartelasGeradas.length} cartelas para '${nome}'. Venda registrada.`); io.emit('contagemJogadores', getContagemJogadores());
+return res.json(cartelasGeradas); // Retorna as cartelas para o admin imprimir
+} catch (error) { console.error("Erro ao gerar/registrar cartelas manuais:", error); return res.status(500).json({ success: false, message: 'Erro interno ao gerar cartelas.' }); }
 });
 
+app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'relatorios.html')); });
 // *** CORREÇÃO DO CAMINHO (Render /src folder) ***
 app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.join(publicPath, 'admin', 'relatorios.html')); });
 // *** FIM DA CORREÇÃO ***
 
 // Convertido para 'async' e sintaxe PG
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
-    try {
-        // 'strftime' (SQLite) vira 'to_char' (PostgreSQL)
-        const stmt = `
-            SELECT sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, 
-                   to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
-            FROM vendas 
-            ORDER BY timestamp DESC
-        `;
-        const vendasRes = await db.query(stmt);
-        const vendas = vendasRes.rows;
-        
-        const totaisRes = await db.query(`SELECT SUM(valor_total) as faturamento_total, SUM(quantidade_cartelas) as cartelas_total FROM vendas`);
-        const totais = totaisRes.rows[0];
-        
-        res.json({ success: true, vendas: vendas, totais: totais });
-    } catch (error) { console.error("Erro ao buscar relatório de vendas:", error); res.status(500).json({ success: false, message: 'Erro interno ao buscar relatório.' }); }
+try {
+// 'strftime' (SQLite) vira 'to_char' (PostgreSQL)
+const stmt = `
+           SELECT sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, 
+                  to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
+           FROM vendas 
+           ORDER BY timestamp DESC
+       `;
+const vendasRes = await db.query(stmt);
+const vendas = vendasRes.rows;
+
+const totaisRes = await db.query(`SELECT SUM(valor_total) as faturamento_total, SUM(quantidade_cartelas) as cartelas_total FROM vendas`);
+const totais = totaisRes.rows[0];
+
+res.json({ success: true, vendas: vendas, totais: totais });
+} catch (error) { console.error("Erro ao buscar relatório de vendas:", error); res.status(500).json({ success: false, message: 'Erro interno ao buscar relatório.' }); }
 });
 
 // Convertido para 'async'
 app.post('/admin/api/vendas/limpar', checkAdmin, async (req, res) => {
-    console.log(`Admin ${req.session.usuario} está limpando o histórico de vendas.`);
-    try {
-        const stmt = 'DELETE FROM vendas'; // 'TRUNCATE TABLE vendas' seria mais rápido
-        const info = await db.query(stmt);
-        console.log(`Histórico de vendas limpo. ${info.rowCount} linhas removidas.`);
-        res.json({ success: true, message: 'Histórico de vendas limpo com sucesso!', changes: info.rowCount });
-    } catch (error) {
-        console.error("Erro ao limpar relatório de vendas:", error);
-        res.status(500).json({ success: false, message: 'Erro interno ao limpar relatório.' });
-    }
+console.log(`Admin ${req.session.usuario} está limpando o histórico de vendas.`);
+try {
+const stmt = 'DELETE FROM vendas'; // 'TRUNCATE TABLE vendas' seria mais rápido
+const info = await db.query(stmt);
+console.log(`Histórico de vendas limpo. ${info.rowCount} linhas removidas.`);
+res.json({ success: true, message: 'Histórico de vendas limpo com sucesso!', changes: info.rowCount });
+} catch (error) {
+console.error("Erro ao limpar relatório de vendas:", error);
+res.status(500).json({ success: false, message: 'Erro interno ao limpar relatório.' });
+}
 });
 
+app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'vencedores.html')); });
 // *** CORREÇÃO DO CAMINHO (Render /src folder) ***
 app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.join(publicPath, 'admin', 'vencedores.html')); });
 // *** FIM DA CORREÇÃO ***
 
 // Convertido para 'async' e sintaxe PG
 app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
-    try {
-        const stmt = `
-            SELECT id, sorteio_id, premio, nome, telefone, status_pagamento, 
-                   to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
-            FROM vencedores 
-            ORDER BY timestamp DESC
-        `;
-        const resDB = await db.query(stmt);
-        const vencedores = resDB.rows;
-        res.json({ success: true, vencedores: vencedores });
-    } catch (error) { console.error("Erro ao buscar relatório de vencedores:", error); res.status(500).json({ success: false, message: 'Erro interno ao buscar relatório.' }); }
+try {
+const stmt = `
+           SELECT id, sorteio_id, premio, nome, telefone, status_pagamento, 
+                  to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
+           FROM vencedores 
+           ORDER BY timestamp DESC
+       `;
+const resDB = await db.query(stmt);
+const vencedores = resDB.rows;
+res.json({ success: true, vencedores: vencedores });
+} catch (error) { console.error("Erro ao buscar relatório de vencedores:", error); res.status(500).json({ success: false, message: 'Erro interno ao buscar relatório.' }); }
 });
 
 // Convertido para 'async'
 app.post('/admin/api/vencedor/pagar', checkAdmin, async (req, res) => {
-    const { id } = req.body; if (!id) { return res.status(400).json({ success: false, message: 'ID do vencedor é obrigatório.' }); }
-    try {
-        const stmt = "UPDATE vencedores SET status_pagamento = 'Pago' WHERE id = $1";
-        const info = await db.query(stmt, [id]);
-        
-        if (info.rowCount > 0) { // .changes vira .rowCount
-            console.log(`Admin ${req.session.usuario} marcou o vencedor ID #${id} como 'Pago'.`); 
-            res.json({ success: true, message: 'Status atualizado para Pago!' }); 
-        }
-        else { res.status(404).json({ success: false, message: 'Vencedor não encontrado.' }); }
-    } catch (error) { console.error("Erro ao atualizar status de pagamento:", error); res.status(500).json({ success: false, message: 'Erro interno ao atualizar status.' }); }
+const { id } = req.body; if (!id) { return res.status(400).json({ success: false, message: 'ID do vencedor é obrigatório.' }); }
+try {
+const stmt = "UPDATE vencedores SET status_pagamento = 'Pago' WHERE id = $1";
+const info = await db.query(stmt, [id]);
+
+if (info.rowCount > 0) { // .changes vira .rowCount
+console.log(`Admin ${req.session.usuario} marcou o vencedor ID #${id} como 'Pago'.`); 
+res.json({ success: true, message: 'Status atualizado para Pago!' }); 
+}
+else { res.status(404).json({ success: false, message: 'Vencedor não encontrado.' }); }
+} catch (error) { console.error("Erro ao atualizar status de pagamento:", error); res.status(500).json({ success: false, message: 'Erro interno ao atualizar status.' }); }
 });
 
 // Convertido para 'async'
 app.post('/admin/api/vencedores/limpar', checkAdmin, async (req, res) => {
-    console.log(`Admin ${req.session.usuario} está limpando o histórico de vencedores.`);
-    try {
-        const stmt = 'DELETE FROM vencedores';
-        const info = await db.query(stmt);
-        console.log(`Histórico de vencedores limpo. ${info.rowCount} linhas removidas.`);
-        res.json({ success: true, message: 'Histórico de vencedores limpo com sucesso!', changes: info.rowCount });
-    } catch (error) {
-        console.error("Erro ao limpar relatório de vencedores:", error);
-        res.status(500).json({ success: false, message: 'Erro interno ao limpar relatório.' });
-    }
+console.log(`Admin ${req.session.usuario} está limpando o histórico de vencedores.`);
+try {
+const stmt = 'DELETE FROM vencedores';
+const info = await db.query(stmt);
+console.log(`Histórico de vencedores limpo. ${info.rowCount} linhas removidas.`);
+res.json({ success: true, message: 'Histórico de vencedores limpo com sucesso!', changes: info.rowCount });
+} catch (error) {
+console.error("Erro ao limpar relatório de vencedores:", error);
+res.status(500).json({ success: false, message: 'Erro interno ao limpar relatório.' });
+}
 });
 
 
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
+// Adiciona a nova página de gerenciamento de cambistas
+app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'cambistas.html')); });
 // *** CORREÇÃO DO CAMINHO (Render /src folder) ***
 app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(publicPath, 'admin', 'cambistas.html')); });
 // *** FIM DA CORREÇÃO ***
 
 // Novas rotas de API para o Admin gerenciar cambistas
 app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
-    try {
-        const result = await db.query('SELECT id, usuario, saldo_creditos, ativo FROM cambistas ORDER BY usuario');
-        res.json({ success: true, cambistas: result.rows });
-    } catch (err) {
-        console.error("Erro ao buscar cambistas:", err);
-        res.status(500).json({ success: false, message: "Erro ao buscar cambistas." });
-    }
+try {
+const result = await db.query('SELECT id, usuario, saldo_creditos, ativo FROM cambistas ORDER BY usuario');
+res.json({ success: true, cambistas: result.rows });
+} catch (err) {
+console.error("Erro ao buscar cambistas:", err);
+res.status(500).json({ success: false, message: "Erro ao buscar cambistas." });
+}
 });
 
 app.post('/admin/api/cambistas/criar', checkAdmin, async (req, res) => {
-    const { usuario, senha } = req.body;
-    if (!usuario || !senha) {
-        return res.status(400).json({ success: false, message: "Usuário e Senha são obrigatórios." });
-    }
+const { usuario, senha } = req.body;
+if (!usuario || !senha) {
+return res.status(400).json({ success: false, message: "Usuário e Senha são obrigatórios." });
+}
 
-    try {
-        const saltRounds = 10;
-        const senhaHash = await bcrypt.hash(senha, saltRounds);
-        
-        const query = "INSERT INTO cambistas (usuario, senha) VALUES ($1, $2) RETURNING id";
-        const result = await db.query(query, [usuario, senhaHash]);
-        
-        console.log(`Admin ${req.session.usuario} criou o cambista ${usuario} (ID: ${result.rows[0].id})`);
-        res.status(201).json({ success: true, message: "Cambista criado com sucesso!", id: result.rows[0].id });
-        
-    } catch (err) {
-        if (err.code === '23505') { // Erro de 'unique violation'
-             console.error("Erro ao criar cambista: Usuário já existe.");
-             res.status(409).json({ success: false, message: "Este nome de usuário já está em uso." });
-        } else {
-             console.error("Erro ao criar cambista:", err);
-             res.status(500).json({ success: false, message: "Erro interno ao criar cambista." });
-        }
-    }
+try {
+const saltRounds = 10;
+const senhaHash = await bcrypt.hash(senha, saltRounds);
+
+const query = "INSERT INTO cambistas (usuario, senha) VALUES ($1, $2) RETURNING id";
+const result = await db.query(query, [usuario, senhaHash]);
+
+console.log(`Admin ${req.session.usuario} criou o cambista ${usuario} (ID: ${result.rows[0].id})`);
+res.status(201).json({ success: true, message: "Cambista criado com sucesso!", id: result.rows[0].id });
+
+} catch (err) {
+if (err.code === '23505') { // Erro de 'unique violation'
+console.error("Erro ao criar cambista: Usuário já existe.");
+res.status(409).json({ success: false, message: "Este nome de usuário já está em uso." });
+} else {
+console.error("Erro ao criar cambista:", err);
+res.status(500).json({ success: false, message: "Erro interno ao criar cambista." });
+}
+}
 });
 
 app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, async (req, res) => {
-    const { cambistaId, valor } = req.body;
-    const valorNum = parseFloat(valor);
-    const adminUsuario = req.session.usuario; // Pega o admin logado
+const { cambistaId, valor } = req.body;
+const valorNum = parseFloat(valor);
+const adminUsuario = req.session.usuario; // Pega o admin logado
 
-    if (!cambistaId || !valorNum || valorNum <= 0) {
-        return res.status(400).json({ success: false, message: "ID do cambista e valor válido são obrigatórios." });
-    }
+if (!cambistaId || !valorNum || valorNum <= 0) {
+return res.status(400).json({ success: false, message: "ID do cambista e valor válido são obrigatórios." });
+}
 
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
+const client = await pool.connect();
+try {
+await client.query('BEGIN');
 
-        // 1. Adiciona o saldo na tabela 'cambistas' e retorna o novo saldo
-        const saldoQuery = `
-            UPDATE cambistas 
-            SET saldo_creditos = saldo_creditos + $1 
-            WHERE id = $2 
-            RETURNING saldo_creditos, usuario
-        `;
-        const saldoResult = await client.query(saldoQuery, [valorNum, cambistaId]);
-        
-        if (saldoResult.rows.length === 0) {
-            throw new Error("Cambista não encontrado.");
-        }
-        
-        const novoSaldo = saldoResult.rows[0].saldo_creditos;
-        const cambistaUsuario = saldoResult.rows[0].usuario;
+// 1. Adiciona o saldo na tabela 'cambistas' e retorna o novo saldo
+const saldoQuery = `
+           UPDATE cambistas 
+           SET saldo_creditos = saldo_creditos + $1 
+           WHERE id = $2 
+           RETURNING saldo_creditos, usuario
+       `;
+const saldoResult = await client.query(saldoQuery, [valorNum, cambistaId]);
 
-        // 2. Registra a transação no histórico
-        const logQuery = `
-            INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo)
-            VALUES ($1, $2, $3, 'recarga')
-        `;
-        await client.query(logQuery, [cambistaId, adminUsuario, valorNum]);
-        
-        await client.query('COMMIT');
-        
-        console.log(`Admin ${adminUsuario} adicionou ${valorNum} créditos para ${cambistaUsuario}. Novo saldo: ${novoSaldo}`);
-        res.json({ success: true, message: "Créditos adicionados!", novoSaldo: novoSaldo });
+if (saldoResult.rows.length === 0) {
+throw new Error("Cambista não encontrado.");
+}
 
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error("Erro ao adicionar créditos:", err);
-        res.status(500).json({ success: false, message: err.message || "Erro interno ao adicionar créditos." });
-    } finally {
-        client.release();
-    }
+const novoSaldo = saldoResult.rows[0].saldo_creditos;
+const cambistaUsuario = saldoResult.rows[0].usuario;
+
+// 2. Registra a transação no histórico
+const logQuery = `
+           INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo)
+           VALUES ($1, $2, $3, 'recarga')
+       `;
+await client.query(logQuery, [cambistaId, adminUsuario, valorNum]);
+
+await client.query('COMMIT');
+
+console.log(`Admin ${adminUsuario} adicionou ${valorNum} créditos para ${cambistaUsuario}. Novo saldo: ${novoSaldo}`);
+res.json({ success: true, message: "Créditos adicionados!", novoSaldo: novoSaldo });
+
+} catch (err) {
+await client.query('ROLLBACK');
+console.error("Erro ao adicionar créditos:", err);
+res.status(500).json({ success: false, message: err.message || "Erro interno ao adicionar créditos." });
+} finally {
+client.release();
+}
 });
 // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
 
+app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'admin')));
 // *** CORREÇÃO DO CAMINHO (Render /src folder) ***
 app.use('/admin', checkAdmin, express.static(path.join(publicPath, 'admin')));
 // *** FIM DA CORREÇÃO ***
@@ -745,165 +765,166 @@ app.use('/admin', checkAdmin, express.static(path.join(publicPath, 'admin')));
 
 // Middleware para checar se o cambista está logado na sessão
 function checkCambista(req, res, next) {
-    if (req.session && req.session.isCambista) {
-        return next();
-    } else {
-        console.log("Acesso negado à área do cambista.");
-        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
-            return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' });
-        }
-        return res.redirect('/cambista/login.html');
-    }
+if (req.session && req.session.isCambista) {
+return next();
+} else {
+console.log("Acesso negado à área do cambista.");
+if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
+return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' });
+}
+return res.redirect('/cambista/login.html');
+}
 }
 
 // Rota de Login do Cambista
 app.post('/cambista/login', async (req, res) => {
-    const { usuario, senha } = req.body;
-    if (!usuario || !senha) {
-        return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
-    }
-    
-    try {
-        const stmt = 'SELECT * FROM cambistas WHERE usuario = $1 AND ativo = true';
-        const resDB = await db.query(stmt, [usuario]);
-        const cambistaUser = resDB.rows[0];
+const { usuario, senha } = req.body;
+if (!usuario || !senha) {
+return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
+}
 
-        if (cambistaUser && (await bcrypt.compare(senha, cambistaUser.senha))) {
-            // Logado! Salva na sessão
-            req.session.isCambista = true;
-            req.session.cambistaId = cambistaUser.id;
-            req.session.cambistaUsuario = cambistaUser.usuario;
-            console.log(`Login de cambista bem-sucedido para: ${cambistaUser.usuario}`);
-            req.session.save(err => {
-                if (err) {
-                    console.error("Erro ao salvar sessão do cambista:", err);
-                    return res.status(500).json({ success: false, message: 'Erro interno ao iniciar sessão.' });
-                }
-                return res.json({ success: true });
-            });
-        } else {
-            console.log(`Falha no login de cambista para: ${usuario}`);
-            return res.status(401).json({ success: false, message: 'Usuário, senha ou conta inativa.' });
-        }
-    } catch (error) {
-        console.error("Erro durante o login do cambista:", error);
-        return res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
-    }
+try {
+const stmt = 'SELECT * FROM cambistas WHERE usuario = $1 AND ativo = true';
+const resDB = await db.query(stmt, [usuario]);
+const cambistaUser = resDB.rows[0];
+
+if (cambistaUser && (await bcrypt.compare(senha, cambistaUser.senha))) {
+// Logado! Salva na sessão
+req.session.isCambista = true;
+req.session.cambistaId = cambistaUser.id;
+req.session.cambistaUsuario = cambistaUser.usuario;
+console.log(`Login de cambista bem-sucedido para: ${cambistaUser.usuario}`);
+req.session.save(err => {
+if (err) {
+console.error("Erro ao salvar sessão do cambista:", err);
+return res.status(500).json({ success: false, message: 'Erro interno ao iniciar sessão.' });
+}
+return res.json({ success: true });
+});
+} else {
+console.log(`Falha no login de cambista para: ${usuario}`);
+return res.status(401).json({ success: false, message: 'Usuário, senha ou conta inativa.' });
+}
+} catch (error) {
+console.error("Erro durante o login do cambista:", error);
+return res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+}
 });
 
 // Rota de Logout do Cambista
 app.get('/cambista/logout', (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            console.error("Erro ao fazer logout do cambista:", err);
-            return res.status(500).send("Erro ao sair.");
-        }
-        console.log("Usuário cambista deslogado.");
-        res.clearCookie('connect.sid');
-        res.redirect('/cambista/login.html');
-    });
+req.session.destroy((err) => {
+if (err) {
+console.error("Erro ao fazer logout do cambista:", err);
+return res.status(500).send("Erro ao sair.");
+}
+console.log("Usuário cambista deslogado.");
+res.clearCookie('connect.sid');
+res.redirect('/cambista/login.html');
+});
 });
 
 // Rota do Painel (protegida)
 // *** CORREÇÃO DO CAMINHO (Render /src folder) ***
 app.get('/cambista/painel.html', checkCambista, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'cambista', 'painel.html'));
     res.sendFile(path.join(publicPath, 'cambista', 'painel.html'));
 });
 // *** FIM DA CORREÇÃO ***
 
 // Rota para o Cambista ver seu status (protegida)
 app.get('/cambista/meu-status', checkCambista, async (req, res) => {
-    try {
-        const query = "SELECT saldo_creditos FROM cambistas WHERE id = $1";
-        const result = await db.query(query, [req.session.cambistaId]);
-        
-        res.json({
-            success: true,
-            usuario: req.session.cambistaUsuario,
-            saldo: result.rows[0].saldo_creditos,
-            precoCartela: PRECO_CARTELA // Envia o preço atual da cartela
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "Erro ao buscar status." });
-    }
+try {
+const query = "SELECT saldo_creditos FROM cambistas WHERE id = $1";
+const result = await db.query(query, [req.session.cambistaId]);
+
+res.json({
+success: true,
+usuario: req.session.cambistaUsuario,
+saldo: result.rows[0].saldo_creditos,
+precoCartela: PRECO_CARTELA // Envia o preço atual da cartela
+});
+} catch (err) {
+res.status(500).json({ success: false, message: "Erro ao buscar status." });
+}
 });
 
 // Rota para o Cambista gerar cartelas (protegida)
 app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
-    const { quantidade, nome, telefone } = req.body;
-    const cambistaId = req.session.cambistaId;
-    const cambistaUsuario = req.session.cambistaUsuario;
+const { quantidade, nome, telefone } = req.body;
+const cambistaId = req.session.cambistaId;
+const cambistaUsuario = req.session.cambistaUsuario;
 
-    if (!nome || !quantidade || quantidade < 1) {
-        return res.status(400).json({ success: false, message: 'Nome do jogador e quantidade são obrigatórios.' });
-    }
+if (!nome || !quantidade || quantidade < 1) {
+return res.status(400).json({ success: false, message: 'Nome do jogador e quantidade são obrigatórios.' });
+}
 
-    const precoUnitario = parseFloat(PRECO_CARTELA);
-    const custoTotal = quantidade * precoUnitario;
-    let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+const precoUnitario = parseFloat(PRECO_CARTELA);
+const custoTotal = quantidade * precoUnitario;
+let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
 
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
+const client = await pool.connect();
+try {
+await client.query('BEGIN');
 
-        // 1. Pega o saldo do cambista e TRAVA A LINHA (FOR UPDATE)
-        const saldoQuery = "SELECT saldo_creditos FROM cambistas WHERE id = $1 FOR UPDATE";
-        const saldoResult = await client.query(saldoQuery, [cambistaId]);
-        
-        if (saldoResult.rows.length === 0) throw new Error("Cambista não encontrado.");
-        
-        const saldoAtual = parseFloat(saldoResult.rows[0].saldo_creditos);
-        
-        // 2. Verifica se tem saldo
-        if (saldoAtual < custoTotal) {
-            throw new Error(`Saldo insuficiente. Você tem ${saldoAtual.toFixed(2)} e a venda custa ${custoTotal.toFixed(2)}.`);
-        }
+// 1. Pega o saldo do cambista e TRAVA A LINHA (FOR UPDATE)
+const saldoQuery = "SELECT saldo_creditos FROM cambistas WHERE id = $1 FOR UPDATE";
+const saldoResult = await client.query(saldoQuery, [cambistaId]);
 
-        // 3. Deduz o saldo
-        const novoSaldo = saldoAtual - custoTotal;
-        await client.query("UPDATE cambistas SET saldo_creditos = $1 WHERE id = $2", [novoSaldo, cambistaId]);
+if (saldoResult.rows.length === 0) throw new Error("Cambista não encontrado.");
 
-        // 4. Gera as cartelas
-        const cartelasGeradas = [];
-        for (let i = 0; i < quantidade; i++) {
-            cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
-        }
-        const cartelasJSON = JSON.stringify(cartelasGeradas);
+const saldoAtual = parseFloat(saldoResult.rows[0].saldo_creditos);
 
-        // 5. Registra a Venda
-        const stmtVenda = `
-            INSERT INTO vendas 
-            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, cambista_id) 
-            VALUES ($1, $2, $3, $4, $5, 'Cambista', $6, $7)
-            RETURNING id
-        `;
-        const vendaResult = await client.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, custoTotal, cartelasJSON, cambistaId]);
-        const vendaId = vendaResult.rows[0].id;
+// 2. Verifica se tem saldo
+if (saldoAtual < custoTotal) {
+throw new Error(`Saldo insuficiente. Você tem ${saldoAtual.toFixed(2)} e a venda custa ${custoTotal.toFixed(2)}.`);
+}
 
-        // 6. Registra a Transação de Crédito
-        const logQuery = `
-            INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo, venda_id)
-            VALUES ($1, $2, $3, 'venda', $4)
-        `;
-        await client.query(logQuery, [cambistaId, cambistaUsuario, -custoTotal, vendaId]);
+// 3. Deduz o saldo
+const novoSaldo = saldoAtual - custoTotal;
+await client.query("UPDATE cambistas SET saldo_creditos = $1 WHERE id = $2", [novoSaldo, cambistaId]);
 
-        await client.query('COMMIT');
+// 4. Gera as cartelas
+const cartelasGeradas = [];
+for (let i = 0; i < quantidade; i++) {
+cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+}
+const cartelasJSON = JSON.stringify(cartelasGeradas);
 
-        // 7. Adiciona na memória do jogo (igual ao admin manual)
-        const manualPlayerId = `manual_${gerarIdUnico()}`; 
-        jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
-        io.emit('contagemJogadores', getContagemJogadores());
-        
-        console.log(`Cambista ${cambistaUsuario} vendeu ${quantidade} cartelas para ${nome}. Saldo restante: ${novoSaldo}`);
-        res.json({ success: true, message: "Venda registrada!", cartelas: cartelasGeradas, novoSaldo: novoSaldo });
+// 5. Registra a Venda
+const stmtVenda = `
+           INSERT INTO vendas 
+           (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, cambista_id) 
+           VALUES ($1, $2, $3, $4, $5, 'Cambista', $6, $7)
+           RETURNING id
+       `;
+const vendaResult = await client.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, custoTotal, cartelasJSON, cambistaId]);
+const vendaId = vendaResult.rows[0].id;
 
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error(`Erro na venda do cambista ${cambistaUsuario}:`, err);
-        res.status(500).json({ success: false, message: err.message || "Erro interno ao processar venda." });
-    } finally {
-        client.release();
-    }
+// 6. Registra a Transação de Crédito
+const logQuery = `
+           INSERT INTO transacoes_creditos (cambista_id, admin_usuario, valor_alteracao, tipo, venda_id)
+           VALUES ($1, $2, $3, 'venda', $4)
+       `;
+await client.query(logQuery, [cambistaId, cambistaUsuario, -custoTotal, vendaId]);
+
+await client.query('COMMIT');
+
+// 7. Adiciona na memória do jogo (igual ao admin manual)
+const manualPlayerId = `manual_${gerarIdUnico()}`; 
+jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
+io.emit('contagemJogadores', getContagemJogadores());
+
+console.log(`Cambista ${cambistaUsuario} vendeu ${quantidade} cartelas para ${nome}. Saldo restante: ${novoSaldo}`);
+res.json({ success: true, message: "Venda registrada!", cartelas: cartelasGeradas, novoSaldo: novoSaldo });
+
+} catch (err) {
+await client.query('ROLLBACK');
+console.error(`Erro na venda do cambista ${cambistaUsuario}:`, err);
+res.status(500).json({ success: false, message: err.message || "Erro interno ao processar venda." });
+} finally {
+client.release();
+}
 });
 // ==========================================================
 
@@ -925,6 +946,7 @@ function gerarDadosCartela(sorteioId) { const cartela = []; const colunas = [ ge
 function checarVencedorLinha(cartelaData, numerosSorteados) { const cartela = cartelaData.data; const numerosComFree = new Set(numerosSorteados); numerosComFree.add("FREE"); for (let i = 0; i < 5; i++) { if (cartela[i].every(num => numerosComFree.has(num))) return true; } for (let i = 0; i < 5; i++) { if (cartela.every(linha => numerosComFree.has(linha[i]))) return true; } if (cartela.every((linha, i) => numerosComFree.has(linha[i]))) return true; if (cartela.every((linha, i) => numerosComFree.has(linha[4-i]))) return true; return false; }
 function checarVencedorCartelaCheia(cartelaData, numerosSorteados) { const cartela = cartelaData.data; const numerosComFree = new Set(numerosSorteados); numerosComFree.add("FREE"); for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { if (!numerosComFree.has(cartela[i][j])) return false; } } return true; }
 function contarFaltantesParaCheia(cartelaData, numerosSorteadosSet) { if (!cartelaData || !cartelaData.data) return 99; const cartela = cartelaData.data; let faltantes = 0; for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { const num = cartela[i][j]; if (num !== "FREE" && !numerosSorteadosSet.has(num)) { faltantes++; } } } return faltantes; }
+function contarFaltantesParaCheia(cartelaData, numerosSorteadosSet) { if (!cartelaData || !cartelaData.data) return 99; const cartela = cartelaData.data; let faltantes = 0; for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { const num = cartela[i][j]; if (num !== "FREE" && !numerosSNorteadosSet.has(num)) { faltantes++; } } } return faltantes; }
 
 // --- Lógica Principal do Jogo (Convertida para PG) ---
 let estadoJogo = "ESPERANDO";
@@ -932,448 +954,448 @@ let tempoRestante = DURACAO_ESPERA_ATUAL;
 let intervaloSorteio = null; let numerosDisponiveis = []; let numerosSorteados = []; let jogadores = {};
 
 setInterval(() => {
-    if (estadoJogo === "ESPERANDO") {
-        tempoRestante--;
-        if (tempoRestante <= 0) {
-            console.log("DEBUG: Tempo esgotado! Tentando iniciar nova rodada...");
-            estadoJogo = "JOGANDO_LINHA";
-            console.log("DEBUG: Estado alterado para JOGANDO_LINHA.");
-            try { io.emit('iniciarJogo'); console.log("DEBUG: Evento 'iniciarJogo' emitido."); }
-            catch (emitError) { console.error("DEBUG: Erro ao emitir 'iniciarJogo':", emitError); }
-            try { iniciarNovaRodada(); console.log("DEBUG: Chamada para iniciarNovaRodada() concluída."); }
-            catch (startRoundError) { console.error("DEBUG: Erro ao chamar iniciarNovaRodada():", startRoundError); }
-        } else { io.emit('cronometroUpdate', { tempo: tempoRestante, sorteioId: numeroDoSorteio, estado: estadoJogo }); }
-    } else { io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); }
+if (estadoJogo === "ESPERANDO") {
+tempoRestante--;
+if (tempoRestante <= 0) {
+console.log("DEBUG: Tempo esgotado! Tentando iniciar nova rodada...");
+estadoJogo = "JOGANDO_LINHA";
+console.log("DEBUG: Estado alterado para JOGANDO_LINHA.");
+try { io.emit('iniciarJogo'); console.log("DEBUG: Evento 'iniciarJogo' emitido."); }
+catch (emitError) { console.error("DEBUG: Erro ao emitir 'iniciarJogo':", emitError); }
+try { iniciarNovaRodada(); console.log("DEBUG: Chamada para iniciarNovaRodada() concluída."); }
+catch (startRoundError) { console.error("DEBUG: Erro ao chamar iniciarNovaRodada():", startRoundError); }
+} else { io.emit('cronometroUpdate', { tempo: tempoRestante, sorteioId: numeroDoSorteio, estado: estadoJogo }); }
+} else { io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); }
 }, 1000);
 
 function iniciarNovaRodada() {
-    console.log("DEBUG: Dentro de iniciarNovaRodada().");
-    console.log(`Servidor: Iniciando Sorteio #${numeroDoSorteio}... Próximo prêmio: LINHA`);
-    try {
-        numerosDisponiveis = Array.from({ length: 75 }, (_, i) => i + 1); numerosSorteados = []; console.log("DEBUG: Arrays de números resetados.");
-        if (intervaloSorteio) { clearInterval(intervaloSorteio); intervaloSorteio = null; console.log("DEBUG: Intervalo de sorteio anterior limpo."); }
-        const jogadoresManuais = {};
-        for (const id in jogadores) { if (jogadores[id].isManual) { if(jogadores[id].cartelas.length > 0 && jogadores[id].cartelas[0].s_id === numeroDoSorteio) { console.log(`Mantendo jogador manual '${jogadores[id].nome}' para o Sorteio #${numeroDoSorteio}`); jogadoresManuais[id] = jogadores[id]; } else { console.log(`Descartando jogador manual '${jogadores[id].nome}' do sorteio anterior.`); } } }
-        jogadores = jogadoresManuais;
-        
-        const numBots = Math.floor(Math.random() * (MAX_BOTS_ATUAL - MIN_BOTS_ATUAL + 1)) + MIN_BOTS_ATUAL;
-        
-        console.log(`Servidor: Adicionando ${numBots} bots para a rodada #${numeroDoSorteio}.`);
-        for (let i = 0; i < numBots; i++) { const botId = `bot_${gerarIdUnico()}`; const botNome = nomesBots[Math.floor(Math.random() * nomesBots.length)]; const numCartelasBot = Math.floor(Math.random() * (MAX_CARTELAS_POR_BOT - MIN_CARTELAS_POR_BOT + 1)) + MIN_CARTELAS_POR_BOT; const botCartelas = []; for (let j = 0; j < numCartelasBot; j++) { botCartelas.push(gerarDadosCartela(numeroDoSorteio)); } jogadores[botId] = { nome: botNome, telefone: null, isBot: true, cartelas: botCartelas }; }
-        console.log("DEBUG: Jogadores/Bots preparados.");
-        io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); io.emit('contagemJogadores', getContagemJogadores()); io.emit('atualizarQuaseLa', []);
-        console.log("DEBUG: Emits de atualização enviados.");
-        setTimeout(() => {
-             console.log("DEBUG: Dentro do setTimeout para iniciar sorteio.");
-             console.log("Servidor: Começando a sortear números.");
-             try { if (intervaloSorteio) { console.warn("DEBUG: Tentativa de iniciar um novo intervalo de sorteio, mas um já existia. Limpando o antigo."); clearInterval(intervaloSorteio); } intervaloSorteio = setInterval(sortearNumero, TEMPO_ENTRE_NUMEROS); console.log("DEBUG: setInterval(sortearNumero) iniciado."); }
-             catch (setIntervalError) { console.error("DEBUG: Erro ao iniciar setInterval(sortearNumero):", setIntervalError); }
-        }, 5000);
-        console.log("DEBUG: setTimeout para iniciar sorteio agendado.");
-    } catch (error) { console.error("DEBUG: Erro DENTRO de iniciarNovaRodada:", error); }
+console.log("DEBUG: Dentro de iniciarNovaRodada().");
+console.log(`Servidor: Iniciando Sorteio #${numeroDoSorteio}... Próximo prêmio: LINHA`);
+try {
+numerosDisponiveis = Array.from({ length: 75 }, (_, i) => i + 1); numerosSorteados = []; console.log("DEBUG: Arrays de números resetados.");
+if (intervaloSorteio) { clearInterval(intervaloSorteio); intervaloSorteio = null; console.log("DEBUG: Intervalo de sorteio anterior limpo."); }
+const jogadoresManuais = {};
+for (const id in jogadores) { if (jogadores[id].isManual) { if(jogadores[id].cartelas.length > 0 && jogadores[id].cartelas[0].s_id === numeroDoSorteio) { console.log(`Mantendo jogador manual '${jogadores[id].nome}' para o Sorteio #${numeroDoSorteio}`); jogadoresManuais[id] = jogadores[id]; } else { console.log(`Descartando jogador manual '${jogadores[id].nome}' do sorteio anterior.`); } } }
+jogadores = jogadoresManuais;
+
+const numBots = Math.floor(Math.random() * (MAX_BOTS_ATUAL - MIN_BOTS_ATUAL + 1)) + MIN_BOTS_ATUAL;
+
+console.log(`Servidor: Adicionando ${numBots} bots para a rodada #${numeroDoSorteio}.`);
+for (let i = 0; i < numBots; i++) { const botId = `bot_${gerarIdUnico()}`; const botNome = nomesBots[Math.floor(Math.random() * nomesBots.length)]; const numCartelasBot = Math.floor(Math.random() * (MAX_CARTELAS_POR_BOT - MIN_CARTELAS_POR_BOT + 1)) + MIN_CARTELAS_POR_BOT; const botCartelas = []; for (let j = 0; j < numCartelasBot; j++) { botCartelas.push(gerarDadosCartela(numeroDoSorteio)); } jogadores[botId] = { nome: botNome, telefone: null, isBot: true, cartelas: botCartelas }; }
+console.log("DEBUG: Jogadores/Bots preparados.");
+io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); io.emit('contagemJogadores', getContagemJogadores()); io.emit('atualizarQuaseLa', []);
+console.log("DEBUG: Emits de atualização enviados.");
+setTimeout(() => {
+console.log("DEBUG: Dentro do setTimeout para iniciar sorteio.");
+console.log("Servidor: Começando a sortear números.");
+try { if (intervaloSorteio) { console.warn("DEBUG: Tentativa de iniciar um novo intervalo de sorteio, mas um já existia. Limpando o antigo."); clearInterval(intervaloSorteio); } intervaloSorteio = setInterval(sortearNumero, TEMPO_ENTRE_NUMEROS); console.log("DEBUG: setInterval(sortearNumero) iniciado."); }
+catch (setIntervalError) { console.error("DEBUG: Erro ao iniciar setInterval(sortearNumero):", setIntervalError); }
+}, 5000);
+console.log("DEBUG: setTimeout para iniciar sorteio agendado.");
+} catch (error) { console.error("DEBUG: Erro DENTRO de iniciarNovaRodada:", error); }
 }
 
 async function sortearNumero() { // Convertido para 'async'
-    if (!numerosDisponiveis || numerosDisponiveis.length === 0) { console.log("Todos os números sorteados."); terminarRodada(null, null); return; }
-    const indiceAleatorio = Math.floor(Math.random() * numerosDisponiveis.length); const numeroSorteado = numerosDisponiveis.splice(indiceAleatorio, 1)[0];
-    numerosSorteados.push(numeroSorteado); console.log(`Servidor: Sorteou ${numeroSorteado}`);
-    io.emit('novoNumeroSorteado', numeroSorteado);
-    const numerosSorteadosSet = new Set(numerosSorteados);
-    const getNome = (jogador, id) => { if (jogador.nome) return jogador.nome; if (jogador.isBot) return `Bot [${id.substring(0,4)}]`; return `Jogador [${id.substring(0,4)}]`; };
-    let vencedorLinhaEncontrado = false;
-    if (estadoJogo === "JOGANDO_LINHA") {
-        for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; if (checarVencedorLinha(cartela, numerosSorteados)) { 
-            console.log(`DEBUG: Vencedor da LINHA encontrado: ${getNome(jogador, socketId)}`); 
-            const nomeVencedor = getNome(jogador, socketId); 
-            
-            // Agora é 'await'
-            await salvarVencedorNoDB({ sorteioId: numeroDoSorteio, premio: "Linha", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
-            
-            const winningSocket = io.sockets.sockets.get(socketId); 
+if (!numerosDisponiveis || numerosDisponiveis.length === 0) { console.log("Todos os números sorteados."); terminarRodada(null, null); return; }
+const indiceAleatorio = Math.floor(Math.random() * numerosDisponiveis.length); const numeroSorteado = numerosDisponiveis.splice(indiceAleatorio, 1)[0];
+numerosSorteados.push(numeroSorteado); console.log(`Servidor: Sorteou ${numeroSorteado}`);
+io.emit('novoNumeroSorteado', numeroSorteado);
+const numerosSorteadosSet = new Set(numerosSorteados);
+const getNome = (jogador, id) => { if (jogador.nome) return jogador.nome; if (jogador.isBot) return `Bot [${id.substring(0,4)}]`; return `Jogador [${id.substring(0,4)}]`; };
+let vencedorLinhaEncontrado = false;
+if (estadoJogo === "JOGANDO_LINHA") {
+for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; if (checarVencedorLinha(cartela, numerosSorteados)) { 
+console.log(`DEBUG: Vencedor da LINHA encontrado: ${getNome(jogador, socketId)}`); 
+const nomeVencedor = getNome(jogador, socketId); 
 
-            if (!jogador.isBot && !jogador.isManual && winningSocket) { 
-                winningSocket.emit('voceGanhouLinha', { cartelaGanhadora: cartela, indiceCartela: i, premioValor: PREMIO_LINHA }); 
-                winningSocket.broadcast.emit('alguemGanhouLinha', { nome: nomeVencedor });
-            } else {
-                io.emit('alguemGanhouLinha', { nome: nomeVencedor }); 
-            }
-            
-            estadoJogo = "JOGANDO_CHEIA"; 
-            io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); 
-            console.log("Servidor: Próximo prêmio: CARTELA CHEIA"); 
-            vencedorLinhaEncontrado = true; 
-            break; 
-        } } if (vencedorLinhaEncontrado) break; }
-    }
+// Agora é 'await'
+await salvarVencedorNoDB({ sorteioId: numeroDoSorteio, premio: "Linha", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
 
-    // ATUALIZAÇÃO (CORREÇÃO DO BUG DO DELAY)
-    if (estadoJogo === "JOGANDO_CHEIA") {
-        for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; 
-            
-            if (checarVencedorCartelaCheia(cartela, numerosSorteadosSet)) { 
-                console.log(`DEBUG: Vencedor da CARTELA CHEIA encontrado: ${getNome(jogador, socketId)}`); 
-                const nomeVencedor = getNome(jogador, socketId); 
+const winningSocket = io.sockets.sockets.get(socketId); 
 
-                // 1. Parar o sorteio de novos números IMEDIATAMENTE
-                if (intervaloSorteio) {
-                    clearInterval(intervaloSorteio);
-                    intervaloSorteio = null;
-                    console.log("DEBUG: Sorteio pausado. Vencedor encontrado.");
-                }
+if (!jogador.isBot && !jogador.isManual && winningSocket) { 
+winningSocket.emit('voceGanhouLinha', { cartelaGanhadora: cartela, indiceCartela: i, premioValor: PREMIO_LINHA }); 
+winningSocket.broadcast.emit('alguemGanhouLinha', { nome: nomeVencedor });
+} else {
+io.emit('alguemGanhouLinha', { nome: nomeVencedor }); 
+}
 
-                // 2. Mudar o estado para "travar" o jogo
-                estadoJogo = "ANUNCIANDO_VENCEDOR"; // Novo estado
-                io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
+estadoJogo = "JOGANDO_CHEIA"; 
+io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); 
+console.log("Servidor: Próximo prêmio: CARTELA CHEIA"); 
+vencedorLinhaEncontrado = true; 
+break; 
+} } if (vencedorLinhaEncontrado) break; }
+}
 
-                // 3. Preparar os dados para o DB e para o fim da rodada
-                const vencedorInfoDB = { 
-                    sorteioId: numeroDoSorteio, 
-                    premio: "Cartela Cheia", 
-                    nome: jogador.nome, 
-                    telefone: jogador.telefone, 
-                    cartelaId: cartela.c_id 
-                };
-                const dadosVencedor = { 
-                    nome: nomeVencedor, 
-                    telefone: jogador.telefone, 
-                    cartelaGanhadora: cartela, 
-                    indiceCartela: i, 
-                    premioValor: PREMIO_CHEIA 
-                }; 
-                const socketVencedor = (jogador.isBot || jogador.isManual) ? null : socketId;
+// ATUALIZAÇÃO (CORREÇÃO DO BUG DO DELAY)
+if (estadoJogo === "JOGANDO_CHEIA") {
+for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; 
 
-                // 4. Esperar 5 segundos ANTES de salvar e anunciar
-                const TEMPO_DELAY_ANUNCIO = 5000; // 5 segundos
-                console.log(`Servidor: Esperando ${TEMPO_DELAY_ANUNCIO}ms para anunciar o vencedor...`);
-                
-                setTimeout(async () => { // <-- Função dentro do timeout agora é async
-                    console.log("Servidor: Anunciando vencedor e terminando a rodada.");
-                    
-                    // 5. SALVA NO DB (e emite 'atualizarVencedores' para o dashboard)
-                    await salvarVencedorNoDB(vencedorInfoDB); 
-                    
-                    // 6. TERMINA A RODADA (e emite 'alguemGanhouCartelaCheia' para o jogo.html)
-                    terminarRodada(dadosVencedor, socketVencedor); 
-                }, TEMPO_DELAY_ANUNCIO);
-                
-                return; // Para o loop de checagem de vencedores
-            } 
-        } }
-    }
+if (checarVencedorCartelaCheia(cartela, numerosSorteadosSet)) { 
+console.log(`DEBUG: Vencedor da CARTELA CHEIA encontrado: ${getNome(jogador, socketId)}`); 
+const nomeVencedor = getNome(jogador, socketId); 
+
+// 1. Parar o sorteio de novos números IMEDIATAMENTE
+if (intervaloSorteio) {
+clearInterval(intervaloSorteio);
+intervaloSorteio = null;
+console.log("DEBUG: Sorteio pausado. Vencedor encontrado.");
+}
+
+// 2. Mudar o estado para "travar" o jogo
+estadoJogo = "ANUNCIANDO_VENCEDOR"; // Novo estado
+io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
+
+// 3. Preparar os dados para o DB e para o fim da rodada
+const vencedorInfoDB = { 
+sorteioId: numeroDoSorteio, 
+premio: "Cartela Cheia", 
+nome: jogador.nome, 
+telefone: jogador.telefone, 
+cartelaId: cartela.c_id 
+};
+const dadosVencedor = { 
+nome: nomeVencedor, 
+telefone: jogador.telefone, 
+cartelaGanhadora: cartela, 
+indiceCartela: i, 
+premioValor: PREMIO_CHEIA 
+}; 
+const socketVencedor = (jogador.isBot || jogador.isManual) ? null : socketId;
+
+// 4. Esperar 5 segundos ANTES de salvar e anunciar
+const TEMPO_DELAY_ANUNCIO = 5000; // 5 segundos
+console.log(`Servidor: Esperando ${TEMPO_DELAY_ANUNCIO}ms para anunciar o vencedor...`);
+
+setTimeout(async () => { // <-- Função dentro do timeout agora é async
+console.log("Servidor: Anunciando vencedor e terminando a rodada.");
+
+// 5. SALVA NO DB (e emite 'atualizarVencedores' para o dashboard)
+await salvarVencedorNoDB(vencedorInfoDB); 
+
+// 6. TERMINA A RODADA (e emite 'alguemGanhouCartelaCheia' para o jogo.html)
+terminarRodada(dadosVencedor, socketVencedor); 
+}, TEMPO_DELAY_ANUNCIO);
+
+return; // Para o loop de checagem de vencedores
+} 
+} }
+}
 
 
-    if (estadoJogo === "JOGANDO_LINHA" || estadoJogo === "JOGANDO_CHEIA") {
-        const jogadoresPerto = [];
-        for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (const cartela of jogador.cartelas) { if (cartela.s_id !== numeroDoSorteio) continue; const faltantes = contarFaltantesParaCheia(cartela, numerosSorteadosSet); if (faltantes > 0 && faltantes <= LIMITE_FALTANTES_QUASELA) { jogadoresPerto.push({ nome: getNome(jogador, socketId), faltam: faltantes }); } } }
-        jogadoresPerto.sort((a, b) => a.faltam - b.faltam); const topJogadores = jogadoresPerto.slice(0, MAX_JOGADORES_QUASELA); io.emit('atualizarQuaseLa', topJogadores);
-    }
+if (estadoJogo === "JOGANDO_LINHA" || estadoJogo === "JOGANDO_CHEIA") {
+const jogadoresPerto = [];
+for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (const cartela of jogador.cartelas) { if (cartela.s_id !== numeroDoSorteio) continue; const faltantes = contarFaltantesParaCheia(cartela, numerosSorteadosSet); if (faltantes > 0 && faltantes <= LIMITE_FALTANTES_QUASELA) { jogadoresPerto.push({ nome: getNome(jogador, socketId), faltam: faltantes }); } } }
+jogadoresPerto.sort((a, b) => a.faltam - b.faltam); const topJogadores = jogadoresPerto.slice(0, MAX_JOGADORES_QUASELA); io.emit('atualizarQuaseLa', topJogadores);
+}
 }
 
 // Convertido para 'async'
 async function salvarVencedorNoDB(vencedorInfo) {
-    try {
-        const stmt = `INSERT INTO vencedores (sorteio_id, premio, nome, telefone, cartela_id) VALUES ($1, $2, $3, $4, $5)`;
-        await db.query(stmt, [vencedorInfo.sorteioId, vencedorInfo.premio, vencedorInfo.nome || 'Bot/Manual', vencedorInfo.telefone, vencedorInfo.cartelaId]);
-        
-        console.log(`Vencedor [${vencedorInfo.premio}] salvo no banco de dados (Status: Pendente).`);
-        
-        const ultimos = await getUltimosVencedoresDoDB(); // 'await'
-        io.emit('atualizarVencedores', ultimos);
-    } catch (err) { console.error("Erro ao salvar vencedor no DB:", err); }
+try {
+const stmt = `INSERT INTO vencedores (sorteio_id, premio, nome, telefone, cartela_id) VALUES ($1, $2, $3, $4, $5)`;
+await db.query(stmt, [vencedorInfo.sorteioId, vencedorInfo.premio, vencedorInfo.nome || 'Bot/Manual', vencedorInfo.telefone, vencedorInfo.cartelaId]);
+
+console.log(`Vencedor [${vencedorInfo.premio}] salvo no banco de dados (Status: Pendente).`);
+
+const ultimos = await getUltimosVencedoresDoDB(); // 'await'
+io.emit('atualizarVencedores', ultimos);
+} catch (err) { console.error("Erro ao salvar vencedor no DB:", err); }
 }
 
 // A função agora é 'async' para salvar no banco
 async function terminarRodada(vencedor, socketVencedor) {
-    console.log("DEBUG: Dentro de terminarRodada().");
-    
-    // A limpeza do intervalo agora é feita ANTES, na função 'sortearNumero'
-    if (intervaloSorteio) { 
-        clearInterval(intervaloSorteio); 
-        intervaloSorteio = null; 
-        console.warn("DEBUG: Intervalo de sorteio parado em terminarRodada (não deveria acontecer se o delay funcionou).");
-    }
-    
-    const idSorteioFinalizado = numeroDoSorteio;
-    
-    if (vencedor) { 
-        if(socketVencedor && io.sockets.sockets.get(socketVencedor)) { 
-            io.to(socketVencedor).emit('voceGanhouCartelaCheia', vencedor); 
-            io.sockets.sockets.get(socketVencedor).broadcast.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome }); 
-        } else { 
-            io.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome }); 
-        } 
-    }
-    else { io.emit('jogoTerminouSemVencedor'); }
-    
-    estadoJogo = "ESPERANDO";
-    tempoRestante = DURACAO_ESPERA_ATUAL; 
-    
-    // Incrementa o número do sorteio e SALVA no banco
-    numeroDoSorteio++; // Incrementa a variável global
-    try {
-        // Salva o NOVO número no banco
-        const query = `
-            INSERT INTO configuracoes (chave, valor) 
-            VALUES ($1, $2) 
-            ON CONFLICT (chave) 
-            DO UPDATE SET valor = EXCLUDED.valor;
-        `;
-        await db.query(query, ['numero_sorteio_atual', numeroDoSorteio.toString()]);
-        console.log(`Servidor: Sorteio #${idSorteioFinalizado} terminado. Próximo será #${numeroDoSorteio} (Salvo no DB).`); 
-    } catch (err) {
-        console.error("ERRO CRÍTICO AO SALVAR NÚMERO DO SORTEIO:", err);
-        // O jogo continua, mas o próximo reinício voltará para o número antigo
-    }
+console.log("DEBUG: Dentro de terminarRodada().");
 
-    io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); io.emit('atualizarQuaseLa', []);
-    console.log("DEBUG: terminarRodada() concluída.");
+// A limpeza do intervalo agora é feita ANTES, na função 'sortearNumero'
+if (intervaloSorteio) { 
+clearInterval(intervaloSorteio); 
+intervaloSorteio = null; 
+console.warn("DEBUG: Intervalo de sorteio parado em terminarRodada (não deveria acontecer se o delay funcionou).");
+}
+
+const idSorteioFinalizado = numeroDoSorteio;
+
+if (vencedor) { 
+if(socketVencedor && io.sockets.sockets.get(socketVencedor)) { 
+io.to(socketVencedor).emit('voceGanhouCartelaCheia', vencedor); 
+io.sockets.sockets.get(socketVencedor).broadcast.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome }); 
+} else { 
+io.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome }); 
+} 
+}
+else { io.emit('jogoTerminouSemVencedor'); }
+
+estadoJogo = "ESPERANDO";
+tempoRestante = DURACAO_ESPERA_ATUAL; 
+
+// Incrementa o número do sorteio e SALVA no banco
+numeroDoSorteio++; // Incrementa a variável global
+try {
+// Salva o NOVO número no banco
+const query = `
+           INSERT INTO configuracoes (chave, valor) 
+           VALUES ($1, $2) 
+           ON CONFLICT (chave) 
+           DO UPDATE SET valor = EXCLUDED.valor;
+       `;
+await db.query(query, ['numero_sorteio_atual', numeroDoSorteio.toString()]);
+console.log(`Servidor: Sorteio #${idSorteioFinalizado} terminado. Próximo será #${numeroDoSorteio} (Salvo no DB).`); 
+} catch (err) {
+console.error("ERRO CRÍTICO AO SALVAR NÚMERO DO SORTEIO:", err);
+// O jogo continua, mas o próximo reinício voltará para o número antigo
+}
+
+io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); io.emit('atualizarQuaseLa', []);
+console.log("DEBUG: terminarRodada() concluída.");
 }
 
 function getContagemJogadores() { 
-    let total = 0; let reais = 0; 
-    try { 
-        if (jogadores && typeof jogadores === 'object') { 
-            const players = Object.values(jogadores); 
-            total = players.filter(j => j && j.nome).length; 
-            reais = players.filter(j => j && j.nome && !j.isBot && !j.isManual).length;
-        } 
-    } catch (error) { 
-        console.error("Erro crítico em getContagemJogadores:", error); 
-        return { total: 0, reais: 0 }; 
-    } 
-    return { total, reais }; 
+let total = 0; let reais = 0; 
+try { 
+if (jogadores && typeof jogadores === 'object') { 
+const players = Object.values(jogadores); 
+total = players.filter(j => j && j.nome).length; 
+reais = players.filter(j => j && j.nome && !j.isBot && !j.isManual).length;
+} 
+} catch (error) { 
+console.error("Erro crítico em getContagemJogadores:", error); 
+return { total: 0, reais: 0 }; 
+} 
+return { total, reais }; 
 }
 
 // Convertido para 'async'
 async function getUltimosVencedoresDoDB(limite = MAX_VENCEDORES_HISTORICO) { 
-    try { 
-        const stmt = `SELECT sorteio_id as "sorteioId", premio, nome FROM vencedores ORDER BY timestamp DESC LIMIT $1`;
-        const resDB = await db.query(stmt, [limite]);
-        return resDB.rows; 
-    } catch (err) { 
-        console.error("Erro ao buscar vencedores no DB:", err); 
-        return []; 
-    } 
+try { 
+const stmt = `SELECT sorteio_id as "sorteioId", premio, nome FROM vencedores ORDER BY timestamp DESC LIMIT $1`;
+const resDB = await db.query(stmt, [limite]);
+return resDB.rows; 
+} catch (err) { 
+console.error("Erro ao buscar vencedores no DB:", err); 
+return []; 
+} 
 }
 
 // Convertido para 'async'
 async function getAdminStatusData() {
-    const statusData = {
-        estado: estadoJogo,
-        sorteioAtual: numeroDoSorteio,
-        tempoRestante: estadoJogo === 'ESPERANDO' ? tempoRestante : null,
-        jogadoresReais: getContagemJogadores().reais
-    };
+const statusData = {
+estado: estadoJogo,
+sorteioAtual: numeroDoSorteio,
+tempoRestante: estadoJogo === 'ESPERANDO' ? tempoRestante : null,
+jogadoresReais: getContagemJogadores().reais
+};
 
-    try {
-        const proximoSorteioId = estadoJogo === 'ESPERANDO' ? numeroDoSorteio : numeroDoSorteio + 1;
-        
-        const vendasProximoRes = await db.query(`
-            SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
-            FROM vendas 
-            WHERE sorteio_id = $1
-        `, [proximoSorteioId]);
-        
-        statusData.vendasProximoSorteio = vendasProximoRes.rows[0] || { qtd_cartelas: 0, valor_total: 0 };
-        statusData.proximoSorteioId = proximoSorteioId;
+try {
+const proximoSorteioId = estadoJogo === 'ESPERANDO' ? numeroDoSorteio : numeroDoSorteio + 1;
 
-        // 'date()' (SQLite) vira '::date' (PostgreSQL)
-        const receitaDiaRes = await db.query(`
-            SELECT SUM(valor_total) as valor_total_dia
-            FROM vendas
-            WHERE (timestamp AT TIME ZONE 'UTC')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date
-        `);
-        statusData.receitaDoDia = receitaDiaRes.rows[0].valor_total_dia || 0;
+const vendasProximoRes = await db.query(`
+           SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
+           FROM vendas 
+           WHERE sorteio_id = $1
+       `, [proximoSorteioId]);
 
-    } catch (error) {
-        console.error("Erro ao buscar dados de status admin:", error);
-        statusData.vendasProximoSorteio = { qtd_cartelas: 'Erro', valor_total: 'Erro' };
-        statusData.receitaDoDia = 'Erro';
-    }
+statusData.vendasProximoSorteio = vendasProximoRes.rows[0] || { qtd_cartelas: 0, valor_total: 0 };
+statusData.proximoSorteioId = proximoSorteioId;
 
-    return statusData;
+// 'date()' (SQLite) vira '::date' (PostgreSQL)
+const receitaDiaRes = await db.query(`
+           SELECT SUM(valor_total) as valor_total_dia
+           FROM vendas
+           WHERE (timestamp AT TIME ZONE 'UTC')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date
+       `);
+statusData.receitaDoDia = receitaDiaRes.rows[0].valor_total_dia || 0;
+
+} catch (error) {
+console.error("Erro ao buscar dados de status admin:", error);
+statusData.vendasProximoSorteio = { qtd_cartelas: 'Erro', valor_total: 'Erro' };
+statusData.receitaDoDia = 'Erro';
+}
+
+return statusData;
 }
 
 
 // Convertido para 'async'
 io.on('connection', async (socket) => {
-    console.log(`Novo usuário conectado: ${socket.id}`);
-    try {
-        const contagemInicial = getContagemJogadores(); 
-        const ultimosVencedoresDB = await getUltimosVencedoresDoDB(); // 'await'
-        const totalOnline = contagemInicial ? contagemInicial.total : 0; 
-        const reaisOnline = contagemInicial ? contagemInicial.reais : 0;
-        
-        const resDB = await db.query("SELECT chave, valor FROM configuracoes");
-        const configs = resDB.rows;
-        const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
-        
-        socket.emit('estadoInicial', { 
-            sorteioId: numeroDoSorteio, 
-            estado: estadoJogo, 
-            tempoRestante: estadoJogo === 'ESPERANDO' ? tempoRestante : 0, 
-            jogadoresOnline: totalOnline, 
-            jogadoresReais: reaisOnline, 
-            ultimosVencedores: ultimosVencedoresDB, 
-            numerosSorteados: numerosSorteados, 
-            ultimoNumero: numerosSorteados.length > 0 ? numerosSorteados[numerosSorteados.length - 1] : null, 
-            quaseLa: [], 
-            configuracoes: configMap 
-        });
-    } catch (error) { console.error("Erro ao emitir estado inicial:", error); }
-    
-    // --- FUNÇÃO DE PAGAMENTO ATUALIZADA (SALVA PENDENTE NO DB) ---
-    socket.on('criarPagamento', async (dadosCompra, callback) => {
-        try {
-            const { nome, telefone, quantidade } = dadosCompra;
-            
-            const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
-            const preco = precoRes.rows[0];
-            const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
-            const valorTotal = quantidade * precoUnitarioAtual;
-            
-            console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade} cartela(s). Total: R$${valorTotal.toFixed(2)}.`);
+console.log(`Novo usuário conectado: ${socket.id}`);
+try {
+const contagemInicial = getContagemJogadores(); 
+const ultimosVencedoresDB = await getUltimosVencedoresDoDB(); // 'await'
+const totalOnline = contagemInicial ? contagemInicial.total : 0; 
+const reaisOnline = contagemInicial ? contagemInicial.reais : 0;
 
-            // Verifica se a BASE_URL foi configurada
-            if (!process.env.BASE_URL) {
-                console.error("ERRO GRAVE: BASE_URL não está configurada! O Webhook do MercadoPago falhará.");
-                // Retorna um erro para o usuário imediatamente
-                if (typeof callback === 'function') {
-                    callback({ success: false, message: 'Erro no servidor: URL de pagamento não configurada.' });
-                }
-                return; // Impede a continuação
-            }
+const resDB = await db.query("SELECT chave, valor FROM configuracoes");
+const configs = resDB.rows;
+const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
 
-            const payment = new Payment(mpClient);
-            const body = {
-                transaction_amount: valorTotal,
-                description: `Compra de ${quantidade} cartela(s) - Bingo do Pix`,
-                payment_method_id: 'pix',
-                notification_url: `${process.env.BASE_URL}/webhook-mercadopago`,
-                payer: {
-                    email: `jogador_${telefone}@bingo.com`, 
-                    first_name: nome,
-                    last_name: "Jogador",
-                },
-                date_of_expiration: new Date(Date.now() + (10 * 60 * 1000)).toISOString().replace("Z", "-03:00") // 10 min
-            };
+socket.emit('estadoInicial', { 
+sorteioId: numeroDoSorteio, 
+estado: estadoJogo, 
+tempoRestante: estadoJogo === 'ESPERANDO' ? tempoRestante : 0, 
+jogadoresOnline: totalOnline, 
+jogadoresReais: reaisOnline, 
+ultimosVencedores: ultimosVencedoresDB, 
+numerosSorteados: numerosSorteados, 
+ultimoNumero: numerosSorteados.length > 0 ? numerosSorteados[numerosSorteados.length - 1] : null, 
+quaseLa: [], 
+configuracoes: configMap 
+});
+} catch (error) { console.error("Erro ao emitir estado inicial:", error); }
 
-            const response = await payment.create({ body });
-            
-            const paymentId = response.id.toString();
-            
-            // *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
-            // Salva o pagamento pendente no DB, não na variável
-            const dadosCompraJSON = JSON.stringify(dadosCompra);
-            const query = `
-                INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (payment_id) DO UPDATE SET
-                    socket_id = EXCLUDED.socket_id,
-                    dados_compra_json = EXCLUDED.dados_compra_json,
-                    timestamp = CURRENT_TIMESTAMP
-            `;
-            await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
-            console.log(`Pagamento PIX ${paymentId} salvo no DB para socket ${socket.id}.`);
-            // *** FIM DA ATUALIZAÇÃO ***
+// --- FUNÇÃO DE PAGAMENTO ATUALIZADA (SALVA PENDENTE NO DB) ---
+socket.on('criarPagamento', async (dadosCompra, callback) => {
+try {
+const { nome, telefone, quantidade } = dadosCompra;
 
-            const qrCodeBase64 = response.point_of_interaction.transaction_data.qr_code_base64;
-            const qrCodeCopiaCola = response.point_of_interaction.transaction_data.qr_code;
-            
-            if (typeof callback === 'function') {
-                // *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
-                // Retorna o paymentId para o cliente
-                callback({ success: true, qrCodeBase64, qrCodeCopiaCola, paymentId: paymentId });
-            }
+const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
+const preco = precoRes.rows[0];
+const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
+const valorTotal = quantidade * precoUnitarioAtual;
 
-        } catch(error) {
-            console.error("Erro em criarPagamento no Mercado Pago:", error.cause || error.message);
-            if (typeof callback === 'function') {
-                callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access Token do Servidor.' });
-            }
-        }
-    });
-    // --- FIM DA FUNÇÃO DE PAGAMENTO ---
-    
-    socket.on('registerPlayer', (playerData) => { try { if (playerData && playerData.cartelas && playerData.cartelas.length > 0) { const s_id_cartela = playerData.cartelas[0].s_id; if (s_id_cartela === numeroDoSorteio || (estadoJogo === "ESPERANDO")) { console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio #${numeroDoSorteio}.`); jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; io.emit('contagemJogadores', getContagemJogadores()); } else { console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio #${numeroDoSorteio} com cartela inválida (Sorteio #${s_id_cartela}, Estado: ${estadoJogo}). REJEITADO.`); socket.emit('cartelaAntiga'); } } } catch(error) { console.error("Erro em registerPlayer:", error); } });
-    socket.on('disconnect', () => { console.log(`Usuário desconectado: ${socket.id}`); const eraJogadorRegistrado = jogadores[socket.id] && jogadores[socket.id].nome && !jogadores[socket.id].isBot && !jogadores[socket.id].isManual; delete jogadores[socket.id]; if (eraJogadorRegistrado) { try { io.emit('contagemJogadores', getContagemJogadores()); } catch (error) { console.error("Erro ao emitir contagemJogadores no disconnect:", error); } } });
-    
-    // Convertido para 'async'
-    socket.on('getAdminStatus', async () => {
-        try {
-            const statusData = await getAdminStatusData(); // 'await'
-            socket.emit('adminStatusUpdate', statusData);
-        } catch (error) {
-            console.error("Erro ao processar getAdminStatus:", error);
-            socket.emit('adminStatusUpdate', { error: 'Falha ao buscar status.' });
-        }
-    });
+console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade} cartela(s). Total: R$${valorTotal.toFixed(2)}.`);
 
-    // Ouvinte para buscar cartelas
-    socket.on('buscarMinhasCartelas', async (data) => {
-        try {
-            const { vendaId, nome } = data;
-            if (!vendaId || !nome) {
-                console.warn(`Cliente ${socket.id} pediu cartelas com dados inválidos.`);
-                socket.emit('cartelasNaoEncontradas');
-                return;
-            }
-            
-            // Busca no banco de dados
-            const query = "SELECT cartelas_json, nome_jogador FROM vendas WHERE id = $1";
-            const res = await db.query(query, [vendaId]);
-            
-            if (res.rows.length > 0) {
-                const venda = res.rows[0];
-                // Verificação de segurança simples
-                if (venda.nome_jogador === nome) {
-                    console.log(`Encontrada Venda #${vendaId} para ${nome}. Enviando cartelas.`);
-                    const cartelas = JSON.parse(venda.cartelas_json);
-                    socket.emit('cartelasEncontradas', { cartelas: cartelas });
-                } else {
-                    // Nome não bate com o ID
-                    console.warn(`Cliente ${socket.id} tentou pegar Venda #${vendaId} (Nome: ${venda.nome_jogador}) usando o nome ${nome}. REJEITADO.`);
-                    socket.emit('cartelasNaoEncontradas');
-                }
-            } else {
-                console.warn(`Cliente ${socket.id} pediu Venda #${vendaId}, mas ela não foi encontrada.`);
-                socket.emit('cartelasNaoEncontradas');
-            }
-        } catch (error) {
-            console.error("Erro ao buscar cartelas:", error);
-            socket.emit('cartelasNaoEncontradas');
-        }
-    });
-    
-    // Novo ouvinte para o cliente checar o status do pagamento
-    socket.on('checarMeuPagamento', async (data) => {
-        try {
-            const { paymentId } = data;
-            if (!paymentId) return;
+// Verifica se a BASE_URL foi configurada
+if (!process.env.BASE_URL) {
+console.error("ERRO GRAVE: BASE_URL não está configurada! O Webhook do MercadoPago falhará.");
+// Retorna um erro para o usuário imediatamente
+if (typeof callback === 'function') {
+callback({ success: false, message: 'Erro no servidor: URL de pagamento não configurada.' });
+}
+return; // Impede a continuação
+}
 
-            // Consulta a tabela de VENDAS (não a de pendentes)
-            const query = "SELECT id, nome_jogador, telefone FROM vendas WHERE payment_id = $1";
-            const res = await db.query(query, [paymentId]);
+const payment = new Payment(mpClient);
+const body = {
+transaction_amount: valorTotal,
+description: `Compra de ${quantidade} cartela(s) - Bingo do Pix`,
+payment_method_id: 'pix',
+notification_url: `${process.env.BASE_URL}/webhook-mercadopago`,
+payer: {
+email: `jogador_${telefone}@bingo.com`, 
+first_name: nome,
+last_name: "Jogador",
+},
+date_of_expiration: new Date(Date.now() + (10 * 60 * 1000)).toISOString().replace("Z", "-03:00") // 10 min
+};
 
-            if (res.rows.length > 0) {
-                // Pagamento foi processado pelo webhook e a venda existe!
-                const venda = res.rows[0];
-                console.log(`Polling: Pagamento ${paymentId} encontrado (Venda #${venda.id}). Avisando cliente ${socket.id}`);
-                
-                // Avisa o cliente que o pagamento foi aprovado
-                socket.emit('pagamentoAprovado', {
-                    vendaId: venda.id,
-                    nome: venda.nome_jogador,
-                    telefone: venda.telefone
-                });
-            } else {
-                // Pagamento ainda não está na tabela de vendas. O cliente continua esperando.
-                // Não fazemos nada, o cliente vai perguntar de novo.
-            }
-        } catch (err) {
-            console.error("Erro ao checar status de pagamento (checarMeuPagamento):", err);
-        }
-    });
+const response = await payment.create({ body });
+
+const paymentId = response.id.toString();
+
+// *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
+// Salva o pagamento pendente no DB, não na variável
+const dadosCompraJSON = JSON.stringify(dadosCompra);
+const query = `
+               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
+               VALUES ($1, $2, $3)
+               ON CONFLICT (payment_id) DO UPDATE SET
+                   socket_id = EXCLUDED.socket_id,
+                   dados_compra_json = EXCLUDED.dados_compra_json,
+                   timestamp = CURRENT_TIMESTAMP
+           `;
+await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
+console.log(`Pagamento PIX ${paymentId} salvo no DB para socket ${socket.id}.`);
+// *** FIM DA ATUALIZAÇÃO ***
+
+const qrCodeBase64 = response.point_of_interaction.transaction_data.qr_code_base64;
+const qrCodeCopiaCola = response.point_of_interaction.transaction_data.qr_code;
+
+if (typeof callback === 'function') {
+// *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
+// Retorna o paymentId para o cliente
+callback({ success: true, qrCodeBase64, qrCodeCopiaCola, paymentId: paymentId });
+}
+
+} catch(error) {
+console.error("Erro em criarPagamento no Mercado Pago:", error.cause || error.message);
+if (typeof callback === 'function') {
+callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access Token do Servidor.' });
+}
+}
+});
+// --- FIM DA FUNÇÃO DE PAGAMENTO ---
+
+socket.on('registerPlayer', (playerData) => { try { if (playerData && playerData.cartelas && playerData.cartelas.length > 0) { const s_id_cartela = playerData.cartelas[0].s_id; if (s_id_cartela === numeroDoSorteio || (estadoJogo === "ESPERANDO")) { console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio #${numeroDoSorteio}.`); jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; io.emit('contagemJogadores', getContagemJogadores()); } else { console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio #${numeroDoSorteio} com cartela inválida (Sorteio #${s_id_cartela}, Estado: ${estadoJogo}). REJEITADO.`); socket.emit('cartelaAntiga'); } } } catch(error) { console.error("Erro em registerPlayer:", error); } });
+socket.on('disconnect', () => { console.log(`Usuário desconectado: ${socket.id}`); const eraJogadorRegistrado = jogadores[socket.id] && jogadores[socket.id].nome && !jogadores[socket.id].isBot && !jogadores[socket.id].isManual; delete jogadores[socket.id]; if (eraJogadorRegistrado) { try { io.emit('contagemJogadores', getContagemJogadores()); } catch (error) { console.error("Erro ao emitir contagemJogadores no disconnect:", error); } } });
+
+// Convertido para 'async'
+socket.on('getAdminStatus', async () => {
+try {
+const statusData = await getAdminStatusData(); // 'await'
+socket.emit('adminStatusUpdate', statusData);
+} catch (error) {
+console.error("Erro ao processar getAdminStatus:", error);
+socket.emit('adminStatusUpdate', { error: 'Falha ao buscar status.' });
+}
+});
+
+// Ouvinte para buscar cartelas
+socket.on('buscarMinhasCartelas', async (data) => {
+try {
+const { vendaId, nome } = data;
+if (!vendaId || !nome) {
+console.warn(`Cliente ${socket.id} pediu cartelas com dados inválidos.`);
+socket.emit('cartelasNaoEncontradas');
+return;
+}
+
+// Busca no banco de dados
+const query = "SELECT cartelas_json, nome_jogador FROM vendas WHERE id = $1";
+const res = await db.query(query, [vendaId]);
+
+if (res.rows.length > 0) {
+const venda = res.rows[0];
+// Verificação de segurança simples
+if (venda.nome_jogador === nome) {
+console.log(`Encontrada Venda #${vendaId} para ${nome}. Enviando cartelas.`);
+const cartelas = JSON.parse(venda.cartelas_json);
+socket.emit('cartelasEncontradas', { cartelas: cartelas });
+} else {
+// Nome não bate com o ID
+console.warn(`Cliente ${socket.id} tentou pegar Venda #${vendaId} (Nome: ${venda.nome_jogador}) usando o nome ${nome}. REJEITADO.`);
+socket.emit('cartelasNaoEncontradas');
+}
+} else {
+console.warn(`Cliente ${socket.id} pediu Venda #${vendaId}, mas ela não foi encontrada.`);
+socket.emit('cartelasNaoEncontradas');
+}
+} catch (error) {
+console.error("Erro ao buscar cartelas:", error);
+socket.emit('cartelasNaoEncontradas');
+}
+});
+
+// Novo ouvinte para o cliente checar o status do pagamento
+socket.on('checarMeuPagamento', async (data) => {
+try {
+const { paymentId } = data;
+if (!paymentId) return;
+
+// Consulta a tabela de VENDAS (não a de pendentes)
+const query = "SELECT id, nome_jogador, telefone FROM vendas WHERE payment_id = $1";
+const res = await db.query(query, [paymentId]);
+
+if (res.rows.length > 0) {
+// Pagamento foi processado pelo webhook e a venda existe!
+const venda = res.rows[0];
+console.log(`Polling: Pagamento ${paymentId} encontrado (Venda #${venda.id}). Avisando cliente ${socket.id}`);
+
+// Avisa o cliente que o pagamento foi aprovado
+socket.emit('pagamentoAprovado', {
+vendaId: venda.id,
+nome: venda.nome_jogador,
+telefone: venda.telefone
+});
+} else {
+// Pagamento ainda não está na tabela de vendas. O cliente continua esperando.
+// Não fazemos nada, o cliente vai perguntar de novo.
+}
+} catch (err) {
+console.error("Erro ao checar status de pagamento (checarMeuPagamento):", err);
+}
+});
 
 });
 // ==========================================================
@@ -1384,20 +1406,20 @@ io.on('connection', async (socket) => {
 
 // (Função IIFE 'async' para permitir 'await' no nível superior)
 (async () => {
-    // 1. Inicializa o banco de dados (cria tabelas, etc.)
-    await inicializarBanco();
-    
-    // 2. Carrega as configurações (Prêmios, Preços E NÚMERO DO SORTEIO)
-    await carregarConfiguracoes();
+// 1. Inicializa o banco de dados (cria tabelas, etc.)
+await inicializarBanco();
 
-    // 3. Inicia o servidor web
-    server.listen(PORTA, () => {
-        console.log(`Servidor "Bingo do Pix" rodando!`);
-        console.log(`Conectado ao PostgreSQL em: ${process.env.DATABASE_URL ? 'Variável de Ambiente' : 'Configuração Padrão'}`);
-        console.log(`Acesse em http://localhost:${PORTA}`);
-        console.log(`Login Admin: http://localhost:${PORTA}/admin/login.html`);
-        console.log(`Dashboard (com anúncio): http://localhost:${PORTA}/dashboard`);
-    });
+// 2. Carrega as configurações (Prêmios, Preços E NÚMERO DO SORTEIO)
+await carregarConfiguracoes();
+
+// 3. Inicia o servidor web
+server.listen(PORTA, () => {
+console.log(`Servidor "Bingo do Pix" rodando!`);
+console.log(`Conectado ao PostgreSQL em: ${process.env.DATABASE_URL ? 'Variável de Ambiente' : 'Configuração Padrão'}`);
+console.log(`Acesse em http://localhost:${PORTA}`);
+console.log(`Login Admin: http://localhost:${PORTA}/admin/login.html`);
+console.log(`Dashboard (com anúncio): http://localhost:${PORTA}/dashboard`);
+});
 })();
 
 
@@ -1406,3 +1428,129 @@ process.on('exit', () => pool.end());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
+}
+
+{
+type: uploaded file
+fileName: index.html
+fullContent:
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo do Pix - Jogue e Ganhe!</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .loader-pix {
+            border: 6px solid #f3f3f3; /* Cinza claro */
+            border-top: 6px solid var(--color-pix-green); /* Verde Pix */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1.5s linear infinite;
+            margin: 20px auto 10px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1 class="title-gradient">BINGO DO PIX</h1>
+        <p class="slogan">Sua sorte em um clique!</p>
+    </header>
+
+    <main>
+
+        <section id="status-sorteio-box" class="card status-esperando"> 
+            <h3 id="status-titulo">CARREGANDO STATUS...</h3>
+            <div id="status-cronometro">--:--</div>
+            <p id="status-subtexto">Garanta já sua cartela!</p>
+            <a href="/dashboard" id="btn-assistir-vivo" class="btn-comprar btn-comprar-azul" style="display: none;">Assistir ao Vivo!</a>
+        </section>
+        <section id="premio-especial" class="card destaque-especial" style="display: none;">
+             <h2>✨ SORTEIO ESPECIAL ✨</h2>
+            <div class="premio-destaque-especial">
+                <span class="premio-valor premio-valor-especial text-pix" id="especial-valor">R$ ...</span>
+                <p class="premio-sub">Cartela Cheia no Pix!</p>
+            </div>
+            <p class="data-sorteio data-especial" id="especial-data">🗓️ ... 🕖</p>
+            <p class="info-especial">(Compre cartelas para os sorteios regulares e concorra também!)</p>
+        </section>
+
+        <section id="premio-info" class="card">
+            <h2>Próximo Sorteio Regular:</h2>
+            <div class="premios-container">
+                <div class="premio-item premio-principal">
+                    <span class="premio-label">Cartela Cheia</span>
+                    <span class="premio-valor premio-valor-cheia text-pix" id="index-premio-cheia">R$ ...</span>
+                    <span class="premio-sub">no Pix!</span>
+                </div>
+                <div class="premio-divisor"></div>
+                <div class="premio-item premio-secundario">
+                     <span class="premio-label">Linha</span>
+                     <span class="premio-valor premio-valor-linha text-pix" id="index-premio-linha">R$ ...</span>
+                    <span class="premio-sub">no Pix!</span>
+                </div>
+            </div>
+            <button id="btn-jogue-agora" class="btn-comprar btn-destaque btn-jogue">
+                Comprar Cartela (<span id="index-preco-cartela">R$ ...</span>)
+            </button>
+            <p class="aviso-preco">*Preço por cartela individual.</p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+    </footer>
+
+    <div id="modal-checkout" class="modal-overlay">
+        <div class="modal-content">
+             <span class="modal-close">&times;</span>
+            
+            <div id="etapa-dados">
+                <h2 class="title-gradient">Complete seu Pedido</h2>
+                <form id="form-checkout">
+                    <div class="form-grupo"><label for="modal-nome">Seu Nome Completo:</label><input type="text" id="modal-nome" placeholder="Nome para o prêmio" required></div>
+                    <div class="form-grupo"><label for="modal-telefone">Telefone (c/ DDD):</label><input type="tel" id="modal-telefone" placeholder="Ex: 69912345678 (para o Pix)" required></div>
+                    <div class="form-grupo"><label for="modal-quantidade">Quantidade de Cartelas (<span id="modal-label-preco">R$ ...</span> cada):</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
+                </form>
+                <div id="resumo-preco"><p>Valor total: <strong id="modal-preco" class="text-pix">R$ ...</strong></p></div>
+                <p class="modal-info">Um QR Code Pix será gerado para pagamento.</p>
+                <button id="btn-gerar-pix" class="btn-comprar btn-destaque">Gerar PIX</button>
+            </div>
+
+            <div id="etapa-pix" style="display: none;">
+                <h2 class="title-gradient">Pague com PIX</h2>
+                <p>Escaneie o QR Code ou use o "Copia e Cola".</p>
+                <div id="pix-qrcode-container">
+                    <img id="pix-qrcode-img" src="" alt="QR Code PIX" style="max-width: 250px; width: 100%; border: 2px solid #ddd; border-radius: 8px;">
+                </div>
+                <div class="form-grupo" style="margin-top: 15px;">
+                    <label>PIX Copia e Cola:</label>
+                    <input type="text" id="pix-copia-cola" readonly style="font-size: 0.9em; padding: 8px; text-align: center;">
+                    <button id="btn-copiar-pix" class="btn-comprar btn-comprar-azul" style="font-size: 0.9em; padding: 8px; margin-top: 5px;">Copiar Código</button>
+                </div>
+                <div id="aguardando-pagamento">
+                    <div class="loader-pix"></div>
+                    <strong>Aguardando Pagamento...</strong>
+                    <p class="modal-info">Não feche esta janela. Você será redirecionado automaticamente após a confirmação.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+}
+
+{
+type: uploaded file
+fileName: image_36c2db.png
