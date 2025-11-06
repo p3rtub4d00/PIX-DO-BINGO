@@ -5,7 +5,7 @@ const { Server } = require("socket.io");
 const session = require('express-session');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const bcrypt = require('bcrypt'); // Importa o bcrypt
-const crypto = require('crypto'); // <-- 1. ADICIONADO para a validação
+const crypto = require('crypto'); // <-- ADICIONADO para a validação
 
 // --- INÍCIO DAS MUDANÇAS NO BANCO DE DADOS ---
 const { Pool } = require('pg');
@@ -220,7 +220,6 @@ if (!MERCADOPAGO_ACCESS_TOKEN) {
 console.warn("AVISO: MERCADOPAGO_ACCESS_TOKEN não foi configurado nas variáveis de ambiente.");
 }
 
-// <-- 2. ADICIONADO Bloco de Chave Secreta -->
 const MERCADOPAGO_WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET; 
 if (!MERCADOPAGO_WEBHOOK_SECRET) {
     console.warn("AVISO DE SEGURANÇA: MERCADOPAGO_WEBHOOK_SECRET não configurado. Pagamentos NÃO SERÃO validados!");
@@ -242,14 +241,22 @@ if (SESSION_SECRET === 'seu_segredo_muito_secreto_e_longo_troque_isso!') { conso
 app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true, sameSite: 'lax' } }));
 
 // ==========================================================
-// *** <-- 3. WEBHOOK MOVIDO E ATUALIZADO ***
+// *** WEBHOOK CORRIGIDO ***
 // Esta rota deve vir ANTES de 'app.use(express.json())'
-// Usamos 'express.raw' para pegar o body como buffer
 // ==========================================================
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req, res) => {
     console.log("Webhook do Mercado Pago recebido!");
 
-    // 1. Validar a assinatura
+    // --- 1. Parsear o body ANTES de tudo ---
+    let reqBody;
+    try {
+        reqBody = JSON.parse(req.body.toString());
+    } catch (e) {
+        console.error("Webhook ERRO: Falha ao parsear JSON do body.");
+        return res.sendStatus(400); // Bad Request
+    }
+
+    // --- 2. Validar a assinatura ---
     const signature = req.headers['x-signature'];
     const requestId = req.headers['x-request-id'];
 
@@ -258,10 +265,18 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
         return res.sendStatus(400); // Bad Request
     }
 
-    // Só validamos se a chave secreta foi configurada
     if (MERCADOPAGO_WEBHOOK_SECRET) {
         try {
-            // Extrai o timestamp (ts) e o hash (v1) da assinatura
+            // --- CORREÇÃO: Checa se é um webhook de pagamento real ---
+            // Se não tiver 'data.id', é um teste ou notificação diferente.
+            if (!reqBody.data || !reqBody.data.id) {
+                console.log("Webhook recebido sem 'data.id' (provavelmente um teste). Respondendo 200 OK.");
+                return res.sendStatus(200); // Responde OK para o MP parar de enviar.
+            }
+            
+            const dataId = reqBody.data.id; // ID do recurso (pagamento)
+            // --- FIM DA CORREÇÃO ---
+            
             const parts = signature.split(',').reduce((acc, part) => {
                 const [key, value] = part.split('=');
                 acc[key.trim()] = value.trim();
@@ -276,15 +291,13 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                  return res.sendStatus(400);
             }
             
-            // Cria o template da assinatura
-            const template = `id:${JSON.parse(req.body.toString()).data.id};request-id:${requestId};ts:${ts};`;
+            // --- CORREÇÃO: Template usa o 'dataId' ---
+            const template = `id:${dataId};request-id:${requestId};ts:${ts};`;
             
-            // Calcula o HMAC
             const hmac = crypto.createHmac('sha256', MERCADOPAGO_WEBHOOK_SECRET);
             hmac.update(template);
             const calculatedHash = hmac.digest('hex');
 
-            // Compara o hash calculado com o hash recebido
             if (calculatedHash !== hash) {
                 console.error("Webhook REJEITADO: Assinatura inválida. (Calculado: %s, Recebido: %s)", calculatedHash, hash);
                 return res.sendStatus(403); // Forbidden
@@ -299,19 +312,10 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
         console.warn("AVISO: Processando Webhook SEM VALIDAÇÃO (MERCADOPAGO_WEBHOOK_SECRET não definida)");
     }
 
-    // 2. Parsear o JSON (que veio como buffer 'raw')
-    let reqBody;
-    try {
-        reqBody = JSON.parse(req.body.toString());
-    } catch (e) {
-        console.error("Webhook ERRO: Falha ao parsear JSON do body.");
-        return res.sendStatus(400); // Bad Request
-    }
-
-    // 3. Lógica do Jogo (código antigo, agora usando 'reqBody')
+    // --- 3. Lógica do Jogo (código antigo, agora usando 'reqBody') ---
     if (reqBody.type === 'payment') {
         const paymentId = reqBody.data.id;
-        console.log(`Webhook: ID de Pagamento recebido: ${paymentId}`);
+        console.log(`Webhook: ID de Pagamento (data.id) recebido: ${paymentId}`);
 
         const payment = new Payment(mpClient);
         payment.get({ id: paymentId })
