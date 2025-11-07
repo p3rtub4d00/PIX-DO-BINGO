@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Rifas - Admin</title>
+    <link rel="stylesheet" href="admin.css"> <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-panel-body">
+
+    <aside class="admin-sidebar">
+        <div class="logo">Bingo PIX</div>
+        <nav class="admin-nav">
+            <ul>
+                <li><a href="/admin/painel.html">Painel & Status</a></li>
+                <li><a href="/admin/rifas.html" class="ativo">Gerenciar Rifas</a></li> <li><a href="/admin/vencedores.html">Gestão Vencedores</a></li>
+                <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
+                <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li>
+            </ul>
+        </nav>
+        <div class="logout-link">
+             <a href="/admin/logout">Sair</a>
+        </div>
+    </aside>
+
+    <main class="admin-content">
+         <header class="content-header">
+             <h1>Gerenciar Rifas</h1>
+        </header>
+
+        <section class="card admin-section">
+            <h2>Criar Nova Rifa</h2>
+            <p>Crie uma nova rifa. Apenas uma rifa pode estar "ativa" por vez. Criar uma nova irá desativar a anterior.</p>
+            <form id="form-criar-rifa">
+                <div class="form-grupo-inline">
+                    <label for="rifa-nome-premio">Nome do Prêmio:</label>
+                    <input type="text" id="rifa-nome-premio" placeholder="Ex: PIX de R$ 1.000,00" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="rifa-descricao">Descrição (Opcional):</label>
+                    <input type="text" id="rifa-descricao" placeholder="Ex: Sorteio pela Loteria Federal dia 25/12">
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="rifa-valor-numero">Valor por Número (R$):</label>
+                    <input type="number" id="rifa-valor-numero" step="0.01" min="0.01" placeholder="Ex: 10.00" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label></label> <button type="submit" class="btn-comprar btn-comprar-azul">Criar e Ativar Rifa</button>
+                </div>
+            </form>
+            <p id="criar-rifa-status" class="status-message" style="display: none;"></p>
+        </section>
+
+        <section class="card admin-section">
+            <h2>Rifa Ativa no Momento</h2>
+            <div id="rifa-ativa-info" style="display: none;"> <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">Prêmio:</span>
+                        <span class="status-value" id="rifa-ativa-nome">---</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Valor por Número:</span>
+                        <span class="status-value" id="rifa-ativa-valor">R$ --,--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Números Vendidos:</span>
+                        <span class="status-value status-destaque" id="rifa-ativa-qtd">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Total Arrecadado:</span>
+                        <span class="status-value status-destaque" id="rifa-ativa-total">R$ 0,00</span>
+                    </div>
+                </div>
+                <button id="btn-encerrar-rifa" class="btn-comprar btn-perigo" style="width: auto; margin-top: 20px;">Encerrar Rifa (Desativar)</button>
+            </div>
+            <p id="nenhuma-rifa-ativa" style="display: none;">Nenhuma rifa ativa no momento. Crie uma acima para começar as vendas.</p>
+        </section>
+
+        <section class="card admin-section">
+            <h2>Números Vendidos (Rifa Ativa)</h2>
+            <p>Lista de todos os números vendidos para a rifa que está ativa no momento.</p>
+            <div class="tabela-relatorio-container">
+                <table class="relatorio-vendas">
+                    <thead>
+                        <tr>
+                            <th class="col-data">Data/Hora</th>
+                            <th>Nome do Comprador</th>
+                            <th class="col-telefone">Telefone</th>
+                            <th>Status Pagamento</th>
+                            <th>Números Comprados</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-vendas-rifa-corpo">
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 20px;">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    </body>
+</html>
