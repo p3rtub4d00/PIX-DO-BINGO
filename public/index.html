@@ -67,7 +67,18 @@
             <p class="aviso-preco">*Preço por cartela individual.</p>
         </section>
 
-    </main>
+        <section id="minhas-cartelas" class="card">
+            <h2>Já comprou? Recupere suas cartelas!</h2>
+            <p>Digite o número de telefone (com DDD) que você usou no PIX para ver seus jogos.</p>
+            <form id="form-recuperar-cartelas" style="max-width: 450px; margin: 0 auto;">
+                <div class="form-grupo">
+                    <label for="modal-telefone-recuperar" style="font-weight: 700;">Seu Telefone (com DDD):</label>
+                    <input type="tel" id="modal-telefone-recuperar" placeholder="Ex: 69912345678" required>
+                </div>
+                <button type="submit" id="btn-recuperar-cartelas" class="btn-comprar btn-comprar-azul" style="margin-top: 15px;">Buscar Minhas Cartelas</button>
+            </form>
+        </section>
+        </main>
 
     <footer>
         <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
@@ -76,7 +87,7 @@
     <div id="modal-checkout" class="modal-overlay">
         <div class="modal-content">
              <span class="modal-close">&times;</span>
-
+            
             <div id="etapa-dados">
                 <h2 class="title-gradient">Complete seu Pedido</h2>
                 <form id="form-checkout">
@@ -112,5 +123,4 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
-</html>
 </html>
