@@ -567,6 +567,32 @@ res.status(200).send('pong');
 });
 
 // ==========================================================
+// ===== INÍCIO: NOVA ROTA PÚBLICA (API DA RIFA) =====
+// ==========================================================
+
+// Rota para a página 'rifa.html' buscar os dados da rifa ativa
+app.get('/api/rifa/publica', async (req, res) => {
+    try {
+        const query = "SELECT id, nome_premio, descricao, valor_numero FROM rifas WHERE ativo = true ORDER BY id DESC LIMIT 1";
+        const result = await db.query(query);
+
+        if (result.rows.length > 0) {
+            res.json({ success: true, rifa: result.rows[0] });
+        } else {
+            res.json({ success: false, message: "Nenhuma rifa ativa encontrada." });
+        }
+    } catch (error) {
+        console.error("Erro ao buscar /api/rifa/publica:", error);
+        res.status(500).json({ success: false, message: "Erro ao buscar dados da rifa." });
+    }
+});
+
+// ==========================================================
+// ===== FIM: NOVA ROTA PÚBLICA (API DA RIFA) =====
+// ==========================================================
+
+
+// ==========================================================
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
 // Adiciona o /cambista/login.html E o /public/cambista
 // ==========================================================
@@ -927,6 +953,125 @@ app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
 });
 // ==========================================================
 // *** FIM DA NOVA ROTA ***
+// ==========================================================
+
+
+// ==========================================================
+// ===== INÍCIO: NOVAS ROTAS (API ADMIN RIFA) =====
+// ==========================================================
+
+// Adiciona a página 'rifas.html' ao middleware de admin
+app.get('/admin/rifas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'rifas.html')); });
+
+// Rota para o admin/rifas.js buscar os dados da rifa ativa e as vendas
+app.get('/admin/api/rifa/ativa', checkAdmin, async (req, res) => {
+    try {
+        // 1. Encontra a rifa ativa
+        const rifaQuery = "SELECT * FROM rifas WHERE ativo = true ORDER BY id DESC LIMIT 1";
+        const rifaResult = await db.query(rifaQuery);
+
+        if (rifaResult.rows.length === 0) {
+            return res.json({ success: true, rifa: null, vendas: [] }); // Nenhuma rifa ativa
+        }
+        const rifa = rifaResult.rows[0];
+
+        // 2. Busca os dados agregados (total vendido)
+        const statsQuery = `
+            SELECT 
+                COUNT(n.id) as numeros_vendidos,
+                SUM(v.valor_total) as total_arrecadado
+            FROM rifa_vendas v
+            JOIN rifa_numeros n ON n.rifa_venda_id = v.id
+            WHERE v.rifa_id = $1 AND v.status_pagamento = 'Pago'
+        `;
+        const statsResult = await db.query(statsQuery, [rifa.id]);
+        
+        rifa.numeros_vendidos = statsResult.rows[0].numeros_vendidos || 0;
+        rifa.total_arrecadado = statsResult.rows[0].total_arrecadado || 0;
+
+        // 3. Busca a lista de vendas e números (agrupados)
+        const vendasQuery = `
+            SELECT 
+                v.id, v.nome_jogador, v.telefone, v.status_pagamento,
+                to_char(v.timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI') as data_formatada,
+                ARRAY_AGG(n.numero_rifa ORDER BY n.numero_rifa) as numeros
+            FROM rifa_vendas v
+            LEFT JOIN rifa_numeros n ON n.rifa_venda_id = v.id
+            WHERE v.rifa_id = $1 AND v.status_pagamento IN ('Pago', 'Pendente')
+            GROUP BY v.id
+            ORDER BY v.timestamp DESC
+        `;
+        const vendasResult = await db.query(vendasQuery, [rifa.id]);
+
+        res.json({ success: true, rifa: rifa, vendas: vendasResult.rows });
+
+    } catch (error) {
+        console.error("Erro ao buscar /admin/api/rifa/ativa:", error);
+        res.status(500).json({ success: false, message: "Erro ao buscar dados da rifa." });
+    }
+});
+
+// Rota para o admin criar uma nova rifa
+app.post('/admin/api/rifa/criar', checkAdmin, async (req, res) => {
+    const { nome, descricao, valor } = req.body;
+    if (!nome || !valor || valor <= 0) {
+        return res.status(400).json({ success: false, message: "Nome e Valor são obrigatórios." });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // 1. Desativa todas as rifas antigas
+        await client.query("UPDATE rifas SET ativo = false WHERE ativo = true");
+        
+        // 2. Cria a nova rifa
+        const query = `
+            INSERT INTO rifas (nome_premio, descricao, valor_numero, ativo)
+            VALUES ($1, $2, $3, true)
+            RETURNING id
+        `;
+        const result = await client.query(query, [nome, descricao || null, valor]);
+        
+        await client.query('COMMIT');
+        
+        console.log(`Admin ${req.session.usuario} criou a Rifa #${result.rows[0].id} (${nome})`);
+        res.status(201).json({ success: true, message: "Rifa criada com sucesso!", id: result.rows[0].id });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Erro ao criar rifa:", err);
+        res.status(500).json({ success: false, message: "Erro interno ao criar rifa." });
+    } finally {
+        client.release();
+    }
+});
+
+// Rota para o admin encerrar (desativar) uma rifa
+app.post('/admin/api/rifa/encerrar', checkAdmin, async (req, res) => {
+    const { rifaId } = req.body;
+    if (!rifaId) {
+        return res.status(400).json({ success: false, message: "ID da Rifa é obrigatório." });
+    }
+    
+    try {
+        const query = "UPDATE rifas SET ativo = false WHERE id = $1";
+        const result = await db.query(query, [rifaId]);
+        
+        if (result.rowCount > 0) {
+            console.log(`Admin ${req.session.usuario} encerrou a Rifa #${rifaId}`);
+            res.json({ success: true, message: "Rifa encerrada com sucesso." });
+        } else {
+            res.status(404).json({ success: false, message: "Rifa não encontrada." });
+        }
+    } catch (err) {
+        console.error("Erro ao encerrar rifa:", err);
+        res.status(500).json({ success: false, message: "Erro interno ao encerrar rifa." });
+    }
+});
+
+// ==========================================================
+// ===== FIM: NOVAS ROTAS (API ADMIN RIFA) =====
 // ==========================================================
 
 
