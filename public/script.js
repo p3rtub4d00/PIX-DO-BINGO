@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let socket;
     try { 
-        // Voltamos a usar o script local, já que o painel admin funciona
         socket = io(); 
         console.log("Conectado ao servidor Socket.IO."); 
     }
@@ -20,13 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const etapaPix = document.getElementById('etapa-pix');
     const btnGerarPix = document.getElementById('btn-gerar-pix'); 
     
-    // --- CORREÇÃO DE SINTAXE (btnCopiarPix) ---
     const btnCopiarPix = document.getElementById('btn-copiar-pix'); 
     const pixQrCodeImg = document.getElementById('pix-qrcode-img');
     const pixQrContainer = document.getElementById('pix-qrcode-container'); // Container da imagem
     const pixCopiaColaInput = document.getElementById('pix-copia-cola');
-    const pixCopiaContainer = pixCopiaColaInput.closest('.form-grupo'); // Container do Copia/Cola
-    // --- FIM DA CORREÇÃO ---
+    const pixCopiaContainer = pixCopiaColaInput ? pixCopiaColaInput.closest('.form-grupo') : null; // Container do Copia/Cola
     
     const aguardandoPagamentoEl = document.getElementById('aguardando-pagamento');
 
@@ -43,13 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const especialValorEl = document.getElementById('especial-valor');
     const especialDataEl = document.getElementById('especial-data');
 
-    // *** INÍCIO DA ATUALIZAÇÃO (Seletores do Quadro de Status) ***
     const statusSorteioBox = document.getElementById('status-sorteio-box');
     const statusTitulo = document.getElementById('status-titulo');
     const statusCronometro = document.getElementById('status-cronometro');
     const statusSubtexto = document.getElementById('status-subtexto');
     const btnAssistirVivo = document.getElementById('btn-assistir-vivo');
-    // *** FIM DA ATUALIZAÇÃO ***
 
     let pollerInterval = null; 
     let currentPaymentId = null; 
@@ -106,10 +101,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             statusCronometro.style.display = 'block';
             statusSubtexto.textContent = 'Garanta já sua cartela!';
-            btnAssistirVivo.style.display = 'none';
+            if (btnAssistirVivo) btnAssistirVivo.style.display = 'none';
             
             // Muda o botão principal
-            btnJogueAgora.innerHTML = `Comprar Cartela (<span id="index-preco-cartela">${formatarBRL(PRECO_CARTELA_ATUAL)}</span>)`;
+            if (btnJogueAgora) btnJogueAgora.innerHTML = `Comprar Cartela (<span id="index-preco-cartela">${formatarBRL(PRECO_CARTELA_ATUAL)}</span>)`;
 
         } else { // JOGANDO_LINHA, JOGANDO_CHEIA, ANUNCIANDO_VENCEDOR
             statusSorteioBox.className = 'card status-jogando';
@@ -124,12 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             statusTitulo.textContent = textoEstado;
-            statusCronometro.style.display = 'none'; // Esconde o timer
-            statusSubtexto.textContent = 'As compras agora valem para o próximo sorteio.';
-            btnAssistirVivo.style.display = 'block'; // Mostra o botão de assistir
+            if (statusCronometro) statusCronometro.style.display = 'none'; // Esconde o timer
+            if (statusSubtexto) statusSubtexto.textContent = 'As compras agora valem para o próximo sorteio.';
+            if (btnAssistirVivo) btnAssistirVivo.style.display = 'block'; // Mostra o botão de assistir
 
             // Muda o botão principal
-            btnJogueAgora.innerHTML = `Comprar p/ Próximo Sorteio (<span id="index-preco-cartela">${formatarBRL(PRECO_CARTELA_ATUAL)}</span>)`;
+            if (btnJogueAgora) btnJogueAgora.innerHTML = `Comprar p/ Próximo Sorteio (<span id="index-preco-cartela">${formatarBRL(PRECO_CARTELA_ATUAL)}</span>)`;
         }
     }
     // --- *** FIM DA ATUALIZAÇÃO *** ---
@@ -375,4 +370,131 @@ document.addEventListener('DOMContentLoaded', () => {
         
         iniciarVerificadorPagamento(paymentIdSalvo);
     }
+
+    
+    // ==========================================================
+    // ===== NOVO CÓDIGO: LÓGICA PARA RECUPERAR CARTELAS (COLE AQUI) =====
+    // ==========================================================
+    
+    // 1. Seleciona o novo formulário e o botão
+    const formRecuperar = document.getElementById('form-recuperar-cartelas');
+    const inputTelefoneRecuperar = document.getElementById('modal-telefone-recuperar');
+    const btnRecuperar = document.getElementById('btn-recuperar-cartelas');
+    
+    // 2. Cria o modal de resultados (mas não o exibe)
+    let modalResultados = null; // Guarda a referência do modal
+    
+    function criarModalResultados(vendas, proximoSorteioId) {
+        // Se o modal já existe, remove
+        if (modalResultados) {
+            modalResultados.remove();
+        }
+
+        // Cria a estrutura do modal
+        modalResultados = document.createElement('div');
+        modalResultados.classList.add('modal-overlay');
+        modalResultados.style.display = 'flex'; // Mostra imediatamente
+
+        let htmlInterno = `
+            <div class="modal-content">
+                <span class="modal-close" id="modal-resultados-fechar">&times;</span>
+                <h2 class="title-gradient">Minhas Compras</h2>
+                <div id="modal-minhas-cartelas-lista">
+        `;
+
+        if (vendas && vendas.length > 0) {
+            vendas.forEach(venda => {
+                const eProximoSorteio = venda.sorteio_id == proximoSorteioId;
+                const textoBotao = eProximoSorteio ? 'Entrar na Sala de Espera' : 'Ver Jogo Encerrado';
+                const classeBotao = eProximoSorteio ? 'btn-destaque' : 'btn-comprar-azul';
+                
+                // Salva o nome e telefone do jogador da primeira venda válida
+                if (!sessionStorage.getItem('bingo_usuario_nome')) {
+                    sessionStorage.setItem('bingo_usuario_nome', venda.nome_jogador);
+                }
+                
+                htmlInterno += `
+                    <div class="cartela-encontrada-item">
+                        <div class="cartela-info-wrapper">
+                            <span class="sorteio-id">Sorteio #${venda.sorteio_id}</span>
+                            <span class="sorteio-qtd">${venda.quantidade_cartelas} cartela(s)</span>
+                            <span class="sorteio-data">Comprada em: ${venda.data_formatada}</span>
+                        </div>
+                        <button class="btn-comprar btn-entrar-jogo ${classeBotao}" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}" ${!eProximoSorteio ? 'disabled' : ''}>
+                            ${textoBotao}
+                        </button>
+                    </div>
+                `;
+            });
+        } else {
+            htmlInterno += `<p>Nenhuma compra recente encontrada para este telefone.</p>`;
+        }
+
+        htmlInterno += `
+                </div>
+            </div>
+        `;
+        
+        modalResultados.innerHTML = htmlInterno;
+        document.body.appendChild(modalResultados);
+
+        // Adiciona eventos de clique ao novo modal
+        modalResultados.addEventListener('click', (e) => {
+            // Fechar modal
+            if (e.target.id === 'modal-resultados-fechar' || e.target === modalResultados) {
+                modalResultados.remove();
+                modalResultados = null;
+            }
+
+            // Clicar no botão "Entrar"
+            if (e.target.classList.contains('btn-entrar-jogo')) {
+                const vendaId = e.target.dataset.vendaId;
+                const nome = e.target.dataset.nome;
+                
+                // Salva o nome para a próxima página
+                sessionStorage.setItem('bingo_usuario_nome', nome);
+                // Redireciona para a sala de espera com o ID da Venda
+                window.location.href = `espera.html?venda=${vendaId}`;
+            }
+        });
+    }
+
+
+    // 3. Adiciona o listener ao formulário
+    if (formRecuperar && inputTelefoneRecuperar && btnRecuperar && socket) {
+        
+        formRecuperar.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const telefone = inputTelefoneRecuperar.value.trim();
+            
+            if (!/^\d{10,11}$/.test(telefone.replace(/\D/g,''))) {
+                alert("Telefone inválido. Digite apenas números, incluindo o DDD (Ex: 69912345678).");
+                return;
+            }
+
+            btnRecuperar.disabled = true;
+            btnRecuperar.textContent = 'Buscando...';
+
+            // Salva o telefone para usar na próxima compra
+            sessionStorage.setItem('bingo_usuario_telefone', telefone);
+
+            socket.emit('buscarCartelasPorTelefone', { telefone }, (data) => {
+                btnRecuperar.disabled = false;
+                btnRecuperar.textContent = 'Buscar Minhas Cartelas';
+
+                if (data.success) {
+                    criarModalResultados(data.vendas, data.proximoSorteioId);
+                } else {
+                    alert(data.message || 'Erro ao buscar cartelas.');
+                }
+            });
+        });
+
+    } else {
+        console.warn("Elementos de 'Recuperar Cartelas' não foram encontrados.");
+    }
+    // ==========================================================
+    // ===== FIM DO NOVO CÓDIGO "RECUPERAR CARTELAS" =====
+    // ==========================================================
+
 });
