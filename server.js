@@ -1408,7 +1408,8 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
                 id, 
                 sorteio_id, 
                 quantidade_cartelas, 
-                to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada
+                to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada,
+                nome_jogador -- <--- [!!] CORREÇÃO APLICADA AQUI
             FROM vendas 
             WHERE telefone = $1 
             AND sorteio_id >= $2
