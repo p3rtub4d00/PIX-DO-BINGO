@@ -519,3 +519,72 @@ footer {
 }
 
 }
+
+/* ========================================================== */
+/* ===== NOVOS ESTILOS PARA "MINHAS CARTELAS" (ADICIONADOS) ===== */
+/* ========================================================== */
+
+/* Estilo para o formulário que acabamos de adicionar */
+#form-recuperar-cartelas {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Modal para exibir os resultados */
+#modal-minhas-cartelas-lista {
+    text-align: left;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 0 15px;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    margin-top: 20px;
+}
+
+.cartela-encontrada-item {
+    padding: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.cartela-encontrada-item:last-child {
+    border-bottom: none;
+}
+
+.cartela-info-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.cartela-info-wrapper .sorteio-id {
+    font-size: 1.3em;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: var(--color-text-heading);
+}
+
+.cartela-info-wrapper .sorteio-data,
+.cartela-info-wrapper .sorteio-qtd {
+    font-size: 0.9em;
+    color: var(--color-text-body);
+}
+
+/* O botão para "Entrar no Jogo" */
+.btn-entrar-jogo {
+    padding: 10px 15px;
+    font-size: 0.9em;
+    width: auto; /* Tamanho automático */
+    flex-shrink: 0; /* Impede que o botão encolha */
+    white-space: nowrap; /* Não quebra o texto */
+}
+
+/* Mensagem de "Nenhuma cartela encontrada" */
+#modal-minhas-cartelas-lista p {
+    padding: 20px;
+    text-align: center;
+    font-style: italic;
+    opacity: 0.8;
+}
