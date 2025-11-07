@@ -1387,6 +1387,62 @@ callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access T
 });
 // --- FIM DA FUNÇÃO DE PAGAMENTO ---
 
+// ==========================================================
+// ===== NOVO OUVINTE "BUSCAR CARTELAS POR TELEFONE" (ADICIONADO AQUI) =====
+// ==========================================================
+socket.on('buscarCartelasPorTelefone', async (data, callback) => {
+    const { telefone } = data;
+    if (!telefone) {
+        if (typeof callback === 'function') callback({ success: false, message: 'Telefone não fornecido.' });
+        return;
+    }
+
+    console.log(`Servidor: Buscando cartelas para o telefone ${telefone}`);
+
+    try {
+        // Determina o ID do próximo sorteio
+        const proximoSorteioId = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+
+        const query = `
+            SELECT 
+                id, 
+                sorteio_id, 
+                quantidade_cartelas, 
+                to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada
+            FROM vendas 
+            WHERE telefone = $1 
+            AND sorteio_id >= $2
+            ORDER BY sorteio_id DESC, timestamp DESC
+            LIMIT 10;
+        `;
+        
+        const res = await db.query(query, [telefone, numeroDoSorteio]);
+
+        if (res.rows.length > 0) {
+            // Encontrou! Retorna a lista de vendas.
+            if (typeof callback === 'function') {
+                callback({ 
+                    success: true, 
+                    vendas: res.rows,
+                    proximoSorteioId: proximoSorteioId // Envia o ID do próximo sorteio
+                });
+            }
+        } else {
+            // Não encontrou.
+            console.log(`Servidor: Nenhuma cartela encontrada para ${telefone} (sorteio #${numeroDoSorteio} ou maior).`);
+            if (typeof callback === 'function') callback({ success: false, message: 'Nenhuma cartela encontrada para este telefone.' });
+        }
+
+    } catch (error) {
+        console.error("Erro ao buscar cartelas por telefone:", error);
+        if (typeof callback === 'function') callback({ success: false, message: 'Erro interno do servidor.' });
+    }
+});
+// ==========================================================
+// ===== FIM DO NOVO BLOCO                                =====
+// ==========================================================
+
+
 socket.on('registerPlayer', (playerData) => { try { if (playerData && playerData.cartelas && playerData.cartelas.length > 0) { const s_id_cartela = playerData.cartelas[0].s_id; if (s_id_cartela === numeroDoSorteio || (estadoJogo === "ESPERANDO")) { console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio #${numeroDoSorteio}.`); jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; io.emit('contagemJogadores', getContagemJogadores()); } else { console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio #${numeroDoSorteio} com cartela inválida (Sorteio #${s_id_cartela}, Estado: ${estadoJogo}). REJEITADO.`); socket.emit('cartelaAntiga'); } } } catch(error) { console.error("Erro em registerPlayer:", error); } });
 socket.on('disconnect', () => { console.log(`Usuário desconectado: ${socket.id}`); const eraJogadorRegistrado = jogadores[socket.id] && jogadores[socket.id].nome && !jogadores[socket.id].isBot && !jogadores[socket.id].isManual; delete jogadores[socket.id]; if (eraJogadorRegistrado) { try { io.emit('contagemJogadores', getContagemJogadores()); } catch (error) { console.error("Erro ao emitir contagemJogadores no disconnect:", error); } } });
 
