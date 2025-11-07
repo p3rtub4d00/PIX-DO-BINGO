@@ -149,6 +149,68 @@ throw e;
 }
         // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
 
+        
+        // ===============================================
+        // ===== INÍCIO: NOVAS TABELAS PARA RIFA =====
+        // ===============================================
+
+        // 1. Tabela para definir qual rifa está ativa
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS rifas (
+                id SERIAL PRIMARY KEY,
+                nome_premio TEXT NOT NULL,
+                descricao TEXT,
+                valor_numero REAL NOT NULL,
+                data_sorteio_prevista TEXT,
+                ativo BOOLEAN DEFAULT true NOT NULL
+            );
+        `);
+        console.log("Tabela 'rifas' verificada.");
+
+        // 2. Tabela para guardar as VENDAS da rifa
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS rifa_vendas (
+                id SERIAL PRIMARY KEY,
+                rifa_id INTEGER NOT NULL REFERENCES rifas(id),
+                nome_jogador TEXT NOT NULL,
+                telefone TEXT NOT NULL,
+                quantidade_numeros INTEGER NOT NULL,
+                valor_total REAL NOT NULL,
+                payment_id TEXT,
+                status_pagamento TEXT DEFAULT 'Pendente' NOT NULL,
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log("Tabela 'rifa_vendas' verificada.");
+
+        // 3. Tabela para guardar os NÚMEROS GERADOS (0000-9999)
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS rifa_numeros (
+                id SERIAL PRIMARY KEY,
+                rifa_id INTEGER NOT NULL REFERENCES rifas(id),
+                rifa_venda_id INTEGER NOT NULL REFERENCES rifa_vendas(id),
+                numero_rifa TEXT NOT NULL, -- (ex: "6870")
+                UNIQUE(rifa_id, numero_rifa) -- Garante que não haja números repetidos na mesma rifa
+            );
+        `);
+        console.log("Tabela 'rifa_numeros' verificada.");
+
+        // 4. Modificar a tabela de pagamentos pendentes para saber o TIPO
+        try {
+            await db.query("ALTER TABLE pagamentos_pendentes ADD COLUMN tipo_compra TEXT DEFAULT 'bingo' NOT NULL");
+            console.log("Coluna 'tipo_compra' adicionada a 'pagamentos_pendentes'.");
+        } catch (e) {
+            if (e.code === '42701') {
+                console.log("Coluna 'tipo_compra' já existe em 'pagamentos_pendentes'.");
+            } else {
+                throw e;
+            }
+        }
+        
+        // ===============================================
+        // ===== FIM: NOVAS TABELAS PARA RIFA =====
+        // ===============================================
+
 
 // Verifica se o admin existe e qual sua senha (lógica de correção de senha)
 const adminRes = await db.query('SELECT senha FROM usuarios_admin WHERE usuario = $1', ['admin']);
@@ -325,51 +387,91 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
                 if (status === 'approved') {
                     console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
+                    // Agora buscamos o tipo de compra também
                     const query = "SELECT * FROM pagamentos_pendentes WHERE payment_id = $1";
                     const pendingPaymentResult = await db.query(query, [paymentId]);
 
                     if (pendingPaymentResult.rows.length > 0) {
                         const pendingPayment = pendingPaymentResult.rows[0];
                         const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
-                        console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
+                        
+                        // ======================================================
+                        // ===== INÍCIO DA BIFURCAÇÃO (RIFA vs BINGO) =====
+                        // ======================================================
 
-                        try {
-                            let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
-                            const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
-                            const preco = precoRes.rows[0];
-                            const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
-                            const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
+                        if (pendingPayment.tipo_compra === 'rifa') {
+                            
+                            // LÓGICA DA RIFA
+                            console.log(`Webhook: Processando pagamento de RIFA ${paymentId}...`);
+                            try {
+                                const { rifaId, rifaVendaId, quantidade } = dadosCompra;
 
-                            const cartelasGeradas = [];
-                            for (let i = 0; i < dadosCompra.quantidade; i++) {
-                                cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+                                // Chama a função para gerar os números
+                                const numerosGerados = await gerarNumerosRifa(rifaId, rifaVendaId, quantidade);
+                                
+                                // Atualiza a venda da rifa para 'Pago'
+                                await db.query("UPDATE rifa_vendas SET status_pagamento = 'Pago' WHERE id = $1", [rifaVendaId]);
+                                
+                                console.log(`Webhook: Rifa ${paymentId} (Venda #${rifaVendaId}) processada com ${numerosGerados.length} números.`);
+
+                                // Remove da tabela de pendentes
+                                await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+
+                            } catch (dbError) {
+                                console.error("Webhook ERRO CRÍTICO ao salvar RIFA:", dbError);
+                                // (O pagamento fica como 'Pendente' para o admin verificar)
                             }
-                            const cartelasJSON = JSON.stringify(cartelasGeradas);
 
-                            const stmtVenda = `
-                                INSERT INTO vendas 
-                                (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id) 
-                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-                                RETURNING id`;
+                        } else {
+                            
+                            // LÓGICA DO BINGO (código antigo)
+                            console.log(`Webhook: Processando pagamento de BINGO ${paymentId}...`);
+                            try {
+                                let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+                                const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
+                                const preco = precoRes.rows[0];
+                                const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
+                                const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
 
-                            const vendaResult = await db.query(stmtVenda, [
-                                sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null,
-                                dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
-                            ]);
-                            const vendaId = vendaResult.rows[0].id;
-                            console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
+                                const cartelasGeradas = [];
+                                for (let i = 0; i < dadosCompra.quantidade; i++) {
+                                    cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+                                }
+                                const cartelasJSON = JSON.stringify(cartelasGeradas);
 
-                            await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
-                            console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
+                                const stmtVenda = `
+                                    INSERT INTO vendas 
+                                    (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id) 
+                                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+                                    RETURNING id`;
 
-                        } catch (dbError) {
-                            console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
+                                const vendaResult = await db.query(stmtVenda, [
+                                    sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null,
+                                    dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
+                                ]);
+                                const vendaId = vendaResult.rows[0].id;
+                                console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
+
+                                await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+                                console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
+
+                            } catch (dbError) {
+                                console.error("Webhook ERRO CRÍTICO ao salvar BINGO:", dbError);
+                            }
                         }
+                        // ======================================================
+                        // ===== FIM DA BIFURCAÇÃO =====
+                        // ======================================================
+
                     } else {
                         console.warn(`Webhook: Pagamento ${paymentId} aprovado, mas NÃO FOI ENCONTRADO no banco 'pagamentos_pendentes'. (Pode ser um pagamento antigo ou um erro)`);
                     }
                 } else if (status === 'cancelled' || status === 'rejected') {
+                    // Limpa pagamentos pendentes de ambos os tipos (bingo e rifa)
                     await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
+                    // Também marca a rifa_venda como 'Cancelado' se existir
+                    await db.query("UPDATE rifa_vendas SET status_pagamento = 'Cancelado' WHERE payment_id = $1 AND status_pagamento = 'Pendente'", [paymentId]);
+                    
                     console.log(`Pagamento ${paymentId} (${status}) removido do DB.`);
                 }
             })
@@ -1018,6 +1120,62 @@ function checarVencedorLinha(cartelaData, numerosSorteados) { const cartela = ca
 function checarVencedorCartelaCheia(cartelaData, numerosSorteados) { const cartela = cartelaData.data; const numerosComFree = new Set(numerosSorteados); numerosComFree.add("FREE"); for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { if (!numerosComFree.has(cartela[i][j])) return false; } } return true; }
 function contarFaltantesParaCheia(cartelaData, numerosSorteadosSet) { if (!cartelaData || !cartelaData.data) return 99; const cartela = cartelaData.data; let faltantes = 0; for (let i = 0; i < 5; i++) { for (let j = 0; j < 5; j++) { const num = cartela[i][j]; if (num !== "FREE" && !numerosSorteadosSet.has(num)) { faltantes++; } } } return faltantes; }
 
+// ===============================================
+// ===== INÍCIO: NOVA FUNÇÃO (GERAR NÚMEROS RIFA) =====
+// ===============================================
+
+/**
+ * Gera números de rifa aleatórios de 4 dígitos (0000-9999) para uma venda.
+ * Tenta até 10 vezes por número para evitar colisões.
+ */
+async function gerarNumerosRifa(rifaId, rifaVendaId, quantidade) {
+    const numerosGerados = [];
+    const queryInsert = "INSERT INTO rifa_numeros (rifa_id, rifa_venda_id, numero_rifa) VALUES ($1, $2, $3)";
+    
+    for (let i = 0; i < quantidade; i++) {
+        let numeroSorteado = null;
+        let tentativas = 0;
+        let numeroJaExiste = true;
+
+        // Tenta gerar um número único
+        while (numeroJaExiste && tentativas < 10) {
+            // Gera um número de 0 a 9999 e formata para 4 dígitos (ex: "0005")
+            numeroSorteado = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            
+            try {
+                // Tenta inserir. Se a restrição 'UNIQUE' falhar, ele dará erro
+                await db.query(queryInsert, [rifaId, rifaVendaId, numeroSorteado]);
+                numeroJaExiste = false; // Sucesso!
+                numerosGerados.push(numeroSorteado);
+            } catch (err) {
+                if (err.code === '23505') { // Código de 'unique_violation' do PostgreSQL
+                    console.warn(`Colisão de número da rifa (${numeroSorteado}). Tentando de novo...`);
+                    tentativas++;
+                    numeroJaExiste = true;
+                } else {
+                    // Outro erro (ex: rifa esgotada, erro de DB)
+                    throw err; 
+                }
+            }
+        }
+        
+        if (numeroJaExiste) {
+             // Se falhou 10x em achar um número (rifa muito cheia)
+             console.error(`Falha ao gerar número único para rifa ${rifaId} após 10 tentativas. Abortando esta venda.`);
+             // Remove os números já inseridos desta venda para reverter
+             await db.query("DELETE FROM rifa_numeros WHERE rifa_venda_id = $1", [rifaVendaId]);
+             throw new Error("Não foi possível gerar números únicos. A rifa pode estar cheia.");
+        }
+    }
+    
+    return numerosGerados;
+}
+
+// ===============================================
+// ===== FIM: NOVA FUNÇÃO (GERAR NÚMEROS RIFA) =====
+// ===============================================
+
+
 // --- Lógica Principal do Jogo (Convertida para PG) ---
 let estadoJogo = "ESPERANDO";
 let tempoRestante = DURACAO_ESPERA_ATUAL; 
@@ -1355,18 +1513,19 @@ const response = await payment.create({ body });
 const paymentId = response.id.toString();
 
 // *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
-// Salva o pagamento pendente no DB, não na variável
+// Salva o pagamento pendente no DB, com o tipo 'bingo'
 const dadosCompraJSON = JSON.stringify(dadosCompra);
 const query = `
-               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
-               VALUES ($1, $2, $3)
+               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json, tipo_compra)
+               VALUES ($1, $2, $3, 'bingo')
                ON CONFLICT (payment_id) DO UPDATE SET
                    socket_id = EXCLUDED.socket_id,
                    dados_compra_json = EXCLUDED.dados_compra_json,
+                   tipo_compra = EXCLUDED.tipo_compra,
                    timestamp = CURRENT_TIMESTAMP
            `;
 await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
-console.log(`Pagamento PIX ${paymentId} salvo no DB para socket ${socket.id}.`);
+console.log(`Pagamento PIX (Bingo) ${paymentId} salvo no DB para socket ${socket.id}.`);
 // *** FIM DA ATUALIZAÇÃO ***
 
 const qrCodeBase64 = response.point_of_interaction.transaction_data.qr_code_base64;
@@ -1388,7 +1547,156 @@ callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access T
 // --- FIM DA FUNÇÃO DE PAGAMENTO ---
 
 // ==========================================================
-// ===== NOVO OUVINTE "BUSCAR CARTELAS POR TELEFONE" (ADICIONADO AQUI) =====
+// ===== INÍCIO: NOVOS OUVINTES (RIFA) =====
+// ==========================================================
+
+// ROTA PARA CRIAR PAGAMENTO DA RIFA
+socket.on('criarPagamentoRifa', async (dadosCompra, callback) => {
+    try {
+        const { nome, telefone, quantidade } = dadosCompra;
+
+        // 1. Buscar a rifa ativa e seu preço
+        // (Estamos assumindo que só há uma rifa ativa por vez, com id=1 para simplificar)
+        // TODO: Você pode tornar o 'rifaId' dinâmico no futuro
+        const rifaId = 1; 
+        const rifaRes = await db.query("SELECT valor_numero FROM rifas WHERE id = $1 AND ativo = true", [rifaId]);
+        
+        if (rifaRes.rows.length === 0) {
+            return callback({ success: false, message: 'Nenhuma rifa ativa encontrada no momento.' });
+        }
+        const precoUnitario = parseFloat(rifaRes.rows[0].valor_numero);
+        const valorTotal = quantidade * precoUnitario;
+
+        console.log(`Servidor: Usuário ${nome} quer comprar ${quantidade} números da rifa #${rifaId}. Total: R$${valorTotal.toFixed(2)}.`);
+        
+        // Verifica se a BASE_URL foi configurada
+        if (!process.env.BASE_URL) {
+            console.error("ERRO GRAVE: BASE_URL não está configurada! O Webhook do MercadoPago falhará.");
+            return callback({ success: false, message: 'Erro no servidor: URL de pagamento não configurada.' });
+        }
+
+        // 2. Criar a Venda Pendente na tabela 'rifa_vendas'
+        const vendaQuery = `
+            INSERT INTO rifa_vendas 
+            (rifa_id, nome_jogador, telefone, quantidade_numeros, valor_total, status_pagamento)
+            VALUES ($1, $2, $3, $4, $5, 'Pendente') 
+            RETURNING id`;
+        const vendaResult = await db.query(vendaQuery, [rifaId, nome, telefone, quantidade, valorTotal]);
+        const rifaVendaId = vendaResult.rows[0].id;
+
+        // 3. Criar o pagamento no MercadoPago
+        const payment = new Payment(mpClient);
+        const body = {
+            transaction_amount: valorTotal,
+            description: `Rifa #${rifaId} - ${quantidade} número(s) - Bingo do Pix`,
+            payment_method_id: 'pix',
+            notification_url: `${process.env.BASE_URL}/webhook-mercadopago`,
+            payer: {
+                email: `jogador_rifa_${telefone}@bingo.com`, 
+                first_name: nome,
+                last_name: "JogadorRifa",
+            },
+            date_of_expiration: new Date(Date.now() + (10 * 60 * 1000)).toISOString().replace("Z", "-03:00") // 10 min
+        };
+        const response = await payment.create({ body });
+        const paymentId = response.id.toString();
+
+        // 4. Atualizar a venda com o Payment ID
+        await db.query("UPDATE rifa_vendas SET payment_id = $1 WHERE id = $2", [paymentId, rifaVendaId]);
+
+        // 5. Salvar no 'pagamentos_pendentes' com o novo tipo 'rifa'
+        // Guardamos o rifaVendaId para o webhook saber qual venda atualizar
+        const dadosParaWebhook = JSON.stringify({ rifaId: rifaId, rifaVendaId: rifaVendaId, quantidade: quantidade });
+        const query = `
+            INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json, tipo_compra)
+            VALUES ($1, $2, $3, 'rifa')
+            ON CONFLICT (payment_id) DO UPDATE SET
+                socket_id = EXCLUDED.socket_id,
+                dados_compra_json = EXCLUDED.dados_compra_json,
+                tipo_compra = EXCLUDED.tipo_compra,
+                timestamp = CURRENT_TIMESTAMP`;
+        await db.query(query, [paymentId, socket.id, dadosParaWebhook]);
+        
+        console.log(`Pagamento PIX (Rifa) ${paymentId} salvo no DB.`);
+
+        // 6. Retornar dados do Pix para o cliente
+        callback({ 
+            success: true, 
+            qrCodeBase64: response.point_of_interaction.transaction_data.qr_code_base64, 
+            qrCodeCopiaCola: response.point_of_interaction.transaction_data.qr_code, 
+            paymentId: paymentId,
+            rifaVendaId: rifaVendaId // Envia o ID da venda para o polling
+        });
+
+    } catch(error) {
+        console.error("Erro em criarPagamentoRifa:", error.cause || error.message);
+        callback({ success: false, message: 'Erro ao gerar QR Code da Rifa.' });
+    }
+});
+
+// ROTA PARA O POLLING DA RIFA (copiada e adaptada de checarMeuPagamento)
+socket.on('checarMeuPagamentoRifa', async (data) => {
+    try {
+        const { paymentId, rifaVendaId } = data;
+        if (!paymentId || !rifaVendaId) return;
+
+        // Consulta a tabela de VENDAS DA RIFA
+        const query = "SELECT id FROM rifa_vendas WHERE payment_id = $1 AND id = $2 AND status_pagamento = 'Pago'";
+        const res = await db.query(query, [paymentId, rifaVendaId]);
+
+        if (res.rows.length > 0) {
+            console.log(`Polling: Pagamento Rifa ${paymentId} encontrado. Avisando cliente.`);
+            // Avisa o cliente que o pagamento foi aprovado
+            socket.emit('pagamentoRifaAprovado', {
+                rifaVendaId: res.rows[0].id
+            });
+        }
+    } catch (err) {
+        console.error("Erro em checarMeuPagamentoRifa:", err);
+    }
+});
+
+// ROTA PARA BUSCAR NÚMEROS DA RIFA (para a página de comprovante)
+socket.on('buscarNumerosRifa', async (data, callback) => {
+    try {
+        const { rifaVendaId } = data;
+        if (!rifaVendaId) {
+            return callback({ success: false, message: 'ID da Venda não fornecido.' });
+        }
+        
+        // Busca os dados da venda E os números gerados
+        const vendaQuery = `
+            SELECT 
+                v.nome_jogador, v.telefone, v.quantidade_numeros, v.valor_total,
+                to_char(v.timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada,
+                r.nome_premio,
+                ARRAY_AGG(n.numero_rifa ORDER BY n.numero_rifa) as numeros
+            FROM rifa_vendas v
+            JOIN rifas r ON v.rifa_id = r.id
+            LEFT JOIN rifa_numeros n ON n.rifa_venda_id = v.id
+            WHERE v.id = $1 AND v.status_pagamento = 'Pago'
+            GROUP BY v.id, r.id
+        `;
+        const res = await db.query(vendaQuery, [rifaVendaId]);
+
+        if (res.rows.length > 0) {
+            callback({ success: true, comprovante: res.rows[0] });
+        } else {
+            callback({ success: false, message: 'Comprovante não encontrado ou pagamento ainda pendente.' });
+        }
+    } catch (err) {
+        console.error("Erro ao buscar números da rifa:", err);
+        callback({ success: false, message: 'Erro interno do servidor.' });
+    }
+});
+
+// ==========================================================
+// ===== FIM: NOVOS OUVINTES (RIFA) =====
+// ==========================================================
+
+
+// ==========================================================
+// ===== "BUSCAR CARTELAS POR TELEFONE" (COM A CORREÇÃO) =====
 // ==========================================================
 socket.on('buscarCartelasPorTelefone', async (data, callback) => {
     const { telefone } = data;
@@ -1440,7 +1748,7 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
     }
 });
 // ==========================================================
-// ===== FIM DO NOVO BLOCO                                =====
+// ===== FIM DO BLOCO                                =====
 // ==========================================================
 
 
