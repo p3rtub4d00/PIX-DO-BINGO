@@ -373,24 +373,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     // ==========================================================
-    // ===== NOVO CÓDIGO: LÓGICA PARA RECUPERAR CARTELAS (COLE AQUI) =====
+    // ===== INÍCIO: MODIFICAÇÃO "RECUPERAR CARTELAS" =====
     // ==========================================================
     
-    // 1. Seleciona o novo formulário e o botão
     const formRecuperar = document.getElementById('form-recuperar-cartelas');
     const inputTelefoneRecuperar = document.getElementById('modal-telefone-recuperar');
     const btnRecuperar = document.getElementById('btn-recuperar-cartelas');
     
-    // 2. Cria o modal de resultados (mas não o exibe)
     let modalResultados = null; // Guarda a referência do modal
     
-    function criarModalResultados(vendas, proximoSorteioId) {
-        // Se o modal já existe, remove
+    // [!!] ATUALIZAÇÃO: 'proximoSorteioId' não é mais necessário
+    function criarModalResultados(vendas) {
         if (modalResultados) {
             modalResultados.remove();
         }
 
-        // Cria a estrutura do modal
         modalResultados = document.createElement('div');
         modalResultados.classList.add('modal-overlay');
         modalResultados.style.display = 'flex'; // Mostra imediatamente
@@ -404,23 +401,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (vendas && vendas.length > 0) {
             vendas.forEach(venda => {
-                const eProximoSorteio = venda.sorteio_id == proximoSorteioId;
-                const textoBotao = eProximoSorteio ? 'Entrar na Sala de Espera' : 'Ver Jogo Encerrado';
-                const classeBotao = eProximoSorteio ? 'btn-destaque' : 'btn-comprar-azul';
                 
-                // Salva o nome e telefone do jogador da primeira venda válida
+                // [!!] INÍCIO DA NOVA LÓGICA (BINGO vs RIFA)
+                let textoBotao = '';
+                let classeBotao = '';
+                let linkDestino = '';
+                let dataTipo = '';
+                let nomeItem = '';
+                let tituloItem = '';
+
+                if (venda.tipo_compra === 'bingo') {
+                    nomeItem = `${venda.quantidade} cartela(s)`;
+                    tituloItem = `Sorteio #${venda.sorteio_id}`;
+                    textoBotao = venda.is_valido ? 'Entrar na Sala de Espera' : 'Jogo Encerrado';
+                    classeBotao = venda.is_valido ? 'btn-destaque' : 'btn-comprar-azul';
+                    linkDestino = `espera.html?venda=${venda.venda_id}`;
+                    dataTipo = 'bingo';
+                } else if (venda.tipo_compra === 'rifa') {
+                    nomeItem = `${venda.quantidade} número(s) da rifa`;
+                    tituloItem = `Rifa #${venda.sorteio_id}`;
+                    textoBotao = 'Ver Comprovante';
+                    classeBotao = 'btn-comprar-azul'; // Cor azul para rifa
+                    linkDestino = `comprovante_rifa.html?vendaId=${venda.venda_id}`;
+                    dataTipo = 'rifa';
+                }
+                // [!!] FIM DA NOVA LÓGICA
+                
+                // Salva o nome e telefone do jogador (se ainda não tiver)
                 if (!sessionStorage.getItem('bingo_usuario_nome')) {
                     sessionStorage.setItem('bingo_usuario_nome', venda.nome_jogador);
+                }
+                if (!sessionStorage.getItem('bingo_usuario_telefone')) {
+                    sessionStorage.setItem('bingo_usuario_telefone', inputTelefoneRecuperar.value.trim());
                 }
                 
                 htmlInterno += `
                     <div class="cartela-encontrada-item">
                         <div class="cartela-info-wrapper">
-                            <span class="sorteio-id">Sorteio #${venda.sorteio_id}</span>
-                            <span class="sorteio-qtd">${venda.quantidade_cartelas} cartela(s)</span>
+                            <span class="sorteio-id">${tituloItem}</span>
+                            <span class="sorteio-qtd">${nomeItem}</span>
                             <span class="sorteio-data">Comprada em: ${venda.data_formatada}</span>
                         </div>
-                        <button class="btn-comprar btn-entrar-jogo ${classeBotao}" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}" ${!eProximoSorteio ? 'disabled' : ''}>
+                        <button class="btn-comprar btn-entrar-jogo ${classeBotao}" 
+                                data-venda-id="${venda.venda_id}" 
+                                data-nome="${venda.nome_jogador}" 
+                                data-tipo="${dataTipo}"
+                                data-link="${linkDestino}" 
+                                ${!venda.is_valido ? 'disabled' : ''}>
                             ${textoBotao}
                         </button>
                     </div>
@@ -446,15 +473,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 modalResultados = null;
             }
 
-            // Clicar no botão "Entrar"
+            // [!!] ATUALIZAÇÃO: Clicar no botão
             if (e.target.classList.contains('btn-entrar-jogo')) {
-                const vendaId = e.target.dataset.vendaId;
                 const nome = e.target.dataset.nome;
+                const link = e.target.dataset.link; // Pega o link (bingo ou rifa)
                 
-                // Salva o nome para a próxima página
+                // Salva o nome para a próxima página (ambas usam)
                 sessionStorage.setItem('bingo_usuario_nome', nome);
-                // Redireciona para a sala de espera com o ID da Venda
-                window.location.href = `espera.html?venda=${vendaId}`;
+                // Redireciona para o link correto
+                window.location.href = link; 
             }
         });
     }
@@ -478,12 +505,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Salva o telefone para usar na próxima compra
             sessionStorage.setItem('bingo_usuario_telefone', telefone);
 
+            // [!!] ATUALIZAÇÃO: 'proximoSorteioId' não é mais passado
             socket.emit('buscarCartelasPorTelefone', { telefone }, (data) => {
                 btnRecuperar.disabled = false;
                 btnRecuperar.textContent = 'Buscar Minhas Cartelas';
 
                 if (data.success) {
-                    criarModalResultados(data.vendas, data.proximoSorteioId);
+                    criarModalResultados(data.vendas); // Passa apenas as vendas
                 } else {
                     alert(data.message || 'Erro ao buscar cartelas.');
                 }
@@ -494,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn("Elementos de 'Recuperar Cartelas' não foram encontrados.");
     }
     // ==========================================================
-    // ===== FIM DO NOVO CÓDIGO "RECUPERAR CARTELAS" =====
+    // ===== FIM DO CÓDIGO "RECUPERAR CARTELAS" =====
     // ==========================================================
 
 });
