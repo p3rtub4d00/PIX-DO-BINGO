@@ -5,11 +5,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputNomePremio = document.getElementById('rifa-nome-premio');
     const inputDescricao = document.getElementById('rifa-descricao');
     const inputValorNumero = document.getElementById('rifa-valor-numero');
+    // [!!] NOVO SELETOR ADICIONADO
+    const inputDataSorteio = document.getElementById('rifa-data-sorteio'); 
     const criarRifaStatus = document.getElementById('criar-rifa-status');
 
     const rifaAtivaInfoEl = document.getElementById('rifa-ativa-info');
     const nenhumaRifaAtivaEl = document.getElementById('nenhuma-rifa-ativa');
     const rifaAtivaNome = document.getElementById('rifa-ativa-nome');
+    // [!!] NOVO SELETOR ADICIONADO
+    const rifaAtivaData = document.getElementById('rifa-ativa-data'); 
     const rifaAtivaValor = document.getElementById('rifa-ativa-valor');
     const rifaAtivaQtd = document.getElementById('rifa-ativa-qtd');
     const rifaAtivaTotal = document.getElementById('rifa-ativa-total');
@@ -60,6 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Preenche o card "Rifa Ativa"
                 rifaAtivaNome.textContent = rifa.nome_premio;
+                // [!!] MOSTRA A DATA DO SORTEIO
+                rifaAtivaData.textContent = rifa.data_sorteio_prevista || 'Não definida'; 
                 rifaAtivaValor.textContent = formatarBRL(rifa.valor_numero);
                 rifaAtivaQtd.textContent = rifa.numeros_vendidos || 0;
                 rifaAtivaTotal.textContent = formatarBRL(rifa.total_arrecadado);
@@ -119,10 +125,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const nome = inputNomePremio.value;
         const descricao = inputDescricao.value;
         const valor = parseFloat(inputValorNumero.value);
+        // [!!] CAPTURA O NOVO CAMPO
+        const dataSorteio = inputDataSorteio.value; 
         const btn = formCriarRifa.querySelector('button');
 
-        if (!nome || !valor || valor <= 0) {
-            mostrarStatus(criarRifaStatus, 'Nome do Prêmio e Valor são obrigatórios.', false);
+        // [!!] ATUALIZA A VALIDAÇÃO
+        if (!nome || !valor || valor <= 0 || !dataSorteio) {
+            mostrarStatus(criarRifaStatus, 'Nome, Valor e Data do Sorteio são obrigatórios.', false);
             return;
         }
         
@@ -134,11 +143,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = 'Criando...';
         
         try {
-            // (Esta rota '/admin/api/rifa/criar' ainda será criada no server.js)
+            // [!!] ATUALIZAÇÃO: Envia a 'dataSorteio' para o servidor
             const response = await fetch('/admin/api/rifa/criar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ nome, descricao, valor }),
+                body: JSON.stringify({ nome, descricao, valor, dataSorteio }),
             });
             const data = await response.json();
 
