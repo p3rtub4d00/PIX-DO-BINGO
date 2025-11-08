@@ -1323,27 +1323,19 @@ async function gerarNumerosRifa(rifaId, rifaVendaId, quantidade) {
 
 // --- Lógica Principal do Jogo (Convertida para PG) ---
 let estadoJogo = "ESPERANDO";
-let tempoRestante = DURACAO_ESPERA_ATUAL; 
+let tempoRestante = 20; // [!!] CORREÇÃO: Esta linha será sobreposta pelo carregarConfiguracoes
 let intervaloSorteio = null; let numerosDisponiveis = []; let numerosSorteados = []; let jogadores = {};
 
-setInterval(() => {
-if (estadoJogo === "ESPERANDO") {
-tempoRestante--;
-if (tempoRestante <= 0) {
-console.log("DEBUG: Tempo esgotado! Tentando iniciar nova rodada...");
-estadoJogo = "JOGANDO_LINHA";
-console.log("DEBUG: Estado alterado para JOGANDO_LINHA.");
-try { io.emit('iniciarJogo'); console.log("DEBUG: Evento 'iniciarJogo' emitido."); }
-catch (emitError) { console.error("DEBUG: Erro ao emitir 'iniciarJogo':", emitError); }
-try { iniciarNovaRodada(); console.log("DEBUG: Chamada para iniciarNovaRodada() concluída."); }
-catch (startRoundError) { console.error("DEBUG: Erro ao chamar iniciarNovaRodada():", startRoundError); }
-} else { io.emit('cronometroUpdate', { tempo: tempoRestante, sorteioId: numeroDoSorteio, estado: estadoJogo }); }
-} else { io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); }
-}, 1000);
+// [!!] CORREÇÃO DO BUG DO TIMER: O 'setInterval' foi movido para o final do arquivo,
+// para que ele só comece DEPOIS que carregarConfiguracoes() definir o tempo correto.
 
 function iniciarNovaRodada() {
 console.log("DEBUG: Dentro de iniciarNovaRodada().");
-console.log(`Servidor: Iniciando Sorteio #${numeroDoSorteio}... Próximo prêmio: LINHA`);
+
+// [!!] CORREÇÃO DO BUG DO TIMER: O tempo é resetado aqui, usando o valor carregado do DB
+tempoRestante = DURACAO_ESPERA_ATUAL; 
+console.log(`Servidor: Iniciando Sorteio #${numeroDoSorteio}... Próximo prêmio: LINHA. (Tempo: ${tempoRestante}s)`);
+
 try {
 numerosDisponiveis = Array.from({ length: 75 }, (_, i) => i + 1); numerosSorteados = []; console.log("DEBUG: Arrays de números resetados.");
 if (intervaloSorteio) { clearInterval(intervaloSorteio); intervaloSorteio = null; console.log("DEBUG: Intervalo de sorteio anterior limpo."); }
@@ -1501,6 +1493,7 @@ io.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome });
 else { io.emit('jogoTerminouSemVencedor'); }
 
 estadoJogo = "ESPERANDO";
+// tempoRestante já é resetado pela iniciarNovaRodada(), mas podemos garantir:
 tempoRestante = DURACAO_ESPERA_ATUAL; 
 
 // Incrementa o número do sorteio e SALVA no banco
@@ -1992,7 +1985,10 @@ await inicializarBanco();
 // 2. Carrega as configurações (Prêmios, Preços E NÚMERO DO SORTEIO)
 await carregarConfiguracoes();
 
-// 3. Inicia o servidor web
+// 3. [!!] CORREÇÃO DO BUG DO TIMER: Define o tempo restante APÓS carregar
+tempoRestante = DURACAO_ESPERA_ATUAL;
+
+// 4. Inicia o servidor web
 server.listen(PORTA, () => {
 console.log(`Servidor "Bingo do Pix" rodando!`);
 console.log(`Conectado ao PostgreSQL em: ${process.env.DATABASE_URL ? 'Variável de Ambiente' : 'Configuração Padrão'}`);
@@ -2000,6 +1996,23 @@ console.log(`Acesse em http://localhost:${PORTA}`);
 console.log(`Login Admin: http://localhost:${PORTA}/admin/login.html`);
 console.log(`Dashboard (com anúncio): http://localhost:${PORTA}/dashboard`);
 });
+
+// 5. [!!] CORREÇÃO DO BUG DO TIMER: Inicia o cronômetro global AGORA.
+setInterval(() => {
+if (estadoJogo === "ESPERANDO") {
+tempoRestante--;
+if (tempoRestante <= 0) {
+console.log("DEBUG: Tempo esgotado! Tentando iniciar nova rodada...");
+estadoJogo = "JOGANDO_LINHA";
+console.log("DEBUG: Estado alterado para JOGANDO_LINHA.");
+try { io.emit('iniciarJogo'); console.log("DEBUG: Evento 'iniciarJogo' emitido."); }
+catch (emitError) { console.error("DEBUG: Erro ao emitir 'iniciarJogo':", emitError); }
+try { iniciarNovaRodada(); console.log("DEBUG: Chamada para iniciarNovaRodada() concluída."); }
+catch (startRoundError) { console.error("DEBUG: Erro ao chamar iniciarNovaRodada():", startRoundError); }
+} else { io.emit('cronometroUpdate', { tempo: tempoRestante, sorteioId: numeroDoSorteio, estado: estadoJogo }); }
+} else { io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); }
+}, 1000);
+
 })();
 
 
