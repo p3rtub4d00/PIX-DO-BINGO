@@ -536,7 +536,8 @@ console.log(`Servidor: Sorteio atual carregado do banco: #${numeroDoSorteio}`); 
 // ==========================================================
 // *** ROTAS PÚBLICAS (Atualizado para PG) ***
 // ==========================================================
-app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'index.html')); });
 
 // Convertido para 'async'
 app.get('/api/config', async (req, res) => {
@@ -556,8 +557,9 @@ res.status(500).json({ success: false, message: "Erro ao buscar configurações.
 }
 });
 
-app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'anuncio.html')); });
-app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'anuncio.html')); });
+app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'dashboard.html')); });
 app.get('/dashboard.html', (req, res) => { res.redirect('/dashboard'); });
 
 // Rota de "ping" para manter o servidor do Render Hobby acordado
@@ -594,15 +596,16 @@ app.get('/api/rifa/publica', async (req, res) => {
 
 // ==========================================================
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
-// Adiciona o /cambista/login.html E o /public/cambista
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
 // ==========================================================
-app.get('/cambista/login', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')); });
-app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')); });
+app.get('/cambista/login', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'cambista', 'login.html')); });
+app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'cambista', 'login.html')); });
 // Serve os arquivos estáticos (login.js, painel.js) da pasta /cambista
-app.use('/cambista', express.static(path.join(__dirname, 'public', 'cambista')));
+app.use('/cambista', express.static(path.join(__dirname, 'publico', 'cambista')));
 // ==========================================================
 
-app.use(express.static(path.join(__dirname, 'public')));
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.use(express.static(path.join(__dirname, 'publico')));
 
 // ==========================================================
 // *** ROTAS DE ADMINISTRAÇÃO (ATUALIZADO - LOGIN HASH) ***
@@ -634,7 +637,8 @@ function checkAdmin(req, res, next) {
 if (req.session && req.session.isAdmin) { return next(); }
 else { console.log("Acesso negado à área admin. Redirecionando para login."); if (req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('json'))) { return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' }); } return res.redirect('/admin/login.html'); }
 }
-app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'painel.html')); });
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'painel.html')); });
 app.get('/admin/logout', (req, res) => { req.session.destroy((err) => { if (err) { console.error("Erro ao fazer logout:", err); return res.status(500).send("Erro ao sair."); } console.log("Usuário admin deslogado."); res.clearCookie('connect.sid'); res.redirect('/admin/login.html'); }); });
 
 // Convertido para 'async'
@@ -740,7 +744,8 @@ return res.json(cartelasGeradas); // Retorna as cartelas para o admin imprimir
 } catch (error) { console.error("Erro ao gerar/registrar cartelas manuais:", error); return res.status(500).json({ success: false, message: 'Erro interno ao gerar cartelas.' }); }
 });
 
-app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'relatorios.html')); });
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'relatorios.html')); });
 
 // Convertido para 'async' e sintaxe PG
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
@@ -776,7 +781,8 @@ res.status(500).json({ success: false, message: 'Erro interno ao limpar relatór
 }
 });
 
-app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'vencedores.html')); });
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'vencedores.html')); });
 
 // Convertido para 'async' e sintaxe PG
 app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
@@ -825,8 +831,8 @@ res.status(500).json({ success: false, message: 'Erro interno ao limpar relatór
 
 // *** ATUALIZAÇÃO (CAMBISTAS) ***
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
-// Adiciona a nova página de gerenciamento de cambistas
-app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'cambistas.html')); });
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'cambistas.html')); });
 
 // Novas rotas de API para o Admin gerenciar cambistas
 app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
@@ -960,8 +966,8 @@ app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
 // ===== INÍCIO: NOVAS ROTAS (API ADMIN RIFA) =====
 // ==========================================================
 
-// Adiciona a página 'rifas.html' ao middleware de admin
-app.get('/admin/rifas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'rifas.html')); });
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.get('/admin/rifas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'rifas.html')); });
 
 // Rota para o admin/rifas.js buscar os dados da rifa ativa e as vendas
 app.get('/admin/api/rifa/ativa', checkAdmin, async (req, res) => {
@@ -1074,8 +1080,8 @@ app.post('/admin/api/rifa/encerrar', checkAdmin, async (req, res) => {
 // ===== FIM: NOVAS ROTAS (API ADMIN RIFA) =====
 // ==========================================================
 
-
-app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'admin')));
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'publico', 'admin')));
 // ==========================================================
 
 
@@ -1145,9 +1151,9 @@ app.get('/cambista/logout', (req, res) => {
     });
 });
 
-// Rota do Painel (protegida)
+// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
 app.get('/cambista/painel.html', checkCambista, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'cambista', 'painel.html'));
+    res.sendFile(path.join(__dirname, 'publico', 'cambista', 'painel.html'));
 });
 
 // Rota para o Cambista ver seu status (protegida)
@@ -1691,12 +1697,10 @@ callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access T
 // ROTA PARA CRIAR PAGAMENTO DA RIFA
 socket.on('criarPagamentoRifa', async (dadosCompra, callback) => {
     try {
-        const { nome, telefone, quantidade } = dadosCompra;
+        // [!!] CORREÇÃO: Pega o rifaId enviado pelo cliente
+        const { nome, telefone, quantidade, rifaId } = dadosCompra; 
 
         // 1. Buscar a rifa ativa e seu preço
-        // (Estamos assumindo que só há uma rifa ativa por vez, com id=1 para simplificar)
-        // TODO: Você pode tornar o 'rifaId' dinâmico no futuro
-        const rifaId = 1; 
         const rifaRes = await db.query("SELECT valor_numero FROM rifas WHERE id = $1 AND ativo = true", [rifaId]);
         
         if (rifaRes.rows.length === 0) {
