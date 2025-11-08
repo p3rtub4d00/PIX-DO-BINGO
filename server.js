@@ -1847,41 +1847,59 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
         return;
     }
 
-    console.log(`Servidor: Buscando cartelas para o telefone ${telefone}`);
+    console.log(`Servidor: Buscando compras para o telefone ${telefone}`);
 
     try {
-        // Determina o ID do próximo sorteio
+        // [!!] ATUALIZAÇÃO: Pega o ID do próximo sorteio de BINGO
         const proximoSorteioId = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
 
+        // [!!] ATUALIZAÇÃO: Nova consulta unificada
         const query = `
-            SELECT 
-                id, 
+            (SELECT 
+                'bingo' as tipo_compra,
+                id as venda_id, 
                 sorteio_id, 
-                quantidade_cartelas, 
+                quantidade_cartelas as quantidade, 
                 to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada,
-                nome_jogador -- <--- [!!] CORREÇÃO APLICADA AQUI
+                nome_jogador,
+                (sorteio_id >= $2) as is_valido -- $2 é proximoSorteioId
             FROM vendas 
-            WHERE telefone = $1 
-            AND sorteio_id >= $2
-            ORDER BY sorteio_id DESC, timestamp DESC
+            WHERE telefone = $1) 
+
+            UNION ALL
+
+            (SELECT 
+                'rifa' as tipo_compra,
+                v.id as venda_id, 
+                v.rifa_id as sorteio_id, 
+                v.quantidade_numeros as quantidade, 
+                to_char(v.timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada,
+                v.nome_jogador,
+                r.ativo as is_valido
+            FROM rifa_vendas v
+            JOIN rifas r ON v.rifa_id = r.id
+            WHERE v.telefone = $1 AND v.status_pagamento = 'Pago')
+
+            ORDER BY data_formatada DESC
             LIMIT 10;
         `;
         
-        const res = await db.query(query, [telefone, numeroDoSorteio]);
+        // [!!] ATUALIZAÇÃO: Passa $1 (telefone) e $2 (proximoSorteioId)
+        const res = await db.query(query, [telefone, proximoSorteioId]);
 
         if (res.rows.length > 0) {
-            // Encontrou! Retorna a lista de vendas.
+            // Encontrou! Retorna a lista de vendas (agora unificada)
             if (typeof callback === 'function') {
                 callback({ 
                     success: true, 
-                    vendas: res.rows,
-                    proximoSorteioId: proximoSorteioId // Envia o ID do próximo sorteio
+                    vendas: res.rows
+                    // Não precisamos mais enviar proximoSorteioId, o frontend não precisa mais dele
                 });
             }
         } else {
             // Não encontrou.
-            console.log(`Servidor: Nenhuma cartela encontrada para ${telefone} (sorteio #${numeroDoSorteio} ou maior).`);
-            if (typeof callback === 'function') callback({ success: false, message: 'Nenhuma cartela encontrada para este telefone.' });
+            console.log(`Servidor: Nenhuma compra encontrada para ${telefone}.`);
+            if (typeof callback === 'function') callback({ success: false, message: 'Nenhuma compra encontrada para este telefone.' });
         }
 
     } catch (error) {
