@@ -38,11 +38,15 @@
                 </div>
                 <div class="form-grupo-inline">
                     <label for="rifa-descricao">Descrição (Opcional):</label>
-                    <input type="text" id="rifa-descricao" placeholder="Ex: Sorteio pela Loteria Federal dia 25/12">
+                    <input type="text" id="rifa-descricao" placeholder="Ex: Concorra a um prêmio incrível!">
                 </div>
                 <div class="form-grupo-inline">
                     <label for="rifa-valor-numero">Valor por Número (R$):</label>
                     <input type="number" id="rifa-valor-numero" step="0.01" min="0.01" placeholder="Ex: 10.00" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="rifa-data-sorteio">Data/Texto do Sorteio:</label>
+                    <input type="text" id="rifa-data-sorteio" placeholder="Ex: Sorteio pela Loteria Federal dia 25/12" required>
                 </div>
                 <div class="form-grupo-inline">
                     <label></label> <button type="submit" class="btn-comprar btn-comprar-azul">Criar e Ativar Rifa</button>
@@ -57,6 +61,10 @@
                     <div class="status-item">
                         <span class="status-label">Prêmio:</span>
                         <span class="status-value" id="rifa-ativa-nome">---</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Data do Sorteio:</span>
+                        <span class="status-value" id="rifa-ativa-data" style="font-size: 1.2em;">---</span>
                     </div>
                     <div class="status-item">
                         <span class="status-label">Valor por Número:</span>
