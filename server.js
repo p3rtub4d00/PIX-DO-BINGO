@@ -536,8 +536,8 @@ console.log(`Servidor: Sorteio atual carregado do banco: #${numeroDoSorteio}`); 
 // ==========================================================
 // *** ROTAS PÚBLICAS (Atualizado para PG) ***
 // ==========================================================
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'index.html')); });
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'index.html')); });
 
 // Convertido para 'async'
 app.get('/api/config', async (req, res) => {
@@ -557,9 +557,9 @@ res.status(500).json({ success: false, message: "Erro ao buscar configurações.
 }
 });
 
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'anuncio.html')); });
-app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'dashboard.html')); });
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'anuncio.html')); });
+app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html')); });
 app.get('/dashboard.html', (req, res) => { res.redirect('/dashboard'); });
 
 // Rota de "ping" para manter o servidor do Render Hobby acordado
@@ -596,16 +596,16 @@ app.get('/api/rifa/publica', async (req, res) => {
 
 // ==========================================================
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
 // ==========================================================
-app.get('/cambista/login', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'cambista', 'login.html')); });
-app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'cambista', 'login.html')); });
+app.get('/cambista/login', (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'cambista', 'login.html')); });
+app.get('/cambista/login.html', (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'cambista', 'login.html')); });
 // Serve os arquivos estáticos (login.js, painel.js) da pasta /cambista
-app.use('/cambista', express.static(path.join(__dirname, 'publico', 'cambista')));
+app.use('/cambista', express.static(path.join(__dirname, '..', 'public', 'cambista')));
 // ==========================================================
 
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.use(express.static(path.join(__dirname, 'publico')));
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ==========================================================
 // *** ROTAS DE ADMINISTRAÇÃO (ATUALIZADO - LOGIN HASH) ***
@@ -637,8 +637,8 @@ function checkAdmin(req, res, next) {
 if (req.session && req.session.isAdmin) { return next(); }
 else { console.log("Acesso negado à área admin. Redirecionando para login."); if (req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('json'))) { return res.status(403).json({ success: false, message: 'Acesso negado. Faça login novamente.' }); } return res.redirect('/admin/login.html'); }
 }
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'painel.html')); });
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'painel.html')); });
 app.get('/admin/logout', (req, res) => { req.session.destroy((err) => { if (err) { console.error("Erro ao fazer logout:", err); return res.status(500).send("Erro ao sair."); } console.log("Usuário admin deslogado."); res.clearCookie('connect.sid'); res.redirect('/admin/login.html'); }); });
 
 // Convertido para 'async'
@@ -744,8 +744,8 @@ return res.json(cartelasGeradas); // Retorna as cartelas para o admin imprimir
 } catch (error) { console.error("Erro ao gerar/registrar cartelas manuais:", error); return res.status(500).json({ success: false, message: 'Erro interno ao gerar cartelas.' }); }
 });
 
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'relatorios.html')); });
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'relatorios.html')); });
 
 // Convertido para 'async' e sintaxe PG
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
@@ -781,8 +781,8 @@ res.status(500).json({ success: false, message: 'Erro interno ao limpar relatór
 }
 });
 
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'vencedores.html')); });
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.get('/admin/vencedores.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'vencedores.html')); });
 
 // Convertido para 'async' e sintaxe PG
 app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
@@ -831,8 +831,8 @@ res.status(500).json({ success: false, message: 'Erro interno ao limpar relatór
 
 // *** ATUALIZAÇÃO (CAMBISTAS) ***
 // *** ATUALIZAÇÃO (ROTAS CAMBISTA) ***
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'cambistas.html')); });
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.get('/admin/cambistas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'cambistas.html')); });
 
 // Novas rotas de API para o Admin gerenciar cambistas
 app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
@@ -966,8 +966,8 @@ app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
 // ===== INÍCIO: NOVAS ROTAS (API ADMIN RIFA) =====
 // ==========================================================
 
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.get('/admin/rifas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'publico', 'admin', 'rifas.html')); });
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.get('/admin/rifas.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'rifas.html')); });
 
 // Rota para o admin/rifas.js buscar os dados da rifa ativa e as vendas
 app.get('/admin/api/rifa/ativa', checkAdmin, async (req, res) => {
@@ -1080,8 +1080,8 @@ app.post('/admin/api/rifa/encerrar', checkAdmin, async (req, res) => {
 // ===== FIM: NOVAS ROTAS (API ADMIN RIFA) =====
 // ==========================================================
 
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
-app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'publico', 'admin')));
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
+app.use('/admin', checkAdmin, express.static(path.join(__dirname, '..', 'public', 'admin')));
 // ==========================================================
 
 
@@ -1151,9 +1151,9 @@ app.get('/cambista/logout', (req, res) => {
     });
 });
 
-// [!!] CORREÇÃO DO NOME DA PASTA: 'public' -> 'publico'
+// [!!] CORREÇÃO DO CAMINHO: '..' para 'public'
 app.get('/cambista/painel.html', checkCambista, (req, res) => {
-    res.sendFile(path.join(__dirname, 'publico', 'cambista', 'painel.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'cambista', 'painel.html'));
 });
 
 // Rota para o Cambista ver seu status (protegida)
