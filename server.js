@@ -264,8 +264,7 @@ if (SESSION_SECRET === 'seu_segredo_muito_secreto_e_longo_troque_isso!') { conso
 app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true, sameSite: 'lax' } }));
 
 // ==========================================================
-// *** WEBHOOK CORRIGIDO (VERSÃO FINAL) ***
-// Esta rota deve vir ANTES de 'app.use(express.json())'
+// *** WEBHOOK ATUALIZADO (LÓGICA DE PREÇO DINÂMICO) ***
 // ==========================================================
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req, res) => {
     console.log("Webhook do Mercado Pago recebido!");
@@ -335,7 +334,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
         console.warn("AVISO: Processando Webhook SEM VALIDAÇÃO (MERCADOPAGO_WEBHOOK_SECRET não definida)");
     }
 
-    // --- 3. Lógica do Jogo (código antigo, agora usando 'reqBody') ---
+    // --- 3. Lógica do Jogo (ATUALIZADA PARA AGENDAMENTO) ---
     if (reqBody.type === 'payment') {
         const paymentId = reqBody.data.id;
         console.log(`Webhook: ID de Pagamento (data.id) recebido: ${paymentId}`);
@@ -353,24 +352,40 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
                     if (pendingPaymentResult.rows.length > 0) {
                         const pendingPayment = pendingPaymentResult.rows[0];
+                        // dadosCompra agora contém { nome, telefone, quantidade, sorteioId }
                         const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
-                        console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
+                        console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`, dadosCompra);
 
                         try {
-                            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                            // !!!!! ATENÇÃO: Esta lógica de 'sorteioAlvo' e 'preco'
-                            // !!!!! precisará ser totalmente REESCRITA na FASE 2
-                            // !!!!! do agendamento.
-                            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                            let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
-                            const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
-                            const preco = precoRes.rows[0];
-                            const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
+                            // ==========================================================
+                            // ===== INÍCIO DA ATUALIZAÇÃO (LÓGICA DE PREÇO) =====
+                            // ==========================================================
+                            const sorteioIdAlvo = parseInt(dadosCompra.sorteioId);
+                            let precoUnitarioAtual = 0;
+
+                            // Verifica se é o sorteio regular (ID = numeroDoSorteio)
+                            if (sorteioIdAlvo === numeroDoSorteio) {
+                                const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
+                                precoUnitarioAtual = parseFloat(precoRes.rows[0].valor || '5.00');
+                                console.log(`Webhook: Venda para Sorteio REGULAR #${sorteioIdAlvo}. Preço unitário: ${precoUnitarioAtual}`);
+                            } else {
+                                // É um sorteio agendado, busca o preço na tabela
+                                const precoRes = await db.query("SELECT preco_cartela FROM sorteios_agendados WHERE id = $1 AND status = 'VENDENDO'", [sorteioIdAlvo]);
+                                if (precoRes.rows.length === 0) {
+                                    throw new Error(`Sorteio agendado ID #${sorteioIdAlvo} não encontrado ou não está à venda.`);
+                                }
+                                precoUnitarioAtual = parseFloat(precoRes.rows[0].preco_cartela);
+                                console.log(`Webhook: Venda para Sorteio AGENDADO #${sorteioIdAlvo}. Preço unitário: ${precoUnitarioAtual}`);
+                            }
+
                             const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
+                            // ==========================================================
+                            // ===== FIM DA ATUALIZAÇÃO (LÓGICA DE PREÇO) =====
+                            // ==========================================================
 
                             const cartelasGeradas = [];
                             for (let i = 0; i < dadosCompra.quantidade; i++) {
-                                cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+                                cartelasGeradas.push(gerarDadosCartela(sorteioIdAlvo)); // Usa o sorteioIdAlvo
                             }
                             const cartelasJSON = JSON.stringify(cartelasGeradas);
 
@@ -381,11 +396,12 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                                 RETURNING id`;
 
                             const vendaResult = await db.query(stmtVenda, [
-                                sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null,
+                                sorteioIdAlvo, // Salva o ID correto
+                                dadosCompra.nome, dadosCompra.telefone || null,
                                 dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
                             ]);
                             const vendaId = vendaResult.rows[0].id;
-                            console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
+                            console.log(`Webhook: Venda #${vendaId} (Sorteio #${sorteioIdAlvo}, Payment ID: ${paymentId}) registrada no banco.`);
 
                             await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
                             console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
@@ -481,6 +497,59 @@ console.error("Erro ao buscar /api/config:", error);
 res.status(500).json({ success: false, message: "Erro ao buscar configurações." });
 }
 });
+
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (API DE SORTEIOS DISPONÍVEIS) =====
+// ==========================================================
+app.get('/api/sorteios-disponiveis', async (req, res) => {
+    try {
+        let sorteiosDisponiveis = [];
+
+        // 1. Busca o Sorteio Regular (o da rodada atual)
+        // Usamos as variáveis globais que já são carregadas
+        const sorteioRegular = {
+            id: numeroDoSorteio, // Usa o ID global do sorteio atual
+            nome_sorteio: `Sorteio Regular #${numeroDoSorteio}`,
+            premio_linha: parseFloat(PREMIO_LINHA),
+            premio_cheia: parseFloat(PREMIO_CHEIA),
+            preco_cartela: parseFloat(PRECO_CARTELA),
+            data_sorteio_f: (estadoJogo === 'ESPERANDO') ? `Em ${tempoRestante} seg` : 'AO VIVO',
+            status: estadoJogo, // 'ESPERANDO', 'JOGANDO_LINHA', etc.
+            is_regular: true
+        };
+        sorteiosDisponiveis.push(sorteioRegular);
+
+        // 2. Busca Sorteios Agendados que estão 'VENDENDO'
+        const query = `
+            SELECT 
+                id,
+                nome_sorteio,
+                premio_linha,
+                premio_cheia,
+                preco_cartela,
+                to_char(data_sorteio AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_sorteio_f,
+                status,
+                false as is_regular
+            FROM sorteios_agendados
+            WHERE status = 'VENDENDO' AND data_sorteio > CURRENT_TIMESTAMP
+            ORDER BY data_sorteio ASC
+        `;
+        const result = await db.query(query);
+        
+        // Adiciona os sorteios agendados à lista
+        sorteiosDisponiveis = sorteiosDisponiveis.concat(result.rows);
+        
+        res.json({ success: true, sorteios: sorteiosDisponiveis });
+
+    } catch (error) {
+        console.error("Erro ao buscar /api/sorteios-disponiveis:", error);
+        res.status(500).json({ success: false, message: "Erro ao buscar sorteios." });
+    }
+});
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (API DE SORTEIOS DISPONÍVEIS) =====
+// ==========================================================
+
 
 app.get('/dashboard', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'anuncio.html')); });
 app.get('/dashboard-real', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
@@ -1427,22 +1496,40 @@ configuracoes: configMap
 });
 } catch (error) { console.error("Erro ao emitir estado inicial:", error); }
 
-// --- FUNÇÃO DE PAGAMENTO ATUALIZADA (SALVA PENDENTE NO DB) ---
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (SOCKET 'criarPagamento') =====
+// ==========================================================
 socket.on('criarPagamento', async (dadosCompra, callback) => {
 try {
-const { nome, telefone, quantidade } = dadosCompra;
+// dadosCompra agora contém { nome, telefone, quantidade, sorteioId }
+const { nome, telefone, quantidade, sorteioId } = dadosCompra;
+const sorteioIdNum = parseInt(sorteioId);
 
-const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
-const preco = precoRes.rows[0];
-const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
+// 1. Buscar o preço correto
+let precoUnitarioAtual = 0;
+let nomeSorteioDesc = "";
+
+if (sorteioIdNum === numeroDoSorteio) {
+    // É o sorteio REGULAR
+    precoUnitarioAtual = parseFloat(PRECO_CARTELA);
+    nomeSorteioDesc = `Sorteio Regular #${sorteioIdNum}`;
+} else {
+    // É um sorteio AGENDADO
+    const precoRes = await db.query("SELECT preco_cartela, nome_sorteio FROM sorteios_agendados WHERE id = $1 AND status = 'VENDENDO'", [sorteioIdNum]);
+    if (precoRes.rows.length === 0) {
+        throw new Error("Sorteio selecionado não está mais disponível para venda.");
+    }
+    precoUnitarioAtual = parseFloat(precoRes.rows[0].preco_cartela);
+    nomeSorteioDesc = precoRes.rows[0].nome_sorteio;
+}
+
 const valorTotal = quantidade * precoUnitarioAtual;
 
-console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade} cartela(s). Total: R$${valorTotal.toFixed(2)}.`);
+console.log(`Servidor: Usuário ${nome} quer comprar ${quantidade} cartela(s) para ${nomeSorteioDesc}. Total: R$${valorTotal.toFixed(2)}.`);
 
 // Verifica se a BASE_URL foi configurada
 if (!process.env.BASE_URL) {
 console.error("ERRO GRAVE: BASE_URL não está configurada! O Webhook do MercadoPago falhará.");
-// Retorna um erro para o usuário imediatamente
 if (typeof callback === 'function') {
 callback({ success: false, message: 'Erro no servidor: URL de pagamento não configurada.' });
 }
@@ -1452,7 +1539,7 @@ return; // Impede a continuação
 const payment = new Payment(mpClient);
 const body = {
 transaction_amount: valorTotal,
-description: `Compra de ${quantidade} cartela(s) - Bingo do Pix`,
+description: `Compra de ${quantidade} cartela(s) - ${nomeSorteioDesc}`,
 payment_method_id: 'pix',
 notification_url: `${process.env.BASE_URL}/webhook-mercadopago`,
 payer: {
@@ -1467,9 +1554,8 @@ const response = await payment.create({ body });
 
 const paymentId = response.id.toString();
 
-// *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
-// Salva o pagamento pendente no DB, não na variável
-const dadosCompraJSON = JSON.stringify(dadosCompra);
+// Salva o pagamento pendente no DB (agora incluindo o sorteioId)
+const dadosCompraJSON = JSON.stringify(dadosCompra); // dadosCompra já tem o sorteioId
 const query = `
                INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
                VALUES ($1, $2, $3)
@@ -1479,26 +1565,25 @@ const query = `
                    timestamp = CURRENT_TIMESTAMP
            `;
 await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
-console.log(`Pagamento PIX ${paymentId} salvo no DB para socket ${socket.id}.`);
-// *** FIM DA ATUALIZAÇÃO ***
+console.log(`Pagamento PIX ${paymentId} (Sorteio #${sorteioIdNum}) salvo no DB para socket ${socket.id}.`);
 
 const qrCodeBase64 = response.point_of_interaction.transaction_data.qr_code_base64;
 const qrCodeCopiaCola = response.point_of_interaction.transaction_data.qr_code;
 
 if (typeof callback === 'function') {
-// *** ATUALIZAÇÃO (POLLING DE PAGAMENTO) ***
-// Retorna o paymentId para o cliente
 callback({ success: true, qrCodeBase64, qrCodeCopiaCola, paymentId: paymentId });
 }
 
 } catch(error) {
 console.error("Erro em criarPagamento no Mercado Pago:", error.cause || error.message);
 if (typeof callback === 'function') {
-callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access Token do Servidor.' });
+callback({ success: false, message: error.message || 'Erro ao gerar QR Code.' });
 }
 }
 });
-// --- FIM DA FUNÇÃO DE PAGAMENTO ---
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (SOCKET 'criarPagamento') =====
+// ==========================================================
 
 // ==========================================================
 // ===== OUVINTE "BUSCAR CARTELAS POR TELEFONE" (MODIFICADO) =====
@@ -1690,6 +1775,48 @@ console.error("Erro ao checar status de pagamento (checarMeuPagamento):", err);
 // ==========================================================
 
 // ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (FUNÇÃO DO AGENDADOR) =====
+// ==========================================================
+async function verificarAgendamentos() {
+    console.log("[Agendador] Verificando sorteios...");
+    const agora = new Date();
+
+    try {
+        // 1. Busca sorteios 'AGENDADOS' que devem 'ABRIR VENDAS'
+        const paraAbrirRes = await db.query(
+            "SELECT id, nome_sorteio FROM sorteios_agendados WHERE data_abertura_vendas <= $1 AND status = 'AGENDADO'",
+            [agora]
+        );
+
+        for (const sorteio of paraAbrirRes.rows) {
+            await db.query("UPDATE sorteios_agendados SET status = 'VENDENDO' WHERE id = $1", [sorteio.id]);
+            console.log(`[Agendador] Sorteio #${sorteio.id} (${sorteio.nome_sorteio}) teve suas vendas ABERTAS.`);
+        }
+
+        // 2. Busca sorteios 'VENDENDO' que devem 'COMEÇAR' (Ainda não implementado - Fase 3)
+        // Por enquanto, apenas mudamos o status para 'VENDENDO'
+
+        // 3. Busca sorteios 'VENDENDO' cuja data do sorteio já passou (devem ser fechados)
+        const paraFecharRes = await db.query(
+             "SELECT id, nome_sorteio FROM sorteios_agendados WHERE data_sorteio <= $1 AND status = 'VENDENDO'",
+            [agora]
+        );
+
+        for (const sorteio of paraFecharRes.rows) {
+            await db.query("UPDATE sorteios_agendados SET status = 'EM_SORTEIO' WHERE id = $1", [sorteio.id]);
+             console.log(`[Agendador] Sorteio #${sorteio.id} (${sorteio.nome_sorteio}) teve suas vendas FECHADAS. Status: EM_SORTEIO.`);
+        }
+
+    } catch (err) {
+        console.error("[Agendador] Erro ao verificar agendamentos:", err);
+    }
+}
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (FUNÇÃO DO AGENDADOR) =====
+// ==========================================================
+
+
+// ==========================================================
 // Iniciar o Servidor
 // ==========================================================
 
@@ -1709,6 +1836,17 @@ console.log(`Acesse em http://localhost:${PORTA}`);
 console.log(`Login Admin: http://localhost:${PORTA}/admin/login.html`);
 console.log(`Dashboard (com anúncio): http://localhost:${PORTA}/dashboard`);
 });
+
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (INICIAR AGENDADOR) =====
+// ==========================================================
+// Inicia o verificador para rodar a cada 60 segundos
+setInterval(verificarAgendamentos, 60000);
+verificarAgendamentos(); // Roda uma vez na inicialização
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (INICIAR AGENDADOR) =====
+// ==========================================================
+
 })();
 
 
