@@ -370,7 +370,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                                 console.log(`Webhook: Venda para Sorteio REGULAR #${sorteioIdAlvo}. Preço unitário: ${precoUnitarioAtual}`);
                             } else {
                                 // É um sorteio agendado, busca o preço na tabela
-                                const precoRes = await db.query("SELECT preco_cartela FROM sorteios_agendados WHERE id = $1 AND status = 'VENDENDO'", [sorteioIdAlvo]);
+                                const precoRes = await db.query("SELECT preco_cartela FROM sorteios_agendados WHERE id = $1 AND (status = 'VENDENDO' OR status = 'EM_SORTEIO')", [sorteioIdAlvo]);
                                 if (precoRes.rows.length === 0) {
                                     throw new Error(`Sorteio agendado ID #${sorteioIdAlvo} não encontrado ou não está à venda.`);
                                 }
@@ -441,6 +441,12 @@ let MIN_BOTS_ATUAL = 80;
 let MAX_BOTS_ATUAL = 150;
 let numeroDoSorteio = 500; // Valor padrão, será sobrescrito
 
+// === INÍCIO DA ATUALIZAÇÃO (Variáveis de Estado do Agendador) ===
+let sorteioRegularPausado = false; // Flag que pausa o jogo regular
+let sorteioEspecialAtivo = false; // Flag que indica que um jogo especial está rodando
+let configuracoesPadrao = {}; // Guarda as configs do jogo regular
+// === FIM DA ATUALIZAÇÃO ===
+
 // Convertido para 'async'
 async function carregarConfiguracoes() {
 try {
@@ -453,19 +459,35 @@ acc[row.chave] = row.valor;
 return acc;
 }, {});
 
-PREMIO_LINHA = configs.premio_linha || '100.00';
-PREMIO_CHEIA = configs.premio_cheia || '500.00';
-PRECO_CARTELA = configs.preco_cartela || '5.00';
-DURACAO_ESPERA_ATUAL = parseInt(configs.duracao_espera, 10) || 20;
-if (isNaN(DURACAO_ESPERA_ATUAL) || DURACAO_ESPERA_ATUAL < 10) DURACAO_ESPERA_ATUAL = 10; 
+// === INÍCIO DA ATUALIZAÇÃO (Salva configs padrão) ===
+// Salva as configurações padrão em uma variável separada
+configuracoesPadrao = {
+    premio_linha: configs.premio_linha || '100.00',
+    premio_cheia: configs.premio_cheia || '500.00',
+    preco_cartela: configs.preco_cartela || '5.00',
+    duracao_espera: parseInt(configs.duracao_espera, 10) || 20,
+    min_bots: parseInt(configs.min_bots, 10) || 80,
+    max_bots: parseInt(configs.max_bots, 10) || 150,
+    numero_sorteio_atual: parseInt(configs.numero_sorteio_atual, 10) || 500
+};
 
-MIN_BOTS_ATUAL = parseInt(configs.min_bots, 10) || 80;
-MAX_BOTS_ATUAL = parseInt(configs.max_bots, 10) || 150;
+// Se um sorteio especial NÃO estiver ativo, carrega as configs padrão
+if (!sorteioEspecialAtivo) {
+    PREMIO_LINHA = configuracoesPadrao.premio_linha;
+    PREMIO_CHEIA = configuracoesPadrao.premio_cheia;
+    PRECO_CARTELA = configuracoesPadrao.preco_cartela;
+    DURACAO_ESPERA_ATUAL = configuracoesPadrao.duracao_espera;
+    MIN_BOTS_ATUAL = configuracoesPadrao.min_bots;
+    MAX_BOTS_ATUAL = configuracoesPadrao.max_bots;
+    numeroDoSorteio = configuracoesPadrao.numero_sorteio_atual;
+}
+// Se um sorteio especial ESTIVER ativo, as variáveis globais (PREMIO_LINHA, etc.)
+// serão controladas pela função 'iniciarSorteioEspecial' e não por aqui.
+// === FIM DA ATUALIZAÇÃO ===
+
+if (isNaN(DURACAO_ESPERA_ATUAL) || DURACAO_ESPERA_ATUAL < 10) DURACAO_ESPERA_ATUAL = 10; 
 if (isNaN(MIN_BOTS_ATUAL) || MIN_BOTS_ATUAL < 0) MIN_BOTS_ATUAL = 0;
 if (isNaN(MAX_BOTS_ATUAL) || MAX_BOTS_ATUAL < MIN_BOTS_ATUAL) MAX_BOTS_ATUAL = MIN_BOTS_ATUAL;
-
-// Carrega o número do sorteio do banco para a variável global
-numeroDoSorteio = parseInt(configs.numero_sorteio_atual, 10) || 500;
 if (isNaN(numeroDoSorteio)) numeroDoSorteio = 500;
 
 console.log(`Configurações de Jogo carregadas: Linha=R$${PREMIO_LINHA}, Cheia=R$${PREMIO_CHEIA}, Cartela=R$${PRECO_CARTELA}, Espera=${DURACAO_ESPERA_ATUAL}s, Bots(${MIN_BOTS_ATUAL}-${MAX_BOTS_ATUAL})`); 
@@ -506,18 +528,20 @@ app.get('/api/sorteios-disponiveis', async (req, res) => {
         let sorteiosDisponiveis = [];
 
         // 1. Busca o Sorteio Regular (o da rodada atual)
-        // Usamos as variáveis globais que já são carregadas
-        const sorteioRegular = {
-            id: numeroDoSorteio, // Usa o ID global do sorteio atual
-            nome_sorteio: `Sorteio Regular #${numeroDoSorteio}`,
-            premio_linha: parseFloat(PREMIO_LINHA),
-            premio_cheia: parseFloat(PREMIO_CHEIA),
-            preco_cartela: parseFloat(PRECO_CARTELA),
-            data_sorteio_f: (estadoJogo === 'ESPERANDO') ? `Em ${tempoRestante} seg` : 'AO VIVO',
-            status: estadoJogo, // 'ESPERANDO', 'JOGANDO_LINHA', etc.
-            is_regular: true
-        };
-        sorteiosDisponiveis.push(sorteioRegular);
+        // Se o jogo regular não estiver pausado, adiciona ele na lista
+        if (!sorteioRegularPausado) {
+            const sorteioRegular = {
+                id: numeroDoSorteio, // Usa o ID global do sorteio atual
+                nome_sorteio: `Sorteio Regular #${numeroDoSorteio}`,
+                premio_linha: parseFloat(PREMIO_LINHA),
+                premio_cheia: parseFloat(PREMIO_CHEIA),
+                preco_cartela: parseFloat(PRECO_CARTELA),
+                data_sorteio_f: (estadoJogo === 'ESPERANDO') ? `Em ${tempoRestante} seg` : 'AO VIVO',
+                status: estadoJogo, // 'ESPERANDO', 'JOGANDO_LINHA', etc.
+                is_regular: true
+            };
+            sorteiosDisponiveis.push(sorteioRegular);
+        }
 
         // 2. Busca Sorteios Agendados que estão 'VENDENDO'
         const query = `
@@ -1205,24 +1229,48 @@ let estadoJogo = "ESPERANDO";
 let tempoRestante = DURACAO_ESPERA_ATUAL; 
 let intervaloSorteio = null; let numerosDisponiveis = []; let numerosSorteados = []; let jogadores = {};
 
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (LOOP PRINCIPAL DO JOGO) =====
+// ==========================================================
 setInterval(() => {
-if (estadoJogo === "ESPERANDO") {
-tempoRestante--;
-if (tempoRestante <= 0) {
-console.log("DEBUG: Tempo esgotado! Tentando iniciar nova rodada...");
-estadoJogo = "JOGANDO_LINHA";
-console.log("DEBUG: Estado alterado para JOGANDO_LINHA.");
-try { io.emit('iniciarJogo'); console.log("DEBUG: Evento 'iniciarJogo' emitido."); }
-catch (emitError) { console.error("DEBUG: Erro ao emitir 'iniciarJogo':", emitError); }
-try { iniciarNovaRodada(); console.log("DEBUG: Chamada para iniciarNovaRodada() concluída."); }
-catch (startRoundError) { console.error("DEBUG: Erro ao chamar iniciarNovaRodada():", startRoundError); }
-} else { io.emit('cronometroUpdate', { tempo: tempoRestante, sorteioId: numeroDoSorteio, estado: estadoJogo }); }
-} else { io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); }
-}, 1000);
+    // Se o jogo regular estiver pausado por um sorteio especial, não faz nada.
+    if (sorteioRegularPausado) {
+        console.log("Loop regular pausado. Sorteio especial em andamento.");
+        return;
+    }
 
+    // Se um sorteio especial está ativo (rodando), este loop também não deve fazer nada.
+    if (sorteioEspecialAtivo) {
+        return;
+    }
+    
+    // Lógica antiga (agora só roda se não estiver pausado)
+    if (estadoJogo === "ESPERANDO") {
+        tempoRestante--;
+        if (tempoRestante <= 0) {
+            console.log("DEBUG: Tempo esgotado! Tentando iniciar nova rodada...");
+            estadoJogo = "JOGANDO_LINHA";
+            console.log("DEBUG: Estado alterado para JOGANDO_LINHA.");
+            try { io.emit('iniciarJogo'); console.log("DEBUG: Evento 'iniciarJogo' emitido."); }
+            catch (emitError) { console.error("DEBUG: Erro ao emitir 'iniciarJogo':", emitError); }
+            try { iniciarNovaRodada(); console.log("DEBUG: Chamada para iniciarNovaRodada() concluída."); }
+            catch (startRoundError) { console.error("DEBUG: Erro ao chamar iniciarNovaRodada():", startRoundError); }
+        } else { io.emit('cronometroUpdate', { tempo: tempoRestante, sorteioId: numeroDoSorteio, estado: estadoJogo }); }
+    } else { io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); }
+}, 1000);
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (LOOP PRINCIPAL DO JOGO) =====
+// ==========================================================
+
+
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (NOVAS FUNÇÕES DE JOGO) =====
+// ==========================================================
+
+// Esta função agora é SÓ para o sorteio REGULAR
 function iniciarNovaRodada() {
 console.log("DEBUG: Dentro de iniciarNovaRodada().");
-console.log(`Servidor: Iniciando Sorteio #${numeroDoSorteio}... Próximo prêmio: LINHA`);
+console.log(`Servidor: Iniciando Sorteio REGULAR #${numeroDoSorteio}... Próximo prêmio: LINHA`);
 try {
 numerosDisponiveis = Array.from({ length: 75 }, (_, i) => i + 1); numerosSorteados = []; console.log("DEBUG: Arrays de números resetados.");
 if (intervaloSorteio) { clearInterval(intervaloSorteio); intervaloSorteio = null; console.log("DEBUG: Intervalo de sorteio anterior limpo."); }
@@ -1246,6 +1294,71 @@ catch (setIntervalError) { console.error("DEBUG: Erro ao iniciar setInterval(sor
 console.log("DEBUG: setTimeout para iniciar sorteio agendado.");
 } catch (error) { console.error("DEBUG: Erro DENTRO de iniciarNovaRodada:", error); }
 }
+
+// NOVA FUNÇÃO para iniciar um sorteio AGENDADO
+async function iniciarSorteioEspecial(sorteioInfo) {
+    console.log(`[Agendador] INICIANDO SORTEIO ESPECIAL #${sorteioInfo.id} (${sorteioInfo.nome_sorteio})`);
+    
+    // 1. Pausa o jogo regular (redundante, mas seguro)
+    sorteioRegularPausado = true;
+    sorteioEspecialAtivo = true;
+
+    // 2. Define as variáveis globais para ESTE sorteio
+    estadoJogo = "JOGANDO_LINHA";
+    numeroDoSorteio = sorteioInfo.id; // Ex: 550
+    PREMIO_LINHA = sorteioInfo.premio_linha;
+    PREMIO_CHEIA = sorteioInfo.premio_cheia;
+    PRECO_CARTELA = sorteioInfo.preco_cartela; // Atualiza o preço global tbm
+    numerosDisponiveis = Array.from({ length: 75 }, (_, i) => i + 1);
+    numerosSorteados = [];
+    
+    // 3. Limpa os jogadores e carrega os jogadores corretos
+    jogadores = {};
+    try {
+        const vendasRes = await db.query("SELECT nome_jogador, telefone, cartelas_json, tipo_venda FROM vendas WHERE sorteio_id = $1", [sorteioInfo.id]);
+        
+        for (const venda of vendasRes.rows) {
+            const playerId = `${venda.tipo_venda}_${gerarIdUnico()}`;
+            const cartelas = JSON.parse(venda.cartelas_json);
+            
+            jogadores[playerId] = {
+                nome: venda.nome_jogador,
+                telefone: venda.telefone || null,
+                isBot: false,
+                isManual: (venda.tipo_venda === 'Manual' || venda.tipo_venda === 'Cambista'),
+                cartelas: cartelas
+            };
+        }
+        console.log(`[Sorteio Especial #${sorteioInfo.id}] Carregados ${vendasRes.rows.length} registros de vendas (jogadores).`);
+        
+    } catch (err) {
+        console.error(`[Sorteio Especial #${sorteioInfo.id}] ERRO CRÍTICO AO CARREGAR JOGADORES:`, err);
+        // O que fazer aqui? Por enquanto, vamos só logar e continuar (jogo sem jogadores)
+    }
+    
+    // 4. Limpa o intervalo antigo (do jogo regular) se ele ainda existir
+    if (intervaloSorteio) { 
+        clearInterval(intervaloSorteio); 
+        intervaloSorteio = null; 
+    }
+
+    // 5. Emite os sinais para os clientes
+    io.emit('iniciarJogo'); // Aviso geral de início
+    io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
+    io.emit('contagemJogadores', getContagemJogadores());
+    io.emit('atualizarQuaseLa', []);
+
+    // 6. Inicia o loop de sorteio de números (o mesmo 'sortearNumero')
+    setTimeout(() => {
+        console.log(`[Sorteio Especial #${sorteioInfo.id}] Começando a sortear números.`);
+        intervaloSorteio = setInterval(sortearNumero, TEMPO_ENTRE_NUMEROS);
+    }, 5000); // Delay de 5s
+}
+
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (NOVAS FUNÇÕES DE JOGO) =====
+// ==========================================================
+
 
 async function sortearNumero() { // Convertido para 'async'
 if (!numerosDisponiveis || numerosDisponiveis.length === 0) { console.log("Todos os números sorteados."); terminarRodada(null, null); return; }
@@ -1356,6 +1469,9 @@ io.emit('atualizarVencedores', ultimos);
 } catch (err) { console.error("Erro ao salvar vencedor no DB:", err); }
 }
 
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (FUNÇÃO 'terminarRodada') =====
+// ==========================================================
 // A função agora é 'async' para salvar no banco
 async function terminarRodada(vencedor, socketVencedor) {
 console.log("DEBUG: Dentro de terminarRodada().");
@@ -1380,28 +1496,58 @@ io.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome });
 else { io.emit('jogoTerminouSemVencedor'); }
 
 estadoJogo = "ESPERANDO";
-tempoRestante = DURACAO_ESPERA_ATUAL; 
 
-// Incrementa o número do sorteio e SALVA no banco
-numeroDoSorteio++; // Incrementa a variável global
-try {
-// Salva o NOVO número no banco
-const query = `
-           INSERT INTO configuracoes (chave, valor) 
-           VALUES ($1, $2) 
-           ON CONFLICT (chave) 
-           DO UPDATE SET valor = EXCLUDED.valor;
-       `;
-await db.query(query, ['numero_sorteio_atual', numeroDoSorteio.toString()]);
-console.log(`Servidor: Sorteio #${idSorteioFinalizado} terminado. Próximo será #${numeroDoSorteio} (Salvo no DB).`); 
-} catch (err) {
-console.error("ERRO CRÍTICO AO SALVAR NÚMERO DO SORTEIO:", err);
-// O jogo continua, mas o próximo reinício voltará para o número antigo
+// VERIFICA SE FOI UM SORTEIO ESPECIAL
+if (sorteioEspecialAtivo) {
+    console.log(`[Sorteio Especial #${idSorteioFinalizado}] Jogo terminado.`);
+    
+    // Marca como concluído no banco
+    try {
+        await db.query("UPDATE sorteios_agendados SET status = 'CONCLUIDO' WHERE id = $1", [idSorteioFinalizado]);
+    } catch (err) {
+        console.error("Erro ao marcar sorteio especial como concluído:", err);
+    }
+    
+    // Reseta as flags
+    sorteioEspecialAtivo = false;
+    sorteioRegularPausado = false;
+    
+    // Recarrega as configurações PADRÃO do jogo regular
+    await carregarConfiguracoes();
+    
+    // Reseta o tempo do jogo regular
+    tempoRestante = DURACAO_ESPERA_ATUAL;
+    
+    console.log(`[Agendador] Sorteio regular retomado. Próximo sorteio #${numeroDoSorteio} em ${tempoRestante}s.`);
+    
+} else {
+    // LÓGICA ANTIGA (Sorteio regular)
+    // Incrementa o número do sorteio e SALVA no banco
+    numeroDoSorteio++; // Incrementa a variável global
+    try {
+    // Salva o NOVO número no banco
+    const query = `
+               INSERT INTO configuracoes (chave, valor) 
+               VALUES ($1, $2) 
+               ON CONFLICT (chave) 
+               DO UPDATE SET valor = EXCLUDED.valor;
+           `;
+    await db.query(query, ['numero_sorteio_atual', numeroDoSorteio.toString()]);
+    console.log(`Servidor: Sorteio REGULAR #${idSorteioFinalizado} terminado. Próximo será #${numeroDoSorteio} (Salvo no DB).`); 
+    } catch (err) {
+    console.error("ERRO CRÍTICO AO SALVAR NÚMERO DO SORTEIO:", err);
+    }
+    // Reseta o tempo
+    tempoRestante = DURACAO_ESPERA_ATUAL;
 }
 
 io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); io.emit('atualizarQuaseLa', []);
 console.log("DEBUG: terminarRodada() concluída.");
 }
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (FUNÇÃO 'terminarRodada') =====
+// ==========================================================
+
 
 function getContagemJogadores() { 
 let total = 0; let reais = 0; 
@@ -1440,7 +1586,7 @@ jogadoresReais: getContagemJogadores().reais
 };
 
 try {
-const proximoSorteioId = estadoJogo === 'ESPERANDO' ? numeroDoSorteio : numeroDoSorteio + 1;
+const proximoSorteioId = (estadoJogo === "ESPERANDO" && !sorteioEspecialAtivo) ? (numeroDoSorteio + 1) : numeroDoSorteio;
 
 const vendasProximoRes = await db.query(`
            SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
@@ -1478,9 +1624,13 @@ const ultimosVencedoresDB = await getUltimosVencedoresDoDB(); // 'await'
 const totalOnline = contagemInicial ? contagemInicial.total : 0; 
 const reaisOnline = contagemInicial ? contagemInicial.reais : 0;
 
-const resDB = await db.query("SELECT chave, valor FROM configuracoes");
-const configs = resDB.rows;
-const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
+// ATENÇÃO: As configs aqui podem ser do sorteio regular ou especial
+// A API /api/sorteios-disponiveis é a fonte mais confiável para o cliente
+const configs = {
+    premio_linha: PREMIO_LINHA,
+    premio_cheia: PREMIO_CHEIA,
+    preco_cartela: PRECO_CARTELA
+};
 
 socket.emit('estadoInicial', { 
 sorteioId: numeroDoSorteio, 
@@ -1492,7 +1642,7 @@ ultimosVencedores: ultimosVencedoresDB,
 numerosSorteados: numerosSorteados, 
 ultimoNumero: numerosSorteados.length > 0 ? numerosSorteados[numerosSorteados.length - 1] : null, 
 quaseLa: [], 
-configuracoes: configMap 
+configuracoes: configs // Envia as configs atuais
 });
 } catch (error) { console.error("Erro ao emitir estado inicial:", error); }
 
@@ -1599,7 +1749,7 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
 
     try {
         // Determina o ID do próximo sorteio
-        const proximoSorteioId = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+        const proximoSorteioId = (estadoJogo === "ESPERANDO" && !sorteioEspecialAtivo) ? numeroDoSorteio : (numeroDoSorteio + 1);
 
         // ***** INÍCIO DA ATUALIZAÇÃO *****
         // Query modificada: remove 'AND sorteio_id >= $2', aumenta o LIMIT e remove o parâmetro $2
@@ -1691,7 +1841,12 @@ socket.on('checarMeusPremios', async (data, callback) => {
 // ==========================================================
 
 
-socket.on('registerPlayer', (playerData) => { try { if (playerData && playerData.cartelas && playerData.cartelas.length > 0) { const s_id_cartela = playerData.cartelas[0].s_id; if (s_id_cartela === numeroDoSorteio || (estadoJogo === "ESPERANDO")) { console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio #${numeroDoSorteio}.`); jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; io.emit('contagemJogadores', getContagemJogadores()); } else { console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio #${numeroDoSorteio} com cartela inválida (Sorteio #${s_id_cartela}, Estado: ${estadoJogo}). REJEITADO.`); socket.emit('cartelaAntiga'); } } } catch(error) { console.error("Erro em registerPlayer:", error); } });
+socket.on('registerPlayer', (playerData) => { try { if (playerData && playerData.cartelas && playerData.cartelas.length > 0) { const s_id_cartela = playerData.cartelas[0].s_id; 
+    
+    // ATUALIZADO: Aceita registro se o ID da cartela for o ID do jogo atual (regular ou especial)
+    if (s_id_cartela === numeroDoSorteio) { 
+    
+    console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio #${numeroDoSorteio}.`); jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; io.emit('contagemJogadores', getContagemJogadores()); } else { console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio #${numeroDoSorteio} com cartela inválida (Sorteio #${s_id_cartela}, Estado: ${estadoJogo}). REJEITADO.`); socket.emit('cartelaAntiga'); } } } catch(error) { console.error("Erro em registerPlayer:", error); } });
 socket.on('disconnect', () => { console.log(`Usuário desconectado: ${socket.id}`); const eraJogadorRegistrado = jogadores[socket.id] && jogadores[socket.id].nome && !jogadores[socket.id].isBot && !jogadores[socket.id].isManual; delete jogadores[socket.id]; if (eraJogadorRegistrado) { try { io.emit('contagemJogadores', getContagemJogadores()); } catch (error) { console.error("Erro ao emitir contagemJogadores no disconnect:", error); } } });
 
 // Convertido para 'async'
@@ -1782,7 +1937,8 @@ async function verificarAgendamentos() {
     const agora = new Date();
 
     try {
-        // 1. Busca sorteios 'AGENDADOS' que devem 'ABRIR VENDAS'
+        // --- 1. Abrir Vendas ---
+        // Busca sorteios 'AGENDADOS' que devem 'ABRIR VENDAS'
         const paraAbrirRes = await db.query(
             "SELECT id, nome_sorteio FROM sorteios_agendados WHERE data_abertura_vendas <= $1 AND status = 'AGENDADO'",
             [agora]
@@ -1793,10 +1949,8 @@ async function verificarAgendamentos() {
             console.log(`[Agendador] Sorteio #${sorteio.id} (${sorteio.nome_sorteio}) teve suas vendas ABERTAS.`);
         }
 
-        // 2. Busca sorteios 'VENDENDO' que devem 'COMEÇAR' (Ainda não implementado - Fase 3)
-        // Por enquanto, apenas mudamos o status para 'VENDENDO'
-
-        // 3. Busca sorteios 'VENDENDO' cuja data do sorteio já passou (devem ser fechados)
+        // --- 2. Fechar Vendas ---
+        // Busca sorteios 'VENDENDO' cuja data do sorteio já passou (devem ser fechados)
         const paraFecharRes = await db.query(
              "SELECT id, nome_sorteio FROM sorteios_agendados WHERE data_sorteio <= $1 AND status = 'VENDENDO'",
             [agora]
@@ -1805,6 +1959,26 @@ async function verificarAgendamentos() {
         for (const sorteio of paraFecharRes.rows) {
             await db.query("UPDATE sorteios_agendados SET status = 'EM_SORTEIO' WHERE id = $1", [sorteio.id]);
              console.log(`[Agendador] Sorteio #${sorteio.id} (${sorteio.nome_sorteio}) teve suas vendas FECHADAS. Status: EM_SORTEIO.`);
+        }
+        
+        // --- 3. Iniciar Sorteio ---
+        // Verifica se algum sorteio especial está pronto para rodar
+        // E se o jogo regular não está no meio de uma rodada
+        if (estadoJogo === 'ESPERANDO' && !sorteioRegularPausado) {
+             const paraIniciarRes = await db.query(
+                "SELECT * FROM sorteios_agendados WHERE status = 'EM_SORTEIO' ORDER BY data_sorteio ASC LIMIT 1"
+            );
+            
+            if (paraIniciarRes.rows.length > 0) {
+                const sorteioParaIniciar = paraIniciarRes.rows[0];
+                
+                // PAUSA o jogo regular
+                sorteioRegularPausado = true;
+                console.log(`[Agendador] PAUSANDO JOGO REGULAR. Iniciando sorteio especial #${sorteioParaIniciar.id}`);
+                
+                // Inicia o jogo especial
+                iniciarSorteioEspecial(sorteioParaIniciar);
+            }
         }
 
     } catch (err) {
