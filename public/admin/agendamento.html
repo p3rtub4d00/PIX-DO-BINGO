@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento de Sorteios - Admin</title>
+    <link rel="stylesheet" href="admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-panel-body">
+
+    <aside class="admin-sidebar">
+        <div class="logo">Bingo PIX</div>
+        <nav class="admin-nav">
+            <ul>
+                <li><a href="/admin/painel.html">Painel & Status</a></li>
+                <li><a href="/admin/agendamento.html" class="ativo">Agendamentos</a></li> 
+                <li><a href="/admin/vencedores.html">Gestão Vencedores</a></li>
+                <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
+                <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li>
+            </ul>
+        </nav>
+        <div class="logout-link">
+             <a href="/admin/logout">Sair</a>
+        </div>
+    </aside>
+
+    <main class="admin-content">
+         <header class="content-header">
+             <h1>Agendamento de Sorteios Especiais</h1>
+        </header>
+
+        <section class="card admin-section">
+            <h2>Agendar Novo Sorteio</h2>
+            <p>Cadastre um sorteio futuro. Ele será ativado para venda e sorteado nas datas configuradas.</p>
+            <form id="form-agendar-sorteio">
+                <div class="form-grupo-inline">
+                    <label for="sorteio-nome">Nome do Sorteio:</label>
+                    <input type="text" id="sorteio-nome" placeholder="Ex: Especial de Natal" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="sorteio-premio-linha">Prêmio Linha (R$):</label>
+                    <input type="number" id="sorteio-premio-linha" step="0.01" min="0" placeholder="Ex: 500.00" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="sorteio-premio-cheia">Prêmio Cheia (R$):</label>
+                    <input type="number" id="sorteio-premio-cheia" step="0.01" min="1" placeholder="Ex: 1000.00" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="sorteio-preco-cartela">Preço da Cartela (R$):</label>
+                    <input type="number" id="sorteio-preco-cartela" step="0.01" min="1" placeholder="Ex: 10.00" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="sorteio-data-abertura">Início das Vendas:</label>
+                    <input type="datetime-local" id="sorteio-data-abertura" required>
+                </div>
+                <div class="form-grupo-inline">
+                    <label for="sorteio-data-sorteio">Data do Sorteio:</label>
+                    <input type="datetime-local" id="sorteio-data-sorteio" required>
+                </div>
+                
+                <div class="form-grupo-inline">
+                    <label></label> 
+                    <button type="submit" id="btn-agendar-sorteio" class="btn-comprar btn-comprar-azul">Agendar Sorteio</button>
+                </div>
+            </form>
+            <p id="agendar-status" class="status-message" style="display: none;"></p>
+        </section>
+
+        <section class="card admin-section">
+            <h2>Sorteios Agendados</h2>
+            <p>Lista de todos os sorteios agendados no sistema (novos e antigos).</p>
+            <div class="tabela-relatorio-container">
+                <table class="relatorio-vendas">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Prêmios (Linha/Cheia)</th>
+                            <th>Preço Cartela</th>
+                            <th>Abertura Vendas</th>
+                            <th>Data Sorteio</th>
+                            <th>Status</th>
+                            <th class="col-acao">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-agendamentos-corpo">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 20px;">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    
+    <script src="agendamento.js"></script>
+</body>
+</html>
