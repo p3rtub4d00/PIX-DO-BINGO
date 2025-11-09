@@ -1388,7 +1388,7 @@ callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access T
 // --- FIM DA FUNÇÃO DE PAGAMENTO ---
 
 // ==========================================================
-// ===== NOVO OUVINTE "BUSCAR CARTELAS POR TELEFONE" (ADICIONADO AQUI) =====
+// ===== OUVINTE "BUSCAR CARTELAS POR TELEFONE" (MODIFICADO) =====
 // ==========================================================
 socket.on('buscarCartelasPorTelefone', async (data, callback) => {
     const { telefone } = data;
@@ -1403,21 +1403,24 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
         // Determina o ID do próximo sorteio
         const proximoSorteioId = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
 
+        // ***** INÍCIO DA ATUALIZAÇÃO *****
+        // Query modificada: remove 'AND sorteio_id >= $2', aumenta o LIMIT e remove o parâmetro $2
         const query = `
             SELECT 
                 id, 
                 sorteio_id, 
                 quantidade_cartelas, 
                 to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada,
-                nome_jogador -- <--- [!!] CORREÇÃO APLICADA AQUI
+                nome_jogador
             FROM vendas 
             WHERE telefone = $1 
-            AND sorteio_id >= $2
             ORDER BY sorteio_id DESC, timestamp DESC
-            LIMIT 10;
+            LIMIT 20; 
         `;
+        // NOTA: Removi 'AND sorteio_id >= $2' e aumentei o limite para 20
         
-        const res = await db.query(query, [telefone, numeroDoSorteio]);
+        const res = await db.query(query, [telefone]);
+        // ***** FIM DA ATUALIZAÇÃO *****
 
         if (res.rows.length > 0) {
             // Encontrou! Retorna a lista de vendas.
@@ -1430,12 +1433,58 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
             }
         } else {
             // Não encontrou.
-            console.log(`Servidor: Nenhuma cartela encontrada para ${telefone} (sorteio #${numeroDoSorteio} ou maior).`);
+            console.log(`Servidor: Nenhuma cartela encontrada para ${telefone}.`);
             if (typeof callback === 'function') callback({ success: false, message: 'Nenhuma cartela encontrada para este telefone.' });
         }
 
     } catch (error) {
         console.error("Erro ao buscar cartelas por telefone:", error);
+        if (typeof callback === 'function') callback({ success: false, message: 'Erro interno do servidor.' });
+    }
+});
+// ==========================================================
+// ===== FIM DO BLOCO MODIFICADO                        =====
+// ==========================================================
+
+
+// ==========================================================
+// ===== NOVO OUVINTE "CHECAR MEUS PREMIOS" (ADICIONADO) =====
+// ==========================================================
+socket.on('checarMeusPremios', async (data, callback) => {
+    const { telefone } = data;
+    if (!telefone) {
+        if (typeof callback === 'function') callback({ success: false, message: 'Telefone não fornecido.' });
+        return;
+    }
+
+    console.log(`Servidor: Verificando prêmios para o telefone ${telefone}`);
+    try {
+        const query = `
+            SELECT 
+                sorteio_id, 
+                premio, 
+                nome, 
+                status_pagamento,
+                to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada 
+            FROM vencedores 
+            WHERE telefone = $1 
+            ORDER BY timestamp DESC;
+        `;
+        const res = await db.query(query, [telefone]);
+        
+        if (res.rows.length > 0) {
+            // Encontrou prêmios!
+            if (typeof callback === 'function') {
+                callback({ success: true, premios: res.rows });
+            }
+        } else {
+            // Nenhum prêmio encontrado.
+            if (typeof callback === 'function') {
+                callback({ success: false, message: 'Nenhum prêmio encontrado para este telefone.' });
+            }
+        }
+    } catch (error) {
+        console.error("Erro ao checar prêmios por telefone:", error);
         if (typeof callback === 'function') callback({ success: false, message: 'Erro interno do servidor.' });
     }
 });
@@ -1555,4 +1604,3 @@ process.on('exit', () => pool.end());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
-
