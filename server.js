@@ -149,6 +149,29 @@ throw e;
 }
         // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
 
+        
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (TABELA DE AGENDAMENTO) =====
+// ==========================================================
+// 4. Cria a tabela de Sorteios Agendados
+await db.query(`
+            CREATE TABLE IF NOT EXISTS sorteios_agendados (
+                id SERIAL PRIMARY KEY,
+                nome_sorteio TEXT NOT NULL,
+                premio_linha REAL NOT NULL,
+                premio_cheia REAL NOT NULL,
+                preco_cartela REAL NOT NULL,
+                data_sorteio TIMESTAMPTZ NOT NULL,
+                data_abertura_vendas TIMESTAMPTZ NOT NULL,
+                status TEXT NOT NULL DEFAULT 'AGENDADO', 
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+console.log("Tabela 'sorteios_agendados' verificada.");
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (TABELA DE AGENDAMENTO) =====
+// ==========================================================
+
 
 // Verifica se o admin existe e qual sua senha (lógica de correção de senha)
 const adminRes = await db.query('SELECT senha FROM usuarios_admin WHERE usuario = $1', ['admin']);
@@ -334,6 +357,11 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                         console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
 
                         try {
+                            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                            // !!!!! ATENÇÃO: Esta lógica de 'sorteioAlvo' e 'preco'
+                            // !!!!! precisará ser totalmente REESCRITA na FASE 2
+                            // !!!!! do agendamento.
+                            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                             let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
                             const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
                             const preco = precoRes.rows[0];
@@ -825,6 +853,91 @@ app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
 });
 // ==========================================================
 // *** FIM DA NOVA ROTA ***
+// ==========================================================
+
+
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (ROTAS DE AGENDAMENTO) =====
+// ==========================================================
+app.get('/admin/agendamento.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'agendamento.html')); });
+
+// API PARA LISTAR SORTEIOS AGENDADOS
+app.get('/admin/api/agendamentos', checkAdmin, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                id,
+                nome_sorteio,
+                premio_linha,
+                premio_cheia,
+                preco_cartela,
+                to_char(data_sorteio AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI') as data_sorteio_f,
+                to_char(data_abertura_vendas AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI') as data_abertura_f,
+                status
+            FROM sorteios_agendados
+            ORDER BY data_sorteio DESC
+        `;
+        const result = await db.query(query);
+        res.json({ success: true, agendamentos: result.rows });
+    } catch (err) {
+        console.error("Erro ao buscar agendamentos:", err);
+        res.status(500).json({ success: false, message: "Erro ao buscar agendamentos." });
+    }
+});
+
+// API PARA CRIAR NOVO SORTEIO AGENDADO
+app.post('/admin/api/agendamentos/criar', checkAdmin, async (req, res) => {
+    const { nome, premioLinha, premioCheia, precoCartela, dataSorteio, dataAbertura } = req.body;
+
+    // Validação básica
+    if (!nome || !premioLinha || !premioCheia || !precoCartela || !dataSorteio || !dataAbertura) {
+        return res.status(400).json({ success: false, message: "Todos os campos são obrigatórios." });
+    }
+    if (new Date(dataAbertura) >= new Date(dataSorteio)) {
+        return res.status(400).json({ success: false, message: "A data de abertura das vendas deve ser ANTERIOR à data do sorteio." });
+    }
+
+    try {
+        const query = `
+            INSERT INTO sorteios_agendados 
+            (nome_sorteio, premio_linha, premio_cheia, preco_cartela, data_sorteio, data_abertura_vendas, status)
+            VALUES ($1, $2, $3, $4, $5, $6, 'AGENDADO')
+            RETURNING id
+        `;
+        const result = await db.query(query, [nome, premioLinha, premioCheia, precoCartela, dataSorteio, dataAbertura]);
+        
+        console.log(`Admin ${req.session.usuario} agendou o sorteio ${nome} (ID: ${result.rows[0].id})`);
+        res.status(201).json({ success: true, message: "Sorteio agendado com sucesso!" });
+
+    } catch (err) {
+        console.error("Erro ao criar agendamento:", err);
+        res.status(500).json({ success: false, message: "Erro interno ao salvar o agendamento." });
+    }
+});
+
+// API PARA DELETAR UM SORTEIO AGENDADO
+app.delete('/admin/api/agendamentos/deletar/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    
+    // ATENÇÃO: Adicionar verificação se o sorteio já tem vendas
+    // Por enquanto, apenas deleta se estiver 'AGENDADO'
+    
+    try {
+        const result = await db.query("DELETE FROM sorteios_agendados WHERE id = $1 AND status = 'AGENDADO'", [id]);
+        
+        if (result.rowCount > 0) {
+            console.log(`Admin ${req.session.usuario} deletou o agendamento ID: ${id}`);
+            res.json({ success: true, message: "Agendamento deletado." });
+        } else {
+            res.status(400).json({ success: false, message: "Não foi possível deletar. O sorteio pode já estar ativo ou não existe." });
+        }
+    } catch (err) {
+        console.error("Erro ao deletar agendamento:", err);
+        res.status(500).json({ success: false, message: "Erro interno." });
+    }
+});
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (ROTAS DE AGENDAMENTO) =====
 // ==========================================================
 
 
