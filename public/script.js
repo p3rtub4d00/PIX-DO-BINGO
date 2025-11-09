@@ -326,11 +326,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // ATUALIZADO: Recarrega os sorteios quando o cronômetro roda (para atualizar o tempo)
         socket.on('cronometroUpdate', (data) => {
-            if (data.tempo % 10 === 0) { // Atualiza a lista a cada 10 segundos
+            // ATUALIZAÇÃO: Só recarrega a lista se o estado for 'ESPERANDO'
+            if (data.estado === 'ESPERANDO' && data.tempo % 10 === 0) { // Atualiza a lista a cada 10 segundos
                  carregarSorteiosDisponiveis();
             }
         });
         
+        // REMOVIDO: 'configAtualizada' e 'estadoInicial' não são mais necessários
+        // para atualizar a UI de preços/status.
+
         // Ouvintes de pagamento e aba (sem alteração)
         socket.on('pagamentoAprovado', (data) => {
             console.log(`Pagamento Aprovado! Venda ID: ${data.vendaId}`);
