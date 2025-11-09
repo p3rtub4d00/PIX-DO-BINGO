@@ -581,10 +581,51 @@ footer {
     white-space: nowrap; /* Não quebra o texto */
 }
 
+/* NOVO: Estilo para "Jogo Encerrado" */
+.jogo-encerrado-info {
+    font-size: 0.9em;
+    font-weight: 700;
+    color: var(--color-text-body);
+    opacity: 0.7;
+    padding: 10px 15px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+
 /* Mensagem de "Nenhuma cartela encontrada" */
 #modal-minhas-cartelas-lista p {
     padding: 20px;
     text-align: center;
     font-style: italic;
     opacity: 0.8;
+}
+
+/* ========================================================== */
+/* ===== NOVOS ESTILOS PARA "VERIFICAR PREMIOS" (ADICIONADOS) ===== */
+/* ========================================================== */
+#modal-meus-premios-lista {
+    text-align: left;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 0 15px;
+    margin-top: 20px;
+}
+
+/* --- Estilos para Modal de Prêmios (Copiado de admin.css) --- */
+.status-pagamento {
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.status-pendente {
+    background-color: #ffc107;
+    color: #333;
+}
+.status-pago {
+    background-color: #28a745;
 }
