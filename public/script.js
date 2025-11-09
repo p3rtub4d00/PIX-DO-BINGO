@@ -71,7 +71,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 botaoTexto = 'Comprar (Próximo)';
                 dataTexto = `<span style="color: red; font-weight: 900;">AO VIVO</span>`;
             } else {
-                 dataTexto = `<span style="color: var(--color-pix-green); font-weight: 900;">${sorteio.data_sorteio_f}</span>`;
+                // ==========================================================
+                // ===== INÍCIO DA CORREÇÃO (BUG 3 - TIMER AO VIVO) =====
+                // ==========================================================
+                // Adiciona um ID único ao timer do sorteio regular
+                dataTexto = `<span id="regular-sorteio-timer" style="color: var(--color-pix-green); font-weight: 900;">${sorteio.data_sorteio_f}</span>`;
+                // ==========================================================
+                // ===== FIM DA CORREÇÃO (BUG 3 - TIMER AO VIVO) =====
+                // ==========================================================
             }
         } else {
             // É agendado
@@ -97,6 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Função para buscar e renderizar os sorteios
     async function carregarSorteiosDisponiveis() {
         if (!sorteiosContainer) return;
+        
+        // Salva o scroll para não pular a tela
+        const scrollAtual = window.scrollY;
+        
         sorteiosContainer.innerHTML = '<p>Carregando sorteios disponíveis...</p>'; // Feedback
         
         try {
@@ -115,6 +126,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 sorteiosContainer.innerHTML = '<p>Nenhum sorteio disponível no momento. Volte mais tarde!</p>';
             }
+            
+            // Restaura o scroll
+            window.scrollTo(0, scrollAtual);
+            
         } catch (error) {
             console.error("Erro ao carregar sorteios:", error);
             sorteiosContainer.innerHTML = `<p style="color: red;">Erro ao carregar sorteios. Tente recarregar a página.</p>`;
@@ -324,17 +339,25 @@ document.addEventListener('DOMContentLoaded', () => {
              carregarSorteiosDisponiveis();
         });
 
-        // ATUALIZADO: Recarrega os sorteios quando o cronômetro roda (para atualizar o tempo)
+        // ==========================================================
+        // ===== INÍCIO DA CORREÇÃO (BUG 3 - CRONÔMETRO) =====
+        // ==========================================================
         socket.on('cronometroUpdate', (data) => {
-            // ATUALIZAÇÃO: Só recarrega a lista se o estado for 'ESPERANDO'
-            if (data.estado === 'ESPERANDO' && data.tempo % 10 === 0) { // Atualiza a lista a cada 10 segundos
-                 carregarSorteiosDisponiveis();
+            // Esta função agora APENAS atualiza o timer, não recarrega a lista inteira.
+            if (data.estado === 'ESPERANDO') {
+                const timerEl = document.getElementById('regular-sorteio-timer');
+                if (timerEl) {
+                    const minutos = Math.floor(data.tempo / 60);
+                    let segundos = data.tempo % 60;
+                    segundos = segundos < 10 ? '0' + segundos : segundos;
+                    timerEl.innerHTML = `Em ${minutos}:${segundos}`;
+                }
             }
         });
+        // ==========================================================
+        // ===== FIM DA CORREÇÃO (BUG 3 - CRONÔMETRO) =====
+        // ==========================================================
         
-        // REMOVIDO: 'configAtualizada' e 'estadoInicial' não são mais necessários
-        // para atualizar a UI de preços/status.
-
         // Ouvintes de pagamento e aba (sem alteração)
         socket.on('pagamentoAprovado', (data) => {
             console.log(`Pagamento Aprovado! Venda ID: ${data.vendaId}`);
