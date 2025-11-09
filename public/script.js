@@ -381,6 +381,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputTelefoneRecuperar = document.getElementById('modal-telefone-recuperar');
     const btnRecuperar = document.getElementById('btn-recuperar-cartelas');
     
+    // ***** INÍCIO DA ATUALIZAÇÃO *****
+    const btnChecarPremios = document.getElementById('btn-checar-premios');
+    // ***** FIM DA ATUALIZAÇÃO *****
+    
+    
     // 2. Cria o modal de resultados (mas não o exibe)
     let modalResultados = null; // Guarda a referência do modal
     
@@ -405,8 +410,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (vendas && vendas.length > 0) {
             vendas.forEach(venda => {
                 const eProximoSorteio = venda.sorteio_id == proximoSorteioId;
-                const textoBotao = eProximoSorteio ? 'Entrar na Sala de Espera' : 'Ver Jogo Encerrado';
-                const classeBotao = eProximoSorteio ? 'btn-destaque' : 'btn-comprar-azul';
+                
+                // ***** INÍCIO DA ATUALIZAÇÃO *****
+                // Mostra "Ver Jogo Encerrado" como texto, não como botão desabilitado
+                const botaoHtml = eProximoSorteio 
+                    ? `<button class="btn-comprar btn-entrar-jogo btn-destaque" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}">
+                           Entrar na Sala de Espera
+                       </button>`
+                    : `<span class="jogo-encerrado-info">Jogo Encerrado</span>`;
+                // ***** FIM DA ATUALIZAÇÃO *****
+
                 
                 // Salva o nome e telefone do jogador da primeira venda válida
                 if (!sessionStorage.getItem('bingo_usuario_nome')) {
@@ -420,9 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="sorteio-qtd">${venda.quantidade_cartelas} cartela(s)</span>
                             <span class="sorteio-data">Comprada em: ${venda.data_formatada}</span>
                         </div>
-                        <button class="btn-comprar btn-entrar-jogo ${classeBotao}" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}" ${!eProximoSorteio ? 'disabled' : ''}>
-                            ${textoBotao}
-                        </button>
+                        ${botaoHtml} 
                     </div>
                 `;
             });
@@ -459,6 +470,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ***** INÍCIO DA ATUALIZAÇÃO (Novo Modal de Prêmios) *****
+    let modalPremios = null; // Guarda a referência
+    
+    function criarModalPremios(premios) {
+        if (modalPremios) {
+            modalPremios.remove();
+        }
+        modalPremios = document.createElement('div');
+        modalPremios.classList.add('modal-overlay');
+        modalPremios.style.display = 'flex';
+
+        let htmlInterno = `
+            <div class="modal-content" style="max-width: 600px;">
+                <span class="modal-close" id="modal-premios-fechar">&times;</span>
+                <h2 class="title-gradient">Meus Prêmios</h2>
+                <div id="modal-meus-premios-lista">
+        `;
+
+        if (premios && premios.length > 0) {
+            htmlInterno += `<p style="text-align: center; font-weight: bold; font-size: 1.1em; color: var(--color-pix-green);">Parabéns! Encontramos ${premios.length} prêmio(s) no seu número!</p>`;
+            premios.forEach(premio => {
+                const statusClasse = premio.status_pagamento === 'Pendente' ? 'status-pendente' : 'status-pago';
+                htmlInterno += `
+                    <div class="cartela-encontrada-item" style="border-left: 4px solid var(--color-pix-green);">
+                        <div class="cartela-info-wrapper">
+                            <span class="sorteio-id">Prêmio: ${premio.premio}</span>
+                            <span class="sorteio-qtd">Sorteio #${premio.sorteio_id} (Nome: ${premio.nome})</span>
+                            <span class="sorteio-data">Data: ${premio.data_formatada}</span>
+                        </div>
+                        <span class="status-pagamento ${statusClasse}" style="font-size: 0.9em; flex-shrink: 0;">${premio.status_pagamento}</span>
+                    </div>
+                `;
+            });
+            htmlInterno += `<p style="text-align: center; margin-top: 15px; font-size: 0.9em;">Se o status estiver "Pendente", entre em contato com a administração para receber.</p>`;
+        } else {
+            // Isso não deve acontecer se a 'data.success' for false, mas é um fallback.
+            htmlInterno += `<p>Nenhum prêmio encontrado.</p>`;
+        }
+
+        htmlInterno += `
+                </div>
+            </div>
+        `;
+        modalPremios.innerHTML = htmlInterno;
+        document.body.appendChild(modalPremios);
+
+        modalPremios.addEventListener('click', (e) => {
+            if (e.target.id === 'modal-premios-fechar' || e.target === modalPremios) {
+                modalPremios.remove();
+                modalPremios = null;
+            }
+        });
+    }
+    // ***** FIM DA ATUALIZAÇÃO (Novo Modal de Prêmios) *****
+
 
     // 3. Adiciona o listener ao formulário
     if (formRecuperar && inputTelefoneRecuperar && btnRecuperar && socket) {
@@ -472,15 +538,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // ***** INÍCIO DA ATUALIZAÇÃO *****
+            // Desabilita os dois botões
             btnRecuperar.disabled = true;
+            btnChecarPremios.disabled = true;
             btnRecuperar.textContent = 'Buscando...';
+            // ***** FIM DA ATUALIZAÇÃO *****
+
 
             // Salva o telefone para usar na próxima compra
             sessionStorage.setItem('bingo_usuario_telefone', telefone);
 
             socket.emit('buscarCartelasPorTelefone', { telefone }, (data) => {
+                // ***** INÍCIO DA ATUALIZAÇÃO *****
+                // Reabilita os dois botões
                 btnRecuperar.disabled = false;
-                btnRecuperar.textContent = 'Buscar Minhas Cartelas';
+                btnChecarPremios.disabled = false;
+                btnRecuperar.textContent = 'Ver Minhas Compras';
+                // ***** FIM DA ATUALIZAÇÃO *****
 
                 if (data.success) {
                     criarModalResultados(data.vendas, data.proximoSorteioId);
@@ -493,6 +568,41 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.warn("Elementos de 'Recuperar Cartelas' não foram encontrados.");
     }
+    
+    // ***** INÍCIO DA ATUALIZAÇÃO (Listener do novo botão) *****
+    if (btnChecarPremios && inputTelefoneRecuperar && btnRecuperar && socket) {
+        
+        btnChecarPremios.addEventListener('click', () => {
+            const telefone = inputTelefoneRecuperar.value.trim();
+            
+            if (!/^\d{10,11}$/.test(telefone.replace(/\D/g,''))) {
+                alert("Telefone inválido. Digite apenas números, incluindo o DDD (Ex: 69912345678).");
+                return;
+            }
+
+            // Desabilita os dois botões
+            btnRecuperar.disabled = true;
+            btnChecarPremios.disabled = true;
+            btnChecarPremios.textContent = 'Verificando...';
+
+            socket.emit('checarMeusPremios', { telefone }, (data) => {
+                // Reabilita os botões
+                btnRecuperar.disabled = false;
+                btnChecarPremios.disabled = false;
+                btnChecarPremios.textContent = 'Verificar Prêmios';
+
+                if (data.success) {
+                    // SUCESSO! Encontrou prêmios.
+                    criarModalPremios(data.premios);
+                } else {
+                    // FALHA! Não encontrou.
+                    alert(data.message || 'Nenhum prêmio encontrado para este telefone.');
+                }
+            });
+        });
+    }
+    // ***** FIM DA ATUALIZAÇÃO (Listener do novo botão) *****
+    
     // ==========================================================
     // ===== FIM DO NOVO CÓDIGO "RECUPERAR CARTELAS" =====
     // ==========================================================
