@@ -264,7 +264,7 @@ if (SESSION_SECRET === 'seu_segredo_muito_secreto_e_longo_troque_isso!') { conso
 app.use(session({ store: store, secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true, sameSite: 'lax' } }));
 
 // ==========================================================
-// *** WEBHOOK ATUALIZADO (LÓGICA DE PREÇO DINÂMICO) ***
+// *** WEBHOOK ATUALIZADO (CORREÇÃO DE LÓGICA) ***
 // ==========================================================
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req, res) => {
     console.log("Webhook do Mercado Pago recebido!");
@@ -358,18 +358,20 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
                         try {
                             // ==========================================================
-                            // ===== INÍCIO DA ATUALIZAÇÃO (LÓGICA DE PREÇO) =====
+                            // ===== INÍCIO DA CORREÇÃO (BUG 1 - LÓGICA DE PREÇO) =====
                             // ==========================================================
                             const sorteioIdAlvo = parseInt(dadosCompra.sorteioId);
                             let precoUnitarioAtual = 0;
 
-                            // Verifica se é o sorteio regular (ID = numeroDoSorteio)
-                            if (sorteioIdAlvo === numeroDoSorteio) {
+                            // Verifica se é o sorteio regular (ID = numeroDoSorteio ATUAL ou ANTERIOR)
+                            // Isso corrige o bug de webhooks atrasados
+                            if (sorteioIdAlvo === numeroDoSorteio || sorteioIdAlvo === (numeroDoSorteio - 1)) {
                                 const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
                                 precoUnitarioAtual = parseFloat(precoRes.rows[0].valor || '5.00');
                                 console.log(`Webhook: Venda para Sorteio REGULAR #${sorteioIdAlvo}. Preço unitário: ${precoUnitarioAtual}`);
                             } else {
                                 // É um sorteio agendado, busca o preço na tabela
+                                // Permite 'VENDENDO' ou 'EM_SORTEIO' (caso o webhook chegue após o fechamento das vendas)
                                 const precoRes = await db.query("SELECT preco_cartela FROM sorteios_agendados WHERE id = $1 AND (status = 'VENDENDO' OR status = 'EM_SORTEIO')", [sorteioIdAlvo]);
                                 if (precoRes.rows.length === 0) {
                                     throw new Error(`Sorteio agendado ID #${sorteioIdAlvo} não encontrado ou não está à venda.`);
@@ -380,7 +382,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
                             const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
                             // ==========================================================
-                            // ===== FIM DA ATUALIZAÇÃO (LÓGICA DE PREÇO) =====
+                            // ===== FIM DA CORREÇÃO (BUG 1 - LÓGICA DE PREÇO) =====
                             // ==========================================================
 
                             const cartelasGeradas = [];
@@ -1000,6 +1002,15 @@ app.post('/admin/api/agendamentos/criar', checkAdmin, async (req, res) => {
         const result = await db.query(query, [nome, premioLinha, premioCheia, precoCartela, dataSorteio, dataAbertura]);
         
         console.log(`Admin ${req.session.usuario} agendou o sorteio ${nome} (ID: ${result.rows[0].id})`);
+        
+        // ==========================================================
+        // ===== INÍCIO DA CORREÇÃO (BUG 3 - CHAMA O AGENDADOR) =====
+        // ==========================================================
+        verificarAgendamentos(); // Chama o agendador imediatamente
+        // ==========================================================
+        // ===== FIM DA CORREÇÃO (BUG 3 - CHAMA O AGENDADOR) =====
+        // ==========================================================
+        
         res.status(201).json({ success: true, message: "Sorteio agendado com sucesso!" });
 
     } catch (err) {
