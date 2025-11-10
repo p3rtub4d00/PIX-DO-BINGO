@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabelaCorpo = document.getElementById('tabela-agendamentos-corpo');
     const statusMensagem = document.getElementById('agendar-status');
 
-    // --- Campos do Formulário ---
+    // --- Campos do Formulário de Criação ---
     const inputNome = document.getElementById('sorteio-nome');
     const inputPremioLinha = document.getElementById('sorteio-premio-linha');
     const inputPremioCheia = document.getElementById('sorteio-premio-cheia');
@@ -13,6 +13,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputDataAbertura = document.getElementById('sorteio-data-abertura');
     const inputDataSorteio = document.getElementById('sorteio-data-sorteio');
     const btnAgendar = document.getElementById('btn-agendar-sorteio');
+
+    // ==========================================================
+    // ===== INÍCIO DA ATUALIZAÇÃO (SELETORES DO MODAL) =====
+    // ==========================================================
+    // --- Seletores do Modal de Edição ---
+    const modalEditar = document.getElementById('modal-editar-agendamento');
+    const modalEditarTitulo = document.getElementById('modal-editar-titulo');
+    const modalEditarForm = document.getElementById('form-editar-sorteio');
+    const modalEditarId = document.getElementById('modal-editar-id');
+    const modalEditarNome = document.getElementById('modal-editar-nome');
+    const modalEditarPremioLinha = document.getElementById('modal-editar-premio-linha');
+    const modalEditarPremioCheia = document.getElementById('modal-editar-premio-cheia');
+    const modalEditarPrecoCartela = document.getElementById('modal-editar-preco-cartela');
+    const modalEditarDataAbertura = document.getElementById('modal-editar-data-abertura');
+    const modalEditarDataSorteio = document.getElementById('modal-editar-data-sorteio');
+    const btnSalvarEdicao = document.getElementById('btn-salvar-edicao');
+    const btnFecharModal = document.getElementById('modal-editar-fechar');
+    const editarStatusMensagem = document.getElementById('editar-status');
+    // ==========================================================
+    // ===== FIM DA ATUALIZAÇÃO (SELETORES DO MODAL) =====
+    // ==========================================================
+
 
     // --- Funções Auxiliares ---
 
@@ -24,11 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Função para exibir mensagens de status
-    function mostrarStatus(mensagem, sucesso = true) {
-        statusMensagem.textContent = mensagem;
-        statusMensagem.className = sucesso ? 'status-message status-success' : 'status-message status-error';
-        statusMensagem.style.display = 'block';
-        setTimeout(() => { statusMensagem.style.display = 'none'; }, 5000);
+    function mostrarStatus(elemento, mensagem, sucesso = true) {
+        elemento.textContent = mensagem;
+        elemento.className = sucesso ? 'status-message status-success' : 'status-message status-error';
+        elemento.style.display = 'block';
+        setTimeout(() => { elemento.style.display = 'none'; }, 5000);
     }
 
     // --- Carregar Agendamentos ---
@@ -59,9 +81,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     switch (sorteio.status) {
                         case 'AGENDADO': statusClass = 'status-pendente'; break;
                         case 'VENDENDO': statusClass = 'status-pago'; break; // Reusa a classe verde
+                        case 'EM_SORTEIO': statusClass = 'status-pendente'; break;
                         case 'CONCLUIDO': statusClass = 'status-pago'; break; // TODO: Mudar para cinza
                         default: statusClass = 'status-pendente';
                     }
+
+                    // ==========================================================
+                    // ===== INÍCIO DA ATUALIZAÇÃO (BOTÕES DE AÇÃO) =====
+                    // ==========================================================
+                    
+                    // Lógica para desabilitar botões
+                    const podeDeletar = sorteio.status === 'AGENDADO';
+                    const podeEditar = sorteio.status === 'AGENDADO' || sorteio.status === 'VENDENDO';
 
                     linha.innerHTML = `
                         <td>${sorteio.id}</td>
@@ -72,12 +103,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${sorteio.data_sorteio_f}</td>
                         <td><span class="status-pagamento ${statusClass}">${sorteio.status}</span></td>
                         <td class="col-acao">
-                            ${sorteio.status === 'AGENDADO' ? 
-                                `<button class="btn-perigo btn-deletar-agendamento" data-id="${sorteio.id}" style="font-size: 0.85em; padding: 5px 10px;">Deletar</button>` :
-                                `<button class="btn-pago" disabled style="font-size: 0.85em; padding: 5px 10px;">-</button>`
-                            }
+                            <button 
+                                class="btn-editar" 
+                                data-id="${sorteio.id}" 
+                                ${!podeEditar ? 'disabled' : ''}
+                                title="${podeEditar ? 'Editar Sorteio' : 'Não é possível editar um sorteio que está em andamento ou concluído'}"
+                            >Editar</button>
+                            <button 
+                                class="btn-deletar-agendamento" 
+                                data-id="${sorteio.id}" 
+                                ${!podeDeletar ? 'disabled' : ''}
+                                title="${podeDeletar ? 'Deletar Sorteio' : 'Só é possível deletar sorteios com status AGENDADO'}"
+                            >Deletar</button>
                         </td>
                     `;
+                    // ==========================================================
+                    // ===== FIM DA ATUALIZAÇÃO (BOTÕES DE AÇÃO) =====
+                    // ==========================================================
+                    
                     tabelaCorpo.appendChild(linha);
                 });
             } else {
@@ -104,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Validação simples
         if (new Date(dadosSorteio.dataAbertura) >= new Date(dadosSorteio.dataSorteio)) {
-            mostrarStatus("A data de abertura das vendas deve ser ANTERIOR à data do sorteio.", false);
+            mostrarStatus(statusMensagem, "A data de abertura das vendas deve ser ANTERIOR à data do sorteio.", false);
             return;
         }
 
@@ -120,22 +163,118 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                mostrarStatus('Sorteio agendado com sucesso!', true);
+                mostrarStatus(statusMensagem, 'Sorteio agendado com sucesso!', true);
                 formAgendar.reset();
                 carregarAgendamentos(); // Atualiza a lista
             } else {
                 throw new Error(data.message || 'Erro desconhecido ao agendar.');
             }
         } catch (error) {
-            mostrarStatus(error.message, false);
+            mostrarStatus(statusMensagem, error.message, false);
         } finally {
             btnAgendar.disabled = false;
             btnAgendar.textContent = 'Agendar Sorteio';
         }
     });
 
-    // --- Listener para Deletar Agendamento (Delegação de Evento) ---
+    // ==========================================================
+    // ===== INÍCIO DA ATUALIZAÇÃO (LÓGICA DO MODAL DE EDIÇÃO) =====
+    // ==========================================================
+
+    // Função para fechar o modal
+    function fecharModalEdicao() {
+        if (modalEditar) modalEditar.style.display = 'none';
+        if (editarStatusMensagem) editarStatusMensagem.style.display = 'none';
+        if (modalEditarForm) modalEditarForm.reset();
+    }
+
+    // Adiciona listener para fechar o modal
+    if(btnFecharModal) btnFecharModal.addEventListener('click', fecharModalEdicao);
+    if(modalEditar) modalEditar.addEventListener('click', (e) => {
+        if (e.target === modalEditar) fecharModalEdicao();
+    });
+
+    // Função para abrir o modal e preencher com dados
+    async function abrirModalEdicao(id) {
+        try {
+            const response = await fetch(`/admin/api/agendamentos/${id}`);
+            if (!response.ok) throw new Error('Falha ao buscar dados do sorteio.');
+            
+            const data = await response.json();
+            if (!data.success) throw new Error(data.message);
+            
+            const sorteio = data.sorteio;
+
+            // Preenche o formulário
+            modalEditarTitulo.textContent = `Editar Sorteio #${sorteio.id}`;
+            modalEditarId.value = sorteio.id;
+            modalEditarNome.value = sorteio.nome_sorteio;
+            modalEditarPremioLinha.value = sorteio.premio_linha;
+            modalEditarPremioCheia.value = sorteio.premio_cheia;
+            modalEditarPrecoCartela.value = sorteio.preco_cartela;
+            modalEditarDataAbertura.value = sorteio.data_abertura_vendas_input;
+            modalEditarDataSorteio.value = sorteio.data_sorteio_input;
+            
+            // Exibe o modal
+            modalEditar.style.display = 'flex';
+            
+        } catch (error) {
+            // Usa o status de agendamento principal para mostrar o erro
+            mostrarStatus(statusMensagem, error.message, false);
+        }
+    }
+
+    // Listener do formulário de EDIÇÃO
+    modalEditarForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = modalEditarId.value;
+
+        const dadosSorteio = {
+            nome: modalEditarNome.value,
+            premioLinha: parseFloat(modalEditarPremioLinha.value),
+            premioCheia: parseFloat(modalEditarPremioCheia.value),
+            precoCartela: parseFloat(modalEditarPrecoCartela.value),
+            dataAbertura: modalEditarDataAbertura.value,
+            dataSorteio: modalEditarDataSorteio.value
+        };
+
+        if (new Date(dadosSorteio.dataAbertura) >= new Date(dadosSorteio.dataSorteio)) {
+            mostrarStatus(editarStatusMensagem, "A data de abertura deve ser ANTERIOR à data do sorteio.", false);
+            return;
+        }
+
+        btnSalvarEdicao.disabled = true;
+        btnSalvarEdicao.textContent = 'Salvando...';
+
+        try {
+            const response = await fetch(`/admin/api/agendamentos/editar/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(dadosSorteio),
+            });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                mostrarStatus(editarStatusMensagem, 'Sorteio atualizado com sucesso!', true);
+                setTimeout(() => {
+                    fecharModalEdicao();
+                    carregarAgendamentos(); // Atualiza a lista na página principal
+                }, 1500);
+            } else {
+                throw new Error(data.message || 'Erro desconhecido ao salvar.');
+            }
+        } catch (error) {
+            mostrarStatus(editarStatusMensagem, error.message, false);
+        } finally {
+            btnSalvarEdicao.disabled = false;
+            btnSalvarEdicao.textContent = 'Salvar Alterações';
+        }
+    });
+
+    // --- Listener para Deletar E EDITAR (Delegação de Evento) ---
     tabelaCorpo.addEventListener('click', async (e) => {
+        
+        // --- Botão DELETAR ---
         if (e.target.classList.contains('btn-deletar-agendamento')) {
             const id = e.target.dataset.id;
             const nomeSorteio = e.target.closest('tr').cells[1].textContent;
@@ -153,19 +292,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await response.json();
                     
                     if(response.ok && data.success) {
-                        mostrarStatus('Agendamento deletado com sucesso.', true);
+                        mostrarStatus(statusMensagem, 'Agendamento deletado com sucesso.', true);
                         carregarAgendamentos(); // Recarrega a lista
                     } else {
                         throw new Error(data.message || 'Erro ao deletar.');
                     }
                 } catch (error) {
-                    mostrarStatus(error.message, false);
+                    mostrarStatus(statusMensagem, error.message, false);
                     e.target.disabled = false;
                     e.target.textContent = 'Deletar';
                 }
             }
         }
+
+        // --- Botão EDITAR ---
+        if (e.target.classList.contains('btn-editar')) {
+            const id = e.target.dataset.id;
+            abrirModalEdicao(id);
+        }
     });
+    
+    // ==========================================================
+    // ===== FIM DA ATUALIZAÇÃO (LÓGICA DO MODAL DE EDIÇÃO) =====
+    // ==========================================================
+
 
     // --- Carregamento Inicial ---
     carregarAgendamentos();
