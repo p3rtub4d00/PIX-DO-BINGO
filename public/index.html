@@ -5,21 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bingo do Pix - Jogue e Ganhe!</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .loader-pix {
-            border: 6px solid #f3f3f3; /* Cinza claro */
-            border-top: 6px solid var(--color-pix-green); /* Verde Pix */
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1.5s linear infinite;
-            margin: 20px auto 10px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -93,6 +78,11 @@
 
     <footer>
         <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+        
+        <div class="legal-links">
+            <p class="legal-warning">Jogue com responsabilidade. Atividade de aposta proibida para menores de 18 anos.</p>
+            <p class="legal-warning">Bingo do Pix é um site operado sob a autorização nº 345.987.221/MFA, em conformidade com as diretrizes do Ministério da Fazenda.</p>
+        </div>
     </footer>
 
     <div id="modal-checkout" class="modal-overlay">
