@@ -362,10 +362,14 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                             // ==========================================================
                             const sorteioIdAlvo = parseInt(dadosCompra.sorteioId);
                             let precoUnitarioAtual = 0;
+                            
+                            // *** CORREÇÃO: Pega o ID do sorteio regular da config, não da variável global
+                            const configSorteioAtual = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['numero_sorteio_atual']);
+                            const idSorteioRegularDB = parseInt(configSorteioAtual.rows[0].valor);
 
-                            // Verifica se é o sorteio regular (ID = numeroDoSorteio ATUAL ou ANTERIOR)
+                            // Verifica se é o sorteio regular (ID = idSorteioRegularDB ATUAL ou ANTERIOR)
                             // Isso corrige o bug de webhooks atrasados
-                            if (sorteioIdAlvo === numeroDoSorteio || sorteioIdAlvo === (numeroDoSorteio - 1)) {
+                            if (sorteioIdAlvo === idSorteioRegularDB || sorteioIdAlvo === (idSorteioRegularDB - 1)) {
                                 const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
                                 precoUnitarioAtual = parseFloat(precoRes.rows[0].valor || '5.00');
                                 console.log(`Webhook: Venda para Sorteio REGULAR #${sorteioIdAlvo}. Preço unitário: ${precoUnitarioAtual}`);
@@ -523,7 +527,7 @@ res.status(500).json({ success: false, message: "Erro ao buscar configurações.
 });
 
 // ==========================================================
-// ===== INÍCIO DA ATUALIZAÇÃO (API DE SORTEIOS DISPONÍVEIS) =====
+// ===== INÍCIO DA CORREÇÃO (BUG 2 - API DE SORTEIOS) =====
 // ==========================================================
 app.get('/api/sorteios-disponiveis', async (req, res) => {
     try {
@@ -532,14 +536,26 @@ app.get('/api/sorteios-disponiveis', async (req, res) => {
         // 1. Busca o Sorteio Regular (o da rodada atual)
         // Se o jogo regular não estiver pausado, adiciona ele na lista
         if (!sorteioRegularPausado) {
+            
+            // *** CORREÇÃO: O ID de venda é SEMPRE o próximo sorteio
+            const idSorteioRegularParaVenda = (estadoJogo === 'ESPERANDO') ? numeroDoSorteio : numeroDoSorteio + 1;
+            
+            // *** CORREÇÃO: O status de exibição depende do estado do jogo
+            const statusDisplay = (estadoJogo === 'ESPERANDO') ? `Em ${tempoRestante} seg` : 'AO VIVO';
+            
+            // *** CORREÇÃO: O nome de exibição também muda
+            const nomeDisplay = (estadoJogo === 'ESPERANDO') 
+                ? `Sorteio Regular #${idSorteioRegularParaVenda}`
+                : `Próximo Sorteio #${idSorteioRegularParaVenda}`;
+
             const sorteioRegular = {
-                id: numeroDoSorteio, // Usa o ID global do sorteio atual
-                nome_sorteio: `Sorteio Regular #${numeroDoSorteio}`,
+                id: idSorteioRegularParaVenda, // Usa o ID correto para a VENDA
+                nome_sorteio: nomeDisplay,
                 premio_linha: parseFloat(PREMIO_LINHA),
                 premio_cheia: parseFloat(PREMIO_CHEIA),
                 preco_cartela: parseFloat(PRECO_CARTELA),
-                data_sorteio_f: (estadoJogo === 'ESPERANDO') ? `Em ${tempoRestante} seg` : 'AO VIVO',
-                status: estadoJogo, // 'ESPERANDO', 'JOGANDO_LINHA', etc.
+                data_sorteio_f: statusDisplay, // Mostra o status real
+                status: estadoJogo,
                 is_regular: true
             };
             sorteiosDisponiveis.push(sorteioRegular);
@@ -573,7 +589,7 @@ app.get('/api/sorteios-disponiveis', async (req, res) => {
     }
 });
 // ==========================================================
-// ===== FIM DA ATUALIZAÇÃO (API DE SORTEIOS DISPONÍVEIS) =====
+// ===== FIM DA CORREÇÃO (BUG 2 - API DE SORTEIOS) =====
 // ==========================================================
 
 
@@ -631,7 +647,6 @@ else { console.log("Acesso negado à área admin. Redirecionando para login."); 
 }
 app.get('/admin/painel.html', checkAdmin, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin', 'painel.html')); });
 app.get('/admin/logout', (req, res) => { req.session.destroy((err) => { if (err) { console.error("Erro ao fazer logout:", err); return res.status(500).send("Erro ao sair."); } console.log("Usuário admin deslogado."); res.clearCookie('connect.sid'); res.redirect('/admin/login.html'); }); });
-
 // Convertido para 'async'
 app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
 try {
@@ -710,11 +725,28 @@ client.release(); // Libera a conexão de volta para o pool
 app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
 const { quantidade, nome, telefone } = req.body;
 if (!nome || nome.trim() === '') { return res.status(400).json({ success: false, message: 'O Nome do Jogador é obrigatório.' }); }
-let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+
+// ==========================================================
+// ===== INÍCIO DA CORREÇÃO (BUG 2 - GERADOR MANUAL) =====
+// ==========================================================
+// A venda manual agora sempre vai para o PRÓXIMO sorteio regular
+let sorteioAlvo = (estadoJogo === "ESPERANDO" && !sorteioEspecialAtivo) ? numeroDoSorteio : numeroDoSorteio + 1;
+// ==========================================================
+// ===== FIM DA CORREÇÃO (BUG 2 - GERADOR MANUAL) =====
+// ==========================================================
+
 console.log(`Admin ${req.session.usuario} está registrando ${quantidade} cartelas para '${nome}' (Tel: ${telefone}) no Sorteio #${sorteioAlvo}.`);
 if (!quantidade || quantidade < 1 || quantidade > 100) { return res.status(400).json({ success: false, message: 'Quantidade inválida (1-100).' }); }
 try {
-const precoUnitarioAtual = parseFloat(PRECO_CARTELA); const valorTotal = quantidade * precoUnitarioAtual; 
+// ==========================================================
+// ===== INÍCIO DA CORREÇÃO (BUG 2 - PREÇO MANUAL) =====
+// ==========================================================
+// Usa o PREÇO_CARTELA do sorteio regular, não importa o que esteja acontecendo
+const precoUnitarioAtual = parseFloat(configuracoesPadrao.preco_cartela); 
+const valorTotal = quantidade * precoUnitarioAtual; 
+// ==========================================================
+// ===== FIM DA CORREÇÃO (BUG 2 - PREÇO MANUAL) =====
+// ==========================================================
 
 const cartelasGeradas = [];
 for (let i = 0; i < quantidade; i++) { cartelasGeradas.push(gerarDadosCartela(sorteioAlvo)); }
@@ -1146,10 +1178,17 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
     if (!nome || !quantidade || quantidade < 1) {
         return res.status(400).json({ success: false, message: 'Nome do jogador e quantidade são obrigatórios.' });
     }
-
-    const precoUnitario = parseFloat(PRECO_CARTELA);
+    
+    // ==========================================================
+    // ===== INÍCIO DA CORREÇÃO (BUG 2 - PREÇO CAMBISTA) =====
+    // ==========================================================
+    const precoUnitario = parseFloat(configuracoesPadrao.preco_cartela); // Usa o preço padrão
     const custoTotal = quantidade * precoUnitario;
-    let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+    let sorteioAlvo = (estadoJogo === "ESPERANDO" && !sorteioEspecialAtivo) ? numeroDoSorteio : numeroDoSorteio + 1;
+    // ==========================================================
+    // ===== FIM DA CORREÇÃO (BUG 2 - PREÇO CAMBISTA) =====
+    // ==========================================================
+
 
     const client = await pool.connect();
     try {
@@ -1479,7 +1518,6 @@ const ultimos = await getUltimosVencedoresDoDB(); // 'await'
 io.emit('atualizarVencedores', ultimos);
 } catch (err) { console.error("Erro ao salvar vencedor no DB:", err); }
 }
-
 // ==========================================================
 // ===== INÍCIO DA ATUALIZAÇÃO (FUNÇÃO 'terminarRodada') =====
 // ==========================================================
@@ -1597,7 +1635,13 @@ jogadoresReais: getContagemJogadores().reais
 };
 
 try {
-const proximoSorteioId = (estadoJogo === "ESPERANDO" && !sorteioEspecialAtivo) ? (numeroDoSorteio + 1) : numeroDoSorteio;
+// ==========================================================
+// ===== INÍCIO DA CORREÇÃO (BUG 2 - STATUS ADMIN) =====
+// ==========================================================
+const proximoSorteioId = (estadoJogo === "ESPERANDO" && !sorteioEspecialAtivo) ? numeroDoSorteio : (numeroDoSorteio + 1);
+// ==========================================================
+// ===== FIM DA CORREÇÃO (BUG 2 - STATUS ADMIN) =====
+// ==========================================================
 
 const vendasProximoRes = await db.query(`
            SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
@@ -1670,11 +1714,23 @@ const sorteioIdNum = parseInt(sorteioId);
 let precoUnitarioAtual = 0;
 let nomeSorteioDesc = "";
 
-if (sorteioIdNum === numeroDoSorteio) {
+// ==========================================================
+// ===== INÍCIO DA CORREÇÃO (BUG 2 - PREÇO PAGAMENTO) =====
+// ==========================================================
+// *** CORREÇÃO: Pega o ID do sorteio regular da config, não da variável global
+const configSorteioAtual = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['numero_sorteio_atual']);
+const idSorteioRegularDB = parseInt(configSorteioAtual.rows[0].valor);
+const idProximoSorteioRegular = (estadoJogo === 'ESPERANDO' && !sorteioEspecialAtivo) ? idSorteioRegularDB : idSorteioRegularDB + 1;
+
+if (sorteioIdNum === idProximoSorteioRegular) {
     // É o sorteio REGULAR
-    precoUnitarioAtual = parseFloat(PRECO_CARTELA);
+    precoUnitarioAtual = parseFloat(configuracoesPadrao.preco_cartela);
     nomeSorteioDesc = `Sorteio Regular #${sorteioIdNum}`;
 } else {
+// ==========================================================
+// ===== FIM DA CORREÇÃO (BUG 2 - PREÇO PAGAMENTO) =====
+// ==========================================================
+
     // É um sorteio AGENDADO
     const precoRes = await db.query("SELECT preco_cartela, nome_sorteio FROM sorteios_agendados WHERE id = $1 AND status = 'VENDENDO'", [sorteioIdNum]);
     if (precoRes.rows.length === 0) {
@@ -1747,7 +1803,7 @@ callback({ success: false, message: error.message || 'Erro ao gerar QR Code.' })
 // ==========================================================
 
 // ==========================================================
-// ===== OUVINTE "BUSCAR CARTELAS POR TELEFONE" (MODIFICADO) =====
+// ===== OUVINTE "BUSCAR CARTELAS POR TELEFONE" (CORRIGIDO) =====
 // ==========================================================
 socket.on('buscarCartelasPorTelefone', async (data, callback) => {
     const { telefone } = data;
@@ -1759,11 +1815,24 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
     console.log(`Servidor: Buscando cartelas para o telefone ${telefone}`);
 
     try {
-        // Determina o ID do próximo sorteio
-        const proximoSorteioId = (estadoJogo === "ESPERANDO" && !sorteioEspecialAtivo) ? numeroDoSorteio : (numeroDoSorteio + 1);
+        // ==========================================================
+        // ===== INÍCIO DA CORREÇÃO (BUG 1 - RECUPERAR CARTELAS) =====
+        // ==========================================================
+        
+        // 1. Busca o ID do sorteio regular que está à venda
+        const idProximoSorteioRegular = (estadoJogo === "ESPERANDO" && !sorteioEspecialAtivo) ? numeroDoSorteio : (numeroDoSorteio + 1);
 
-        // ***** INÍCIO DA ATUALIZAÇÃO *****
-        // Query modificada: remove 'AND sorteio_id >= $2', aumenta o LIMIT e remove o parâmetro $2
+        // 2. Busca IDs de todos os sorteios agendados que estão 'VENDENDO'
+        const agendadosRes = await db.query("SELECT id FROM sorteios_agendados WHERE status = 'VENDENDO'");
+        const idsSorteiosAgendados = agendadosRes.rows.map(r => r.id);
+        
+        // 3. Junta todos os IDs de sorteios válidos (para os quais o cliente pode entrar na sala de espera)
+        const idsSorteiosValidos = [idProximoSorteioRegular, ...idsSorteiosAgendados];
+        
+        // ==========================================================
+        // ===== FIM DA CORREÇÃO (BUG 1 - RECUPERAR CARTELAS) =====
+        // ==========================================================
+        
         const query = `
             SELECT 
                 id, 
@@ -1776,10 +1845,8 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
             ORDER BY sorteio_id DESC, timestamp DESC
             LIMIT 20; 
         `;
-        // NOTA: Removi 'AND sorteio_id >= $2' e aumentei o limite para 20
         
         const res = await db.query(query, [telefone]);
-        // ***** FIM DA ATUALIZAÇÃO *****
 
         if (res.rows.length > 0) {
             // Encontrou! Retorna a lista de vendas.
@@ -1787,7 +1854,8 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
                 callback({ 
                     success: true, 
                     vendas: res.rows,
-                    proximoSorteioId: proximoSorteioId // Envia o ID do próximo sorteio
+                    // *** CORREÇÃO: Envia a lista de todos os sorteios válidos
+                    sorteiosValidos: idsSorteiosValidos 
                 });
             }
         } else {
