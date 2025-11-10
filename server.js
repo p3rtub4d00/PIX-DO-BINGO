@@ -1000,7 +1000,9 @@ app.get('/admin/api/agendamentos', checkAdmin, async (req, res) => {
                 preco_cartela,
                 to_char(data_sorteio AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI') as data_sorteio_f,
                 to_char(data_abertura_vendas AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI') as data_abertura_f,
-                status
+                status,
+                data_sorteio, 
+                data_abertura_vendas
             FROM sorteios_agendados
             ORDER BY data_sorteio DESC
         `;
@@ -1011,6 +1013,106 @@ app.get('/admin/api/agendamentos', checkAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: "Erro ao buscar agendamentos." });
     }
 });
+
+// ==========================================================
+// ===== INÍCIO DA ATUALIZAÇÃO (NOVA ROTA EDITAR) =====
+// ==========================================================
+// API PARA BUSCAR DADOS DE UM ÚNICO SORTEIO (para preencher o modal de edição)
+app.get('/admin/api/agendamentos/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const query = `
+            SELECT 
+                id,
+                nome_sorteio,
+                premio_linha,
+                premio_cheia,
+                preco_cartela,
+                data_sorteio,
+                data_abertura_vendas,
+                status
+            FROM sorteios_agendados
+            WHERE id = $1
+        `;
+        const result = await db.query(query, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Sorteio não encontrado." });
+        }
+        
+        // Formata as datas para o input datetime-local (YYYY-MM-DDTHH:MI)
+        const sorteio = result.rows[0];
+        
+        const formatarDataParaInput = (data) => {
+            const d = new Date(data);
+            const pad = (num) => (num < 10 ? '0' + num : num);
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+
+        sorteio.data_sorteio_input = formatarDataParaInput(sorteio.data_sorteio);
+        sorteio.data_abertura_vendas_input = formatarDataParaInput(sorteio.data_abertura_vendas);
+
+        res.json({ success: true, sorteio: sorteio });
+        
+    } catch (err) {
+        console.error("Erro ao buscar dados do sorteio:", err);
+        res.status(500).json({ success: false, message: "Erro ao buscar dados do sorteio." });
+    }
+});
+
+// API PARA ATUALIZAR (EDITAR) UM SORTEIO AGENDADO
+app.put('/admin/api/agendamentos/editar/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { nome, premioLinha, premioCheia, precoCartela, dataSorteio, dataAbertura } = req.body;
+
+    // Validação básica
+    if (!nome || !premioLinha || !premioCheia || !precoCartela || !dataSorteio || !dataAbertura) {
+        return res.status(400).json({ success: false, message: "Todos os campos são obrigatórios." });
+    }
+    if (new Date(dataAbertura) >= new Date(dataSorteio)) {
+        return res.status(400).json({ success: false, message: "A data de abertura das vendas deve ser ANTERIOR à data do sorteio." });
+    }
+    
+    try {
+        // Verifica se o sorteio pode ser editado (não "CONCLUIDO" ou "EM_SORTEIO")
+        const statusRes = await db.query("SELECT status FROM sorteios_agendados WHERE id = $1", [id]);
+        if (statusRes.rows.length === 0) {
+             return res.status(404).json({ success: false, message: "Sorteio não encontrado." });
+        }
+        
+        const status = statusRes.rows[0].status;
+        if (status === 'CONCLUIDO' || status === 'EM_SORTEIO') {
+             return res.status(400).json({ success: false, message: `Não é possível editar um sorteio com status "${status}".` });
+        }
+
+        const query = `
+            UPDATE sorteios_agendados SET
+                nome_sorteio = $1,
+                premio_linha = $2,
+                premio_cheia = $3,
+                preco_cartela = $4,
+                data_sorteio = $5,
+                data_abertura_vendas = $6
+            WHERE id = $7
+        `;
+        await db.query(query, [nome, premioLinha, premioCheia, precoCartela, dataSorteio, dataAbertura, id]);
+        
+        console.log(`Admin ${req.session.usuario} editou o sorteio ${nome} (ID: ${id})`);
+        
+        // Força o agendador a rodar para reavaliar o status (ex: se a data mudou)
+        verificarAgendamentos(); 
+        
+        res.json({ success: true, message: "Sorteio atualizado com sucesso!" });
+
+    } catch (err) {
+        console.error("Erro ao editar agendamento:", err);
+        res.status(500).json({ success: false, message: "Erro interno ao salvar as alterações." });
+    }
+});
+// ==========================================================
+// ===== FIM DA ATUALIZAÇÃO (NOVAS ROTAS EDITAR) =====
+// ==========================================================
+
 
 // API PARA CRIAR NOVO SORTEIO AGENDADO
 app.post('/admin/api/agendamentos/criar', checkAdmin, async (req, res) => {
@@ -1259,7 +1361,6 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
 // ==========================================================
 // *** LÓGICA DO JOGO (SOCKET.IO) (Funções auxiliares) ***
 // ==========================================================
-
 // Constantes do Jogo
 const TEMPO_ENTRE_NUMEROS = 5000;
 const MAX_VENCEDORES_HISTORICO = 10;
@@ -1518,6 +1619,7 @@ const ultimos = await getUltimosVencedoresDoDB(); // 'await'
 io.emit('atualizarVencedores', ultimos);
 } catch (err) { console.error("Erro ao salvar vencedor no DB:", err); }
 }
+
 // ==========================================================
 // ===== INÍCIO DA ATUALIZAÇÃO (FUNÇÃO 'terminarRodada') =====
 // ==========================================================
