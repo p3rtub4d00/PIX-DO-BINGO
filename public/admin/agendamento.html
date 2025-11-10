@@ -5,6 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agendamento de Sorteios - Admin</title>
     <link rel="stylesheet" href="admin.css">
+    <style>
+        .modal-overlay {
+            display: none; 
+            position: fixed; 
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); 
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--color-bg-white);
+            margin: auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-medium);
+            width: 90%;
+            max-width: 600px; /* Um pouco maior para o formulário */
+            text-align: left;
+            position: relative;
+        }
+        .modal-close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+        .modal-close:hover,
+        .modal-close:focus {
+            color: var(--color-text-heading);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-content h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .btn-editar {
+            background-color: var(--color-accent-blue);
+            color: #fff; border: none; padding: 5px 10px; font-size: 0.85em; 
+            border-radius: 4px; cursor: pointer; font-weight: bold;
+            margin-right: 5px; /* Espaço entre botões */
+        }
+        .btn-editar:hover {
+             background-color: #0056b3;
+        }
+        .btn-deletar-agendamento {
+             background-color: #dc3545; color: #fff; border: none; padding: 5px 10px; font-size: 0.85em; 
+             border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        .btn-deletar-agendamento:hover {
+            background-color: #c82333;
+        }
+    </style>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body class="admin-panel-body">
@@ -93,7 +154,45 @@
             </div>
         </section>
     </main>
-    
+
+    <div id="modal-editar-agendamento" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" id="modal-editar-fechar">&times;</span>
+            <h2 id="modal-editar-titulo">Editar Sorteio #...</h2>
+            
+            <form id="form-editar-sorteio">
+                <input type="hidden" id="modal-editar-id">
+                
+                <div class="form-grupo">
+                    <label for="modal-editar-nome">Nome do Sorteio:</label>
+                    <input type="text" id="modal-editar-nome" required>
+                </div>
+                <div class="form-grupo">
+                    <label for="modal-editar-premio-linha">Prêmio Linha (R$):</label>
+                    <input type="number" id="modal-editar-premio-linha" step="0.01" min="0" required>
+                </div>
+                <div class="form-grupo">
+                    <label for="modal-editar-premio-cheia">Prêmio Cheia (R$):</label>
+                    <input type="number" id="modal-editar-premio-cheia" step="0.01" min="1" required>
+                </div>
+                <div class="form-grupo">
+                    <label for="modal-editar-preco-cartela">Preço da Cartela (R$):</label>
+                    <input type="number" id="modal-editar-preco-cartela" step="0.01" min="1" required>
+                </div>
+                <div class="form-grupo">
+                    <label for="modal-editar-data-abertura">Início das Vendas:</label>
+                    <input type="datetime-local" id="modal-editar-data-abertura" required>
+                </div>
+                <div class="form-grupo">
+                    <label for="modal-editar-data-sorteio">Data do Sorteio:</label>
+                    <input type="datetime-local" id="modal-editar-data-sorteio" required>
+                </div>
+                
+                <button type="submit" id="btn-salvar-edicao" class="btn-comprar btn-destaque" style="width: 100%; margin-top: 20px;">Salvar Alterações</button>
+            </form>
+            <p id="editar-status" class="status-message" style="display: none;"></p>
+        </div>
+    </div>
     <script src="agendamento.js"></script>
 </body>
 </html>
