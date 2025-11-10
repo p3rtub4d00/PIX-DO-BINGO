@@ -76,9 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 botaoTexto = 'Comprar (Próximo)';
                 dataTexto = `<span style="color: red; font-weight: 900;">AO VIVO</span>`;
                 // Adiciona o HTML do botão "Assistir"
-                assistirLinkHtml = `<a href="/dashboard" class="btn-comprar btn-comprar-azul" style="text-align: center; padding: 10px 15px; font-size: 1.1em;">Assistir ao Vivo!</a>`;
+                assistirLinkHtml = `<a href="/dashboard" class="btn-comprar btn-comprar-azul" style="text-align: center; padding: 10px 15px; font-size: 1.1em; text-decoration: none;">Assistir ao Vivo!</a>`;
             } else {
                 botaoTexto = 'Comprar'; 
+                // Adiciona um ID único ao timer do sorteio regular
                 dataTexto = `<span id="regular-sorteio-timer" style="color: var(--color-pix-green); font-weight: 900;">${sorteio.data_sorteio_f}</span>`;
             }
         // ==========================================================
@@ -113,6 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Salva o scroll para não pular a tela
         const scrollAtual = window.scrollY;
+        // Salva o timer atual para evitar "piscar"
+        const timerAtual = document.getElementById('regular-sorteio-timer')?.innerHTML || null;
         
         sorteiosContainer.innerHTML = '<p>Carregando sorteios disponíveis...</p>'; // Feedback
         
@@ -129,6 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const card = criarCardSorteio(sorteio);
                     sorteiosContainer.appendChild(card);
                 });
+                
+                // Restaura o timer se ele existia
+                if (timerAtual) {
+                    const timerEl = document.getElementById('regular-sorteio-timer');
+                    if (timerEl) timerEl.innerHTML = timerAtual;
+                }
+                
             } else {
                 sorteiosContainer.innerHTML = '<p>Nenhum sorteio disponível no momento. Volte mais tarde!</p>';
             }
@@ -346,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // ==========================================================
-        // ===== INÍCIO DA CORREÇÃO (BUG 3 - CRONÔMETRO) =====
+        // ===== INÍCIO DA CORREÇÃO (CRONÔMETRO) =====
         // ==========================================================
         socket.on('cronometroUpdate', (data) => {
             // Esta função agora APENAS atualiza o timer, não recarrega a lista inteira.
@@ -361,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         // ==========================================================
-        // ===== FIM DA CORREÇÃO (BUG 3 - CRONÔMETRO) =====
+        // ===== FIM DA CORREÇÃO (CRONÔMETRO) =====
         // ==========================================================
         
         // Ouvintes de pagamento e aba (sem alteração)
