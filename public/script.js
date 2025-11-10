@@ -67,19 +67,19 @@ document.addEventListener('DOMContentLoaded', () => {
         let dataTexto = sorteio.data_sorteio_f;
 
         if (sorteio.is_regular) {
+            // ==========================================================
+            // ===== INÍCIO DA CORREÇÃO (BUG 2 - LÓGICA DO BOTÃO) =====
+            // ==========================================================
             if (sorteio.status !== 'ESPERANDO') {
-                botaoTexto = 'Comprar (Próximo)';
+                botaoTexto = 'Comprar (Próximo)'; // Correto: Vende para o próximo
                 dataTexto = `<span style="color: red; font-weight: 900;">AO VIVO</span>`;
             } else {
-                // ==========================================================
-                // ===== INÍCIO DA CORREÇÃO (BUG 3 - TIMER AO VIVO) =====
-                // ==========================================================
-                // Adiciona um ID único ao timer do sorteio regular
+                botaoTexto = 'Comprar'; // Correto: Vende para o atual
                 dataTexto = `<span id="regular-sorteio-timer" style="color: var(--color-pix-green); font-weight: 900;">${sorteio.data_sorteio_f}</span>`;
-                // ==========================================================
-                // ===== FIM DA CORREÇÃO (BUG 3 - TIMER AO VIVO) =====
-                // ==========================================================
             }
+            // ==========================================================
+            // ===== FIM DA CORREÇÃO (BUG 2 - LÓGICA DO BOTÃO) =====
+            // ==========================================================
         } else {
             // É agendado
             botaoClasse = 'btn-comprar-azul';
@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     // ==========================================================
-    // ===== CÓDIGO "RECUPERAR CARTELAS" (Sem alterações) =====
+    // ===== CÓDIGO "RECUPERAR CARTELAS" (CORRIGIDO) =====
     // ==========================================================
     
     // 1. Seleciona o novo formulário e o botão
@@ -437,11 +437,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Cria o modal de resultados (mas não o exibe)
     let modalResultados = null; // Guarda a referência do modal
     
-    function criarModalResultados(vendas, proximoSorteioId) {
+    // ==========================================================
+    // ===== INÍCIO DA CORREÇÃO (BUG 1 - RECUPERAR CARTELAS) =====
+    // ==========================================================
+    function criarModalResultados(vendas, sorteiosValidos) {
         // Se o modal já existe, remove
         if (modalResultados) {
             modalResultados.remove();
         }
+    // ==========================================================
+    // ===== FIM DA CORREÇÃO (BUG 1 - RECUPERAR CARTELAS) =====
+    // ==========================================================
 
         // Cria a estrutura do modal
         modalResultados = document.createElement('div');
@@ -457,13 +463,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (vendas && vendas.length > 0) {
             vendas.forEach(venda => {
-                const eProximoSorteio = venda.sorteio_id == proximoSorteioId;
+                // ==========================================================
+                // ===== INÍCIO DA CORREÇÃO (BUG 1 - RECUPERAR CARTELAS) =====
+                // ==========================================================
+                // Verifica se o ID da venda está na lista de sorteios válidos (regulares ou agendados)
+                const eSorteioValido = sorteiosValidos.includes(venda.sorteio_id);
                 
-                const botaoHtml = eProximoSorteio 
+                const botaoHtml = eSorteioValido 
                     ? `<button class="btn-comprar btn-entrar-jogo btn-destaque" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}">
                            Entrar na Sala de Espera
                        </button>`
                     : `<span class="jogo-encerrado-info">Jogo Encerrado</span>`;
+                // ==========================================================
+                // ===== FIM DA CORREÇÃO (BUG 1 - RECUPERAR CARTELAS) =====
+                // ==========================================================
                 
                 // Salva o nome e telefone do jogador da primeira venda válida
                 if (!sessionStorage.getItem('bingo_usuario_nome')) {
@@ -595,7 +608,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnRecuperar.textContent = 'Ver Minhas Compras';
 
                 if (data.success) {
-                    criarModalResultados(data.vendas, data.proximoSorteioId);
+                    // ==========================================================
+                    // ===== INÍCIO DA CORREÇÃO (BUG 1 - RECUPERAR CARTELAS) =====
+                    // ==========================================================
+                    // Passa a lista de IDs de sorteios válidos para o modal
+                    criarModalResultados(data.vendas, data.sorteiosValidos);
+                    // ==========================================================
+                    // ===== FIM DA CORREÇÃO (BUG 1 - RECUPERAR CARTELAS) =====
+                    // ==========================================================
                 } else {
                     alert(data.message || 'Erro ao buscar cartelas.');
                 }
