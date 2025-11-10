@@ -65,21 +65,25 @@ document.addEventListener('DOMContentLoaded', () => {
         let botaoClasse = 'btn-destaque'; // Padrão (verde)
         let botaoTexto = 'Comprar';
         let dataTexto = sorteio.data_sorteio_f;
+        
+        // ==========================================================
+        // ===== INÍCIO DA CORREÇÃO (LINK "ASSISTIR AO VIVO") =====
+        // ==========================================================
+        let assistirLinkHtml = ''; // Por padrão, não há link
 
         if (sorteio.is_regular) {
-            // ==========================================================
-            // ===== INÍCIO DA CORREÇÃO (BUG 2 - LÓGICA DO BOTÃO) =====
-            // ==========================================================
             if (sorteio.status !== 'ESPERANDO') {
-                botaoTexto = 'Comprar (Próximo)'; // Correto: Vende para o próximo
+                botaoTexto = 'Comprar (Próximo)';
                 dataTexto = `<span style="color: red; font-weight: 900;">AO VIVO</span>`;
+                // Adiciona o HTML do botão "Assistir"
+                assistirLinkHtml = `<a href="/dashboard" class="btn-comprar btn-comprar-azul" style="text-align: center; padding: 10px 15px; font-size: 1.1em;">Assistir ao Vivo!</a>`;
             } else {
-                botaoTexto = 'Comprar'; // Correto: Vende para o atual
+                botaoTexto = 'Comprar'; 
                 dataTexto = `<span id="regular-sorteio-timer" style="color: var(--color-pix-green); font-weight: 900;">${sorteio.data_sorteio_f}</span>`;
             }
-            // ==========================================================
-            // ===== FIM DA CORREÇÃO (BUG 2 - LÓGICA DO BOTÃO) =====
-            // ==========================================================
+        // ==========================================================
+        // ===== FIM DA CORREÇÃO (LINK "ASSISTIR AO VIVO") =====
+        // ==========================================================
         } else {
             // É agendado
             botaoClasse = 'btn-comprar-azul';
@@ -96,7 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span>Sorteio: <strong>${dataTexto}</strong></span>
                 </div>
             </div>
-            <button class="btn-comprar btn-jogue ${botaoClasse}">${botaoTexto}</button>
+            <div class="sorteio-botoes-wrapper" style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn-comprar btn-jogue ${botaoClasse}">${botaoTexto}</button>
+                ${assistirLinkHtml} </div>
         `;
         return card;
     }
