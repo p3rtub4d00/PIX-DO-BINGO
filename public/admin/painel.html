@@ -129,23 +129,26 @@
                 </div>
                 <hr style="margin: 25px 0;">
 
-                <h3>Sorteio Especial (Página Inicial)</h3>
+                <h3>Sorteio Especial (Agendado)</h3>
                 <div class="form-grupo form-grupo-inline">
-                    <label for="sorteio-especial-ativo">Exibir Sorteio Especial?</label>
+                    <label for="sorteio-especial-ativo">Ativar Sorteio Especial?</label>
                     <select id="sorteio-especial-ativo">
-                        <option value="true">Sim, exibir</option>
-                        <option value="false">Não, ocultar</option>
+                        <option value="true">Sim, agendar e exibir</option>
+                        <option value="false">Não, desativar</option>
                     </select>
                 </div>
                 <div class="form-grupo form-grupo-inline">
-                    <label for="sorteio-especial-valor">Valor do Prêmio Especial (R$):</label>
-                    <input type="number" id="sorteio-especial-valor" step="0.01" min="0" placeholder="Ex: 1000.00">
+                    <label for="sorteio-especial-datahora">Data/Hora do Sorteio:</label>
+                    <input type="datetime-local" id="sorteio-especial-datahora">
                 </div>
                 <div class="form-grupo form-grupo-inline">
-                    <label for="sorteio-especial-data">Data/Hora do Sorteio (Texto):</label>
-                    <input type="text" id="sorteio-especial-data" placeholder="Ex: Dia 25/10 às 19:00">
+                    <label for="sorteio-especial-valor">Valor do Prêmio (R$):</label>
+                    <input type="number" id="sorteio-especial-valor" step="0.01" min="0" placeholder="Ex: 1000.00">
                 </div>
-
+                 <div class="form-grupo form-grupo-inline">
+                    <label for="sorteio-especial-preco-cartela">Preço Cartela Especial (R$):</label>
+                    <input type="number" id="sorteio-especial-preco-cartela" step="0.01" min="0.01" placeholder="Ex: 10.00" required>
+                </div>
                 <div class="form-grupo-inline"> <label></label> <button type="submit" id="btn-salvar-config" class="btn-comprar btn-destaque">Salvar Configurações</button>
                 </div>
             </form>

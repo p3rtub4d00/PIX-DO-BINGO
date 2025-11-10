@@ -166,26 +166,29 @@ document.addEventListener('DOMContentLoaded', () => {
         divCartela.appendChild(grid); return divCartela;
     }
 
-    // --- SEÇÃO CONTROLE DE CONFIGURAÇÕES (MODIFICADA) ---
+    // ================================================== -->
     const formConfig = document.getElementById('form-config');
     const premioLinhaInput = document.getElementById('premio-linha');
     const premioCheiaInput = document.getElementById('premio-cheia');
     const precoCartelaInput = document.getElementById('preco-cartela');
     const duracaoEsperaInput = document.getElementById('duracao-espera'); 
-    // *** INÍCIO DA MODIFICAÇÃO: SELETORES DE BOTS ***
     const minBotsInput = document.getElementById('min_bots');
     const maxBotsInput = document.getElementById('max_bots');
-    // *** FIM DA MODIFICAÇÃO ***
     const especialAtivoInput = document.getElementById('sorteio-especial-ativo');
     const especialValorInput = document.getElementById('sorteio-especial-valor');
-    const especialDataInput = document.getElementById('sorteio-especial-data');
+    
+    // --- CAMPOS MODIFICADOS E NOVO CAMPO ---
+    const especialDataHoraInput = document.getElementById('sorteio-especial-datahora'); // ID MODIFICADO
+    const especialPrecoCartelaInput = document.getElementById('sorteio-especial-preco-cartela'); // ID NOVO
+
     const btnSalvarConfig = document.getElementById('btn-salvar-config');
     const configStatus = document.getElementById('config-status');
 
     async function carregarConfiguracoesAtuais() {
+        // --- ATUALIZANDO VERIFICAÇÃO ---
         if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput ||
-            !minBotsInput || !maxBotsInput || /* <-- Adicionado à verificação */
-            !especialAtivoInput || !especialValorInput || !especialDataInput || !configStatus) {
+            !minBotsInput || !maxBotsInput || 
+            !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !configStatus) {
             console.error("Um ou mais elementos de configuração não foram encontrados no DOM.");
             if(configStatus) { configStatus.textContent = `Erro: Elementos do formulário não encontrados.`; configStatus.className = 'status-message status-error'; configStatus.style.display = 'block'; }
             return;
@@ -202,15 +205,15 @@ document.addEventListener('DOMContentLoaded', () => {
             premioCheiaInput.value = parseFloat(data.premio_cheia || '0').toFixed(2);
             precoCartelaInput.value = parseFloat(data.preco_cartela || '0').toFixed(2);
             duracaoEsperaInput.value = parseInt(data.duracao_espera || '20', 10); 
-            
-            // *** INÍCIO DA MODIFICAÇÃO: CARREGAR VALORES DE BOTS ***
             minBotsInput.value = parseInt(data.min_bots || '80', 10);
             maxBotsInput.value = parseInt(data.max_bots || '150', 10);
-            // *** FIM DA MODIFICAÇÃO ***
 
+            // --- ATUALIZANDO CARREGAMENTO DOS VALORES ---
             especialAtivoInput.value = data.sorteio_especial_ativo || 'false';
             especialValorInput.value = parseFloat(data.sorteio_especial_valor || '0').toFixed(2);
-            especialDataInput.value = data.sorteio_especial_data || '';
+            // Carrega a data/hora no formato 'YYYY-MM-DDThh:mm' que o input 'datetime-local' espera
+            especialDataHoraInput.value = data.sorteio_especial_datahora || ''; 
+            especialPrecoCartelaInput.value = parseFloat(data.sorteio_especial_preco_cartela || '10.00').toFixed(2); // Carrega novo valor
 
         } catch (error) {
             console.error("Erro ao carregar configurações:", error);
@@ -226,9 +229,10 @@ document.addEventListener('DOMContentLoaded', () => {
         formConfig.addEventListener('submit', async (event) => {
             event.preventDefault();
             
+            // --- ATUALIZANDO VERIFICAÇÃO ---
              if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput ||
-                 !minBotsInput || !maxBotsInput || /* <-- Adicionado à verificação */
-                 !especialAtivoInput || !especialValorInput || !especialDataInput || !configStatus || !btnSalvarConfig) {
+                 !minBotsInput || !maxBotsInput || 
+                 !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !configStatus || !btnSalvarConfig) {
                   console.error("Erro no submit: Elementos de configuração não encontrados.");
                   alert("Erro: Elementos do formulário não encontrados.");
                   return;
@@ -237,19 +241,19 @@ document.addEventListener('DOMContentLoaded', () => {
             configStatus.style.display = 'none';
             btnSalvarConfig.disabled = true; btnSalvarConfig.textContent = 'Salvando...';
 
-            // *** INÍCIO DA MODIFICAÇÃO: COLETAR VALORES DE BOTS ***
+            // --- ATUALIZANDO COLETA DOS DADOS ---
             const dadosParaSalvar = {
                 premio_linha: parseFloat(premioLinhaInput.value),
                 premio_cheia: parseFloat(premioCheiaInput.value),
                 preco_cartela: parseFloat(precoCartelaInput.value),
                 duracao_espera: parseInt(duracaoEsperaInput.value, 10), 
-                min_bots: parseInt(minBotsInput.value, 10), // <-- Coletado
-                max_bots: parseInt(maxBotsInput.value, 10), // <-- Coletado
+                min_bots: parseInt(minBotsInput.value, 10), 
+                max_bots: parseInt(maxBotsInput.value, 10), 
                 sorteio_especial_ativo: especialAtivoInput.value,
                 sorteio_especial_valor: parseFloat(especialValorInput.value),
-                sorteio_especial_data: especialDataInput.value.trim()
+                sorteio_especial_datahora: especialDataHoraInput.value, // Enviando o valor 'datetime-local'
+                sorteio_especial_preco_cartela: parseFloat(especialPrecoCartelaInput.value) // Enviando novo valor
             };
-            // *** FIM DA MODIFICAÇÃO ***
             console.log("Salvando configurações:", dadosParaSalvar);
 
             try {

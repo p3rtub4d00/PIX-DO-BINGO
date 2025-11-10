@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bingo do Pix - Jogue e Ganhe!</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .loader-pix {
+            border: 6px solid #f3f3f3; /* Cinza claro */
+            border-top: 6px solid var(--color-pix-green); /* Verde Pix */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1.5s linear infinite;
+            margin: 20px auto 10px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* --- INÍCIO DA MODIFICAÇÃO (AVISO LEGAL) --- */
+        .legal-links {
+            padding-top: 15px;
+            border-top: 1px solid #444; /* Linha divisória no rodapé escuro */
+            margin-top: 15px;
+            max-width: 800px; /* Limita a largura */
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 15px; /* Espaçamento lateral */
+            padding-right: 15px; /* Espaçamento lateral */
+        }
+        .legal-warning {
+            font-size: 0.85em;
+            color: #ccc; /* Cor mais suave que o copyright */
+            opacity: 0.7;
+            line-height: 1.5;
+            margin: 5px 0;
+        }
+        /* --- FIM DA MODIFICAÇÃO --- */
+    </style>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -21,16 +56,21 @@
             <p id="status-subtexto">Garanta já sua cartela!</p>
             <a href="/dashboard" id="btn-assistir-vivo" class="btn-comprar btn-comprar-azul" style="display: none;">Assistir ao Vivo!</a>
         </section>
+
         <section id="premio-especial" class="card destaque-especial" style="display: none;">
-             <h2>✨ SORTEIO ESPECIAL ✨</h2>
+             <h2>✨ SORTEIO ESPECIAL AGENDADO ✨</h2>
             <div class="premio-destaque-especial">
                 <span class="premio-valor premio-valor-especial text-pix" id="especial-valor">R$ ...</span>
                 <p class="premio-sub">Cartela Cheia no Pix!</p>
             </div>
             <p class="data-sorteio data-especial" id="especial-data">🗓️ ... 🕖</p>
-            <p class="info-especial">(Compre cartelas para os sorteios regulares e concorra também!)</p>
+            
+            <button id="btn-jogue-especial" class="btn-comprar btn-destaque btn-jogue" style="background-color: #fff; color: var(--color-pix-green); margin-top: 25px;">
+                Comprar p/ Especial (<span id="especial-preco-cartela">R$ ...</span>)
+            </button>
+            
+            <p class="info-especial" style="margin-top: 15px;">(A compra é antecipada. O sorteio será automático na data marcada)</p>
         </section>
-
         <section id="premio-info" class="card">
             <h2>Próximo Sorteio Regular:</h2>
             <div class="premios-container">
@@ -90,7 +130,7 @@
              <span class="modal-close">&times;</span>
             
             <div id="etapa-dados">
-                <h2 class="title-gradient">Complete seu Pedido</h2>
+                <h2 class="title-gradient" id="modal-titulo">Complete seu Pedido</h2>
                 <form id="form-checkout">
                     <div class="form-grupo"><label for="modal-nome">Seu Nome Completo:</label><input type="text" id="modal-nome" placeholder="Nome para o prêmio" required></div>
                     <div class="form-grupo"><label for="modal-telefone">Telefone (c/ DDD):</label><input type="tel" id="modal-telefone" placeholder="Ex: 69912345678 (para o Pix)" required></div>

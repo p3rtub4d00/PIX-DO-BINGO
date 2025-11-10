@@ -96,6 +96,40 @@ throw e;
 }
 }
 
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (NOVAS COLUNAS VENDAS) ---
+// ==================================================
+
+// Adiciona coluna 'tipo_sorteio' na tabela 'vendas'
+try {
+    await db.query("ALTER TABLE vendas ADD COLUMN tipo_sorteio TEXT DEFAULT 'regular' NOT NULL");
+    console.log("Coluna 'tipo_sorteio' adicionada à tabela 'vendas'.");
+} catch (e) {
+    if (e.code === '42701') {
+        console.log("Coluna 'tipo_sorteio' já existe. Ignorando.");
+    } else {
+        throw e;
+    }
+}
+
+// Adiciona coluna 'sorteio_id_especial' na tabela 'vendas'
+// Armazena o ID (datahora) do sorteio especial para agrupar os jogadores
+try {
+    await db.query("ALTER TABLE vendas ADD COLUMN sorteio_id_especial TEXT NULL");
+    console.log("Coluna 'sorteio_id_especial' adicionada à tabela 'vendas'.");
+} catch (e) {
+    if (e.code === '42701') {
+        console.log("Coluna 'sorteio_id_especial' já existe. Ignorando.");
+    } else {
+        throw e;
+    }
+}
+
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
+
 // Cria a tabela para pagamentos pendentes
 await db.query(`
            CREATE TABLE IF NOT EXISTS pagamentos_pendentes (
@@ -178,7 +212,17 @@ const configs = [
 { chave: 'preco_cartela', valor: '5.00' },
 { chave: 'sorteio_especial_ativo', valor: 'true' },
 { chave: 'sorteio_especial_valor', valor: '1000.00' },
-{ chave: 'sorteio_especial_data', valor: 'Dia 25/10/2026 às 19:00' },
+
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (CONFIGS DO BANCO) ---
+// ==================================================
+{ chave: 'sorteio_especial_datahora', valor: '' }, // NOVO (Formato YYYY-MM-DDTHH:MM)
+{ chave: 'sorteio_especial_preco_cartela', valor: '10.00' }, // NOVO
+// { chave: 'sorteio_especial_data', valor: 'Dia 25/10/2026 às 19:00' }, // ANTIGO - REMOVIDO
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
 { chave: 'duracao_espera', valor: '20' },
 { chave: 'min_bots', valor: '80' },
 { chave: 'max_bots', valor: '150' },
@@ -334,33 +378,80 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                         console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
 
                         try {
-                            let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
-                            const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
-                            const preco = precoRes.rows[0];
-                            const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
-                            const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
-
+                            // ==================================================
+                            // --- INÍCIO DA MODIFICAÇÃO (WEBHOOK) ---
+                            // ==================================================
+                            
                             const cartelasGeradas = [];
-                            for (let i = 0; i < dadosCompra.quantidade; i++) {
-                                cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+                            let stmtVenda = '';
+                            let paramsVenda = [];
+
+                            if (dadosCompra.tipo_compra === 'especial') {
+                                // Compra de SORTEIO ESPECIAL
+                                // O ID do sorteio é a data/hora agendada
+                                const idSorteioEspecial = SORTEIO_ESPECIAL_DATAHORA; 
+                                const precoUnitarioEspecial = parseFloat(PRECO_CARTELA_ESPECIAL_ATUAL);
+                                const valorTotal = dadosCompra.quantidade * precoUnitarioEspecial;
+
+                                for (let i = 0; i < dadosCompra.quantidade; i++) {
+                                    // Geramos a cartela com o ID especial (data/hora)
+                                    cartelasGeradas.push(gerarDadosCartela(idSorteioEspecial));
+                                }
+                                const cartelasJSON = JSON.stringify(cartelasGeradas);
+
+                                stmtVenda = `
+                                    INSERT INTO vendas 
+                                    (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id, tipo_sorteio, sorteio_id_especial) 
+                                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'especial_agendado', $9) 
+                                    RETURNING id`;
+                                
+                                paramsVenda = [
+                                    0, // Sorteio ID regular (não se aplica, usamos 0 como placeholder)
+                                    dadosCompra.nome, dadosCompra.telefone || null,
+                                    dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId,
+                                    idSorteioEspecial // Armazena o ID especial
+                                ];
+                                
+                                console.log(`Webhook: Venda (ESPECIAL) para ${idSorteioEspecial} registrada.`);
+
+                            } else {
+                                // Compra de SORTEIO REGULAR (lógica antiga)
+                                let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+                                const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
+                                const preco = precoRes.rows[0];
+                                const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
+                                const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
+
+                                for (let i = 0; i < dadosCompra.quantidade; i++) {
+                                    cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
+                                }
+                                const cartelasJSON = JSON.stringify(cartelasGeradas);
+
+                                stmtVenda = `
+                                    INSERT INTO vendas 
+                                    (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id, tipo_sorteio) 
+                                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'regular') 
+                                    RETURNING id`;
+
+                                paramsVenda = [
+                                    sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null,
+                                    dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
+                                ];
+                                
+                                console.log(`Webhook: Venda (REGULAR) para Sorteio #${sorteioAlvo} registrada.`);
                             }
-                            const cartelasJSON = JSON.stringify(cartelasGeradas);
-
-                            const stmtVenda = `
-                                INSERT INTO vendas 
-                                (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, payment_id) 
-                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-                                RETURNING id`;
-
-                            const vendaResult = await db.query(stmtVenda, [
-                                sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null,
-                                dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
-                            ]);
+                            
+                            // Executa a query de Venda (seja regular ou especial)
+                            const vendaResult = await db.query(stmtVenda, paramsVenda);
                             const vendaId = vendaResult.rows[0].id;
                             console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
 
                             await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
                             console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
+
+                            // ==================================================
+                            // --- FIM DA MODIFICAÇÃO (WEBHOOK) ---
+                            // ==================================================
 
                         } catch (dbError) {
                             console.error("Webhook ERRO CRÍTICO ao salvar no DB ou gerar cartelas:", dbError);
@@ -397,12 +488,32 @@ let MIN_BOTS_ATUAL = 80;
 let MAX_BOTS_ATUAL = 150;
 let numeroDoSorteio = 500; // Valor padrão, será sobrescrito
 
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (VARIÁVEIS GLOBAIS) ---
+// ==================================================
+let PRECO_CARTELA_ESPECIAL_ATUAL = '10.00';
+let SORTEIO_ESPECIAL_DATAHORA = ''; // Formato: YYYY-MM-DDTHH:MM
+let SORTEIO_ESPECIAL_ATIVO = 'false';
+let sorteioEspecialEmAndamento = false; // Flag para controlar o estado do jogo
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
+
 // Convertido para 'async'
 async function carregarConfiguracoes() {
 try {
-// Pede também o 'numero_sorteio_atual'
-const res = await db.query("SELECT chave, valor FROM configuracoes WHERE chave IN ($1, $2, $3, $4, $5, $6, $7)", 
-['premio_linha', 'premio_cheia', 'preco_cartela', 'duracao_espera', 'min_bots', 'max_bots', 'numero_sorteio_atual']);
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (CARREGAR CONFIGS) ---
+// ==================================================
+// Pede também as novas chaves
+const res = await db.query("SELECT chave, valor FROM configuracoes WHERE chave IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", 
+    ['premio_linha', 'premio_cheia', 'preco_cartela', 'duracao_espera', 'min_bots', 'max_bots', 'numero_sorteio_atual',
+     'sorteio_especial_ativo', 'sorteio_especial_datahora', 'sorteio_especial_preco_cartela', 'sorteio_especial_valor'] // 'sorteio_especial_data' removido
+);
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
 
 const configs = res.rows.reduce((acc, row) => {
 acc[row.chave] = row.valor;
@@ -424,8 +535,19 @@ if (isNaN(MAX_BOTS_ATUAL) || MAX_BOTS_ATUAL < MIN_BOTS_ATUAL) MAX_BOTS_ATUAL = M
 numeroDoSorteio = parseInt(configs.numero_sorteio_atual, 10) || 500;
 if (isNaN(numeroDoSorteio)) numeroDoSorteio = 500;
 
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (CARREGAR NOVAS VARS) ---
+// ==================================================
+SORTEIO_ESPECIAL_ATIVO = configs.sorteio_especial_ativo || 'false';
+SORTEIO_ESPECIAL_DATAHORA = configs.sorteio_especial_datahora || '';
+PRECO_CARTELA_ESPECIAL_ATUAL = configs.sorteio_especial_preco_cartela || '10.00';
+
 console.log(`Configurações de Jogo carregadas: Linha=R$${PREMIO_LINHA}, Cheia=R$${PREMIO_CHEIA}, Cartela=R$${PRECO_CARTELA}, Espera=${DURACAO_ESPERA_ATUAL}s, Bots(${MIN_BOTS_ATUAL}-${MAX_BOTS_ATUAL})`); 
 console.log(`Servidor: Sorteio atual carregado do banco: #${numeroDoSorteio}`); // Novo log
+console.log(`Servidor: Sorteio Especial Ativo: ${SORTEIO_ESPECIAL_ATIVO}, Data: ${SORTEIO_ESPECIAL_DATAHORA}, Preço: R$${PRECO_CARTELA_ESPECIAL_ATUAL}`);
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
 
 } catch (err) { console.error("Erro ao carregar configurações do DB:", err); }
 }
@@ -520,74 +642,110 @@ res.json(configMap);
 } catch (error) { console.error("Erro ao buscar configs admin:", error); res.status(500).json({ success: false, message: "Erro ao buscar configurações." }); }
 });
 
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (ROTA ADMIN PREMIOS POST) ---
+// ==================================================
 // Convertido para 'async' e Transação PG
 app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
-const {
-premio_linha, premio_cheia, preco_cartela, duracao_espera,
-min_bots, max_bots,
-sorteio_especial_ativo, sorteio_especial_valor, sorteio_especial_data
-} = req.body;
-console.log(`Admin ${req.session.usuario} está atualizando configurações.`);
+    // Coleta as variáveis antigas e as NOVAS
+    const {
+        premio_linha, premio_cheia, preco_cartela, duracao_espera,
+        min_bots, max_bots,
+        sorteio_especial_ativo, sorteio_especial_valor, 
+        sorteio_especial_datahora, sorteio_especial_preco_cartela // <-- NOVOS CAMPOS
+    } = req.body;
+    console.log(`Admin ${req.session.usuario} está atualizando configurações.`);
 
-// (Validação continua a mesma)
-const linhaNum = parseFloat(premio_linha); const cheiaNum = parseFloat(premio_cheia); const precoNum = parseFloat(preco_cartela);
-const esperaNum = parseInt(duracao_espera, 10); 
-const minBotsNum = parseInt(min_bots, 10);
-const maxBotsNum = parseInt(max_bots, 10);
-if (isNaN(linhaNum) || isNaN(cheiaNum) || isNaN(precoNum) || linhaNum < 0 || cheiaNum < 0 || precoNum <= 0) { return res.status(400).json({ success: false, message: 'Valores de prêmio/preço inválidos.' }); }
-if (isNaN(esperaNum) || esperaNum < 10) { return res.status(400).json({ success: false, message: 'Tempo de Espera inválido (mínimo 10 segundos).' }); } 
-if (isNaN(minBotsNum) || minBotsNum < 0 || isNaN(maxBotsNum) || maxBotsNum < minBotsNum) { return res.status(400).json({ success: false, message: 'Valores de Bots inválidos (Mínimo deve ser >= 0 e Máximo deve ser >= Mínimo).' }); }
-const valorEspecialNum = parseFloat(sorteio_especial_valor) || 0.00;
+    // (Validação continua a mesma)
+    const linhaNum = parseFloat(premio_linha); const cheiaNum = parseFloat(premio_cheia); const precoNum = parseFloat(preco_cartela);
+    const esperaNum = parseInt(duracao_espera, 10); 
+    const minBotsNum = parseInt(min_bots, 10);
+    const maxBotsNum = parseInt(max_bots, 10);
+    if (isNaN(linhaNum) || isNaN(cheiaNum) || isNaN(precoNum) || linhaNum < 0 || cheiaNum < 0 || precoNum <= 0) { return res.status(400).json({ success: false, message: 'Valores de prêmio/preço inválidos.' }); }
+    if (isNaN(esperaNum) || esperaNum < 10) { return res.status(400).json({ success: false, message: 'Tempo de Espera inválido (mínimo 10 segundos).' }); } 
+    if (isNaN(minBotsNum) || minBotsNum < 0 || isNaN(maxBotsNum) || maxBotsNum < minBotsNum) { return res.status(400).json({ success: false, message: 'Valores de Bots inválidos (Mínimo deve ser >= 0 e Máximo deve ser >= Mínimo).' }); }
+    
+    // Validação dos novos campos
+    const valorEspecialNum = parseFloat(sorteio_especial_valor) || 0.00;
+    const precoEspecialNum = parseFloat(sorteio_especial_preco_cartela);
+    if (isNaN(precoEspecialNum) || precoEspecialNum <= 0) { return res.status(400).json({ success: false, message: 'Preço da cartela especial inválido.' }); }
+    // Valida se a data é válida (se ativa)
+    if (sorteio_especial_ativo === 'true' && !sorteio_especial_datahora) {
+        return res.status(400).json({ success: false, message: 'Data/Hora é obrigatória para ativar o sorteio especial.' });
+    }
+    
+    // Transação em PostgreSQL
+    const client = await pool.connect(); // Pega uma conexão do pool
+    try {
+        await client.query('BEGIN'); // Inicia a transação
 
-// Transação em PostgreSQL
-const client = await pool.connect(); // Pega uma conexão do pool
-try {
-await client.query('BEGIN'); // Inicia a transação
-
-// 'INSERT OR REPLACE' vira 'INSERT ... ON CONFLICT ... DO UPDATE'
-const query = `
+        // 'INSERT OR REPLACE' vira 'INSERT ... ON CONFLICT ... DO UPDATE'
+        const query = `
            INSERT INTO configuracoes (chave, valor) 
            VALUES ($1, $2) 
            ON CONFLICT (chave) 
            DO UPDATE SET valor = EXCLUDED.valor;
        `;
 
-await client.query(query, ['premio_linha', linhaNum.toFixed(2)]);
-await client.query(query, ['premio_cheia', cheiaNum.toFixed(2)]);
-await client.query(query, ['preco_cartela', precoNum.toFixed(2)]);
-await client.query(query, ['duracao_espera', esperaNum.toString()]);
-await client.query(query, ['min_bots', minBotsNum.toString()]);
-await client.query(query, ['max_bots', maxBotsNum.toString()]);
-await client.query(query, ['sorteio_especial_ativo', sorteio_especial_ativo]);
-await client.query(query, ['sorteio_especial_valor', valorEspecialNum.toFixed(2)]);
-await client.query(query, ['sorteio_especial_data', sorteio_especial_data]);
+        await client.query(query, ['premio_linha', linhaNum.toFixed(2)]);
+        await client.query(query, ['premio_cheia', cheiaNum.toFixed(2)]);
+        await client.query(query, ['preco_cartela', precoNum.toFixed(2)]);
+        await client.query(query, ['duracao_espera', esperaNum.toString()]);
+        await client.query(query, ['min_bots', minBotsNum.toString()]);
+        await client.query(query, ['max_bots', maxBotsNum.toString()]);
+        await client.query(query, ['sorteio_especial_ativo', sorteio_especial_ativo]);
+        await client.query(query, ['sorteio_especial_valor', valorEspecialNum.toFixed(2)]);
+        
+        // Salvando os novos valores
+        await client.query(query, ['sorteio_especial_datahora', sorteio_especial_datahora]);
+        await client.query(query, ['sorteio_especial_preco_cartela', precoEspecialNum.toFixed(2)]);
+        // Removendo o valor antigo (opcional, mas bom para limpeza)
+        await client.query("DELETE FROM configuracoes WHERE chave = 'sorteio_especial_data'");
 
-await client.query('COMMIT'); // Confirma a transação
 
-await carregarConfiguracoes(); // Recarrega variáveis globais (agora é async)
+        await client.query('COMMIT'); // Confirma a transação
 
-const resDB = await db.query("SELECT chave, valor FROM configuracoes");
-const configs = resDB.rows;
-const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
+        await carregarConfiguracoes(); // Recarrega variáveis globais (agora é async)
 
-io.emit('configAtualizada', configMap);
-console.log("Configurações atualizadas no banco de dados e emitidas.");
-return res.json({ success: true, message: 'Configurações atualizadas com sucesso!' });
+        const resDB = await db.query("SELECT chave, valor FROM configuracoes");
+        const configs = resDB.rows;
+        const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
 
-} catch (error) {
-await client.query('ROLLBACK'); // Desfaz a transação em caso de erro
-console.error("Erro ao salvar configurações:", error); 
-return res.status(500).json({ success: false, message: 'Erro interno ao salvar configurações.' });
-} finally {
-client.release(); // Libera a conexão de volta para o pool
-}
+        io.emit('configAtualizada', configMap);
+        console.log("Configurações atualizadas no banco de dados e emitidas.");
+        return res.json({ success: true, message: 'Configurações atualizadas com sucesso!' });
+
+    } catch (error) {
+        await client.query('ROLLBACK'); // Desfaz a transação em caso de erro
+        console.error("Erro ao salvar configurações:", error); 
+        return res.status(500).json({ success: false, message: 'Erro interno ao salvar configurações.' });
+    } finally {
+        client.release(); // Libera a conexão de volta para o pool
+    }
 });
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (ROTA ADMIN PREMIOS POST) ---
+// ==================================================
+
 
 // Convertido para 'async'
 app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
 const { quantidade, nome, telefone } = req.body;
 if (!nome || nome.trim() === '') { return res.status(400).json({ success: false, message: 'O Nome do Jogador é obrigatório.' }); }
+
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (GERAR CARTELAS ADMIN) ---
+// ==================================================
+// Vendas manuais do admin SÃO SEMPRE para o próximo sorteio REGULAR.
+// Ignora o sorteio especial.
+if (sorteioEspecialEmAndamento) {
+    return res.status(400).json({ success: false, message: 'Não é possível gerar cartelas manuais durante um Sorteio Especial.' });
+}
 let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
 console.log(`Admin ${req.session.usuario} está registrando ${quantidade} cartelas para '${nome}' (Tel: ${telefone}) no Sorteio #${sorteioAlvo}.`);
 if (!quantidade || quantidade < 1 || quantidade > 100) { return res.status(400).json({ success: false, message: 'Quantidade inválida (1-100).' }); }
 try {
@@ -600,12 +758,18 @@ const cartelasJSON = JSON.stringify(cartelasGeradas);
 const manualPlayerId = `manual_${gerarIdUnico()}`; 
 jogadores[manualPlayerId] = { nome: nome, telefone: telefone || null, isBot: false, isManual: true, cartelas: cartelasGeradas };
 
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (INSERT VENDA ADMIN) ---
+// ==================================================
 const stmtVenda = `
            INSERT INTO vendas 
-           (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`;
+           (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, tipo_sorteio) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'regular')`; // Define explicitamente como 'regular'
 // O payment_id e cambista_id de uma venda manual são null
 await db.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, valorTotal, 'Manual', cartelasJSON]);
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
 
 console.log(`Geradas e REGISTRADAS ${cartelasGeradas.length} cartelas para '${nome}'. Venda registrada.`); io.emit('contagemJogadores', getContagemJogadores());
 return res.json(cartelasGeradas); // Retorna as cartelas para o admin imprimir
@@ -618,12 +782,19 @@ app.get('/admin/relatorios.html', checkAdmin, (req, res) => { res.sendFile(path.
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
 try {
 // 'strftime' (SQLite) vira 'to_char' (PostgreSQL)
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (API VENDAS) ---
+// ==================================================
+// Adiciona as colunas tipo_sorteio e sorteio_id_especial
 const stmt = `
-           SELECT sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, 
+           SELECT sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, tipo_sorteio, sorteio_id_especial,
                   to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI:SS') as data_formatada 
            FROM vendas 
            ORDER BY timestamp DESC
        `;
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
 const vendasRes = await db.query(stmt);
 const vendas = vendasRes.rows;
 
@@ -929,10 +1100,21 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
     if (!nome || !quantidade || quantidade < 1) {
         return res.status(400).json({ success: false, message: 'Nome do jogador e quantidade são obrigatórios.' });
     }
+    
+    // ==================================================
+    // --- INÍCIO DA MODIFICAÇÃO (VENDA CAMBISTA) ---
+    // ==================================================
+    // Vendas de cambista SÃO SEMPRE para o próximo sorteio REGULAR.
+    if (sorteioEspecialEmAndamento) {
+        return res.status(400).json({ success: false, message: 'O Sorteio Especial está em andamento. Aguarde o fim para registrar novas vendas.' });
+    }
+    let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+    // ==================================================
+    // --- FIM DA MODIFICAÇÃO ---
+    // ==================================================
 
     const precoUnitario = parseFloat(PRECO_CARTELA);
     const custoTotal = quantidade * precoUnitario;
-    let sorteioAlvo = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
 
     const client = await pool.connect();
     try {
@@ -963,13 +1145,19 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
         const cartelasJSON = JSON.stringify(cartelasGeradas);
 
         // 5. Registra a Venda
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (INSERT VENDA CAMBISTA) ---
+        // ==================================================
         const stmtVenda = `
             INSERT INTO vendas 
-            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, cambista_id) 
-            VALUES ($1, $2, $3, $4, $5, 'Cambista', $6, $7)
+            (sorteio_id, nome_jogador, telefone, quantidade_cartelas, valor_total, tipo_venda, cartelas_json, cambista_id, tipo_sorteio) 
+            VALUES ($1, $2, $3, $4, $5, 'Cambista', $6, $7, 'regular')
             RETURNING id
         `;
         const vendaResult = await client.query(stmtVenda, [sorteioAlvo, nome, telefone || null, quantidade, custoTotal, cartelasJSON, cambistaId]);
+        // ==================================================
+        // --- FIM DA MODIFICAÇÃO ---
+        // ==================================================
         const vendaId = vendaResult.rows[0].id;
 
         // 6. Registra a Transação de Crédito
@@ -1023,22 +1211,53 @@ let estadoJogo = "ESPERANDO";
 let tempoRestante = DURACAO_ESPERA_ATUAL; 
 let intervaloSorteio = null; let numerosDisponiveis = []; let numerosSorteados = []; let jogadores = {};
 
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (GAME TICKER PRINCIPAL) ---
+// ==================================================
 setInterval(() => {
-if (estadoJogo === "ESPERANDO") {
-tempoRestante--;
-if (tempoRestante <= 0) {
-console.log("DEBUG: Tempo esgotado! Tentando iniciar nova rodada...");
-estadoJogo = "JOGANDO_LINHA";
-console.log("DEBUG: Estado alterado para JOGANDO_LINHA.");
-try { io.emit('iniciarJogo'); console.log("DEBUG: Evento 'iniciarJogo' emitido."); }
-catch (emitError) { console.error("DEBUG: Erro ao emitir 'iniciarJogo':", emitError); }
-try { iniciarNovaRodada(); console.log("DEBUG: Chamada para iniciarNovaRodada() concluída."); }
-catch (startRoundError) { console.error("DEBUG: Erro ao chamar iniciarNovaRodada():", startRoundError); }
-} else { io.emit('cronometroUpdate', { tempo: tempoRestante, sorteioId: numeroDoSorteio, estado: estadoJogo }); }
-} else { io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); }
+    // A cada segundo, verifica se um sorteio especial precisa começar
+    verificarSorteioEspecial();
+
+    if (estadoJogo === "ESPERANDO" && !sorteioEspecialEmAndamento) {
+        tempoRestante--;
+        if (tempoRestante <= 0) {
+            console.log("DEBUG: Tempo esgotado! Tentando iniciar nova rodada...");
+            estadoJogo = "JOGANDO_LINHA";
+            console.log("DEBUG: Estado alterado para JOGANDO_LINHA.");
+            try { io.emit('iniciarJogo'); console.log("DEBUG: Evento 'iniciarJogo' emitido."); }
+            catch (emitError) { console.error("DEBUG: Erro ao emitir 'iniciarJogo':", emitError); }
+            try { iniciarNovaRodada(); console.log("DEBUG: Chamada para iniciarNovaRodada() concluída."); }
+            catch (startRoundError) { console.error("DEBUG: Erro ao chamar iniciarNovaRodada():", startRoundError); }
+        } else { 
+            // Emite o cronômetro do sorteio REGULAR
+            io.emit('cronometroUpdate', { tempo: tempoRestante, sorteioId: numeroDoSorteio, estado: estadoJogo }); 
+        }
+    } else if (sorteioEspecialEmAndamento) {
+        // Se o especial estiver rolando, o estado é JOGANDO (mas o ID é o especial)
+        io.emit('estadoJogoUpdate', { sorteioId: SORTEIO_ESPECIAL_DATAHORA, estado: estadoJogo });
+    } else { 
+        // Se o regular estiver rolando
+        io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); 
+    }
 }, 1000);
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (GAME TICKER PRINCIPAL) ---
+// ==================================================
+
 
 function iniciarNovaRodada() {
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (INICIAR RODADA REGULAR) ---
+// ==================================================
+// Se um sorteio especial estiver rolando, não faz nada.
+if (sorteioEspecialEmAndamento) {
+    console.warn("Servidor: Tentou iniciar uma rodada REGULAR, mas um Sorteio Especial está em andamento. Ignorando.");
+    return;
+}
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
 console.log("DEBUG: Dentro de iniciarNovaRodada().");
 console.log(`Servidor: Iniciando Sorteio #${numeroDoSorteio}... Próximo prêmio: LINHA`);
 try {
@@ -1073,13 +1292,27 @@ io.emit('novoNumeroSorteado', numeroSorteado);
 const numerosSorteadosSet = new Set(numerosSorteados);
 const getNome = (jogador, id) => { if (jogador.nome) return jogador.nome; if (jogador.isBot) return `Bot [${id.substring(0,4)}]`; return `Jogador [${id.substring(0,4)}]`; };
 let vencedorLinhaEncontrado = false;
+
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (ID DO SORTEIO ATUAL) ---
+// ==================================================
+// Define para qual ID de sorteio estamos checando (regular ou especial)
+const idSorteioAtual = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
 if (estadoJogo === "JOGANDO_LINHA") {
-for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; if (checarVencedorLinha(cartela, numerosSorteados)) { 
+for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; 
+    
+    if (cartela.s_id != idSorteioAtual) continue; // Pula cartelas que não são deste sorteio
+    
+    if (checarVencedorLinha(cartela, numerosSorteados)) { 
 console.log(`DEBUG: Vencedor da LINHA encontrado: ${getNome(jogador, socketId)}`); 
 const nomeVencedor = getNome(jogador, socketId); 
 
 // Agora é 'await'
-await salvarVencedorNoDB({ sorteioId: numeroDoSorteio, premio: "Linha", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
+await salvarVencedorNoDB({ sorteioId: idSorteioAtual, premio: "Linha", nome: jogador.nome, telefone: jogador.telefone, cartelaId: cartela.c_id }); 
 
 const winningSocket = io.sockets.sockets.get(socketId); 
 
@@ -1091,7 +1324,7 @@ io.emit('alguemGanhouLinha', { nome: nomeVencedor });
 }
 
 estadoJogo = "JOGANDO_CHEIA"; 
-io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); 
+io.emit('estadoJogoUpdate', { sorteioId: idSorteioAtual, estado: estadoJogo }); 
 console.log("Servidor: Próximo prêmio: CARTELA CHEIA"); 
 vencedorLinhaEncontrado = true; 
 break; 
@@ -1100,7 +1333,9 @@ break;
 
 // ATUALIZAÇÃO (CORREÇÃO DO BUG DO DELAY)
 if (estadoJogo === "JOGANDO_CHEIA") {
-for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; if (cartela.s_id !== numeroDoSorteio) continue; 
+for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (let i = 0; i < jogador.cartelas.length; i++) { const cartela = jogador.cartelas[i]; 
+    
+    if (cartela.s_id != idSorteioAtual) continue; // Pula cartelas que não são deste sorteio
 
 if (checarVencedorCartelaCheia(cartela, numerosSorteadosSet)) { 
 console.log(`DEBUG: Vencedor da CARTELA CHEIA encontrado: ${getNome(jogador, socketId)}`); 
@@ -1115,11 +1350,11 @@ console.log("DEBUG: Sorteio pausado. Vencedor encontrado.");
 
 // 2. Mudar o estado para "travar" o jogo
 estadoJogo = "ANUNCIANDO_VENCEDOR"; // Novo estado
-io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
+io.emit('estadoJogoUpdate', { sorteioId: idSorteioAtual, estado: estadoJogo });
 
 // 3. Preparar os dados para o DB e para o fim da rodada
 const vencedorInfoDB = { 
-sorteioId: numeroDoSorteio, 
+sorteioId: idSorteioAtual, 
 premio: "Cartela Cheia", 
 nome: jogador.nome, 
 telefone: jogador.telefone, 
@@ -1156,16 +1391,32 @@ return; // Para o loop de checagem de vencedores
 
 if (estadoJogo === "JOGANDO_LINHA" || estadoJogo === "JOGANDO_CHEIA") {
 const jogadoresPerto = [];
-for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (const cartela of jogador.cartelas) { if (cartela.s_id !== numeroDoSorteio) continue; const faltantes = contarFaltantesParaCheia(cartela, numerosSorteadosSet); if (faltantes > 0 && faltantes <= LIMITE_FALTANTES_QUASELA) { jogadoresPerto.push({ nome: getNome(jogador, socketId), faltam: faltantes }); } } }
+for (const socketId in jogadores) { const jogador = jogadores[socketId]; if (!jogador.cartelas || jogador.cartelas.length === 0) continue; for (const cartela of jogador.cartelas) { 
+    if (cartela.s_id != idSorteioAtual) continue; // Pula cartelas que não são deste sorteio
+    const faltantes = contarFaltantesParaCheia(cartela, numerosSorteadosSet); if (faltantes > 0 && faltantes <= LIMITE_FALTANTES_QUASELA) { jogadoresPerto.push({ nome: getNome(jogador, socketId), faltam: faltantes }); } } }
 jogadoresPerto.sort((a, b) => a.faltam - b.faltam); const topJogadores = jogadoresPerto.slice(0, MAX_JOGADORES_QUASELA); io.emit('atualizarQuaseLa', topJogadores);
 }
 }
 
-// Convertido para 'async'
-async function salvarVencedorNoDB(vencedorInfo) {
+async function salvarVencedorNoDB(vencedorInfo) { // Convertido para 'async'
 try {
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (SALVAR VENCEDOR) ---
+// ==================================================
+// O ID do sorteio agora pode ser um número (regular) ou um texto (especial)
+// Como a coluna 'sorteio_id' é INTEGER, vamos salvar o ID numérico do regular,
+// ou '0' se for um especial (o prêmio "Cartela Cheia" e o nome já o identificam
+// no painel de vencedores).
+let idSorteioParaDB = 0;
+if (!sorteioEspecialEmAndamento) {
+    idSorteioParaDB = numeroDoSorteio;
+}
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
 const stmt = `INSERT INTO vencedores (sorteio_id, premio, nome, telefone, cartela_id) VALUES ($1, $2, $3, $4, $5)`;
-await db.query(stmt, [vencedorInfo.sorteioId, vencedorInfo.premio, vencedorInfo.nome || 'Bot/Manual', vencedorInfo.telefone, vencedorInfo.cartelaId]);
+await db.query(stmt, [idSorteioParaDB, vencedorInfo.premio, vencedorInfo.nome || 'Bot/Manual', vencedorInfo.telefone, vencedorInfo.cartelaId]);
 
 console.log(`Vencedor [${vencedorInfo.premio}] salvo no banco de dados (Status: Pendente).`);
 
@@ -1174,52 +1425,106 @@ io.emit('atualizarVencedores', ultimos);
 } catch (err) { console.error("Erro ao salvar vencedor no DB:", err); }
 }
 
-// A função agora é 'async' para salvar no banco
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (TERMINAR RODADA) ---
+// ==================================================
 async function terminarRodada(vencedor, socketVencedor) {
 console.log("DEBUG: Dentro de terminarRodada().");
 
-// A limpeza do intervalo agora é feita ANTES, na função 'sortearNumero'
 if (intervaloSorteio) { 
-clearInterval(intervaloSorteio); 
-intervaloSorteio = null; 
-console.warn("DEBUG: Intervalo de sorteio parado em terminarRodada (não deveria acontecer se o delay funcionou).");
+    clearInterval(intervaloSorteio); 
+    intervaloSorteio = null; 
+    console.warn("DEBUG: Intervalo de sorteio parado em terminarRodada.");
 }
 
-const idSorteioFinalizado = numeroDoSorteio;
-
+// Emite o resultado para os jogadores
+const idSorteioFinalizado = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
 if (vencedor) { 
-if(socketVencedor && io.sockets.sockets.get(socketVencedor)) { 
-io.to(socketVencedor).emit('voceGanhouCartelaCheia', vencedor); 
-io.sockets.sockets.get(socketVencedor).broadcast.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome }); 
-} else { 
-io.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome }); 
-} 
+    if(socketVencedor && io.sockets.sockets.get(socketVencedor)) { 
+        io.to(socketVencedor).emit('voceGanhouCartelaCheia', vencedor); 
+        io.sockets.sockets.get(socketVencedor).broadcast.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome }); 
+    } else { 
+        io.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome }); 
+    } 
 }
 else { io.emit('jogoTerminouSemVencedor'); }
 
-estadoJogo = "ESPERANDO";
-tempoRestante = DURACAO_ESPERA_ATUAL; 
+if (sorteioEspecialEmAndamento) {
+    // Se foi um SORTEIO ESPECIAL
+    console.log(`Servidor: Sorteio ESPECIAL #${idSorteioFinalizado} terminado.`);
+    await terminarRodadaEspecial(); // Chama a nova função de limpeza
+} else {
+    // Se foi um SORTEIO REGULAR
+    console.log(`Servidor: Sorteio REGULAR #${idSorteioFinalizado} terminado.`);
+    await terminarRodadaRegular(); // Chama a lógica antiga (agora em nova função)
+}
 
-// Incrementa o número do sorteio e SALVA no banco
-numeroDoSorteio++; // Incrementa a variável global
-try {
-// Salva o NOVO número no banco
-const query = `
+// Em ambos os casos, o estado volta para ESPERANDO
+estadoJogo = "ESPERANDO";
+io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); 
+io.emit('atualizarQuaseLa', []);
+console.log("DEBUG: terminarRodada() concluída.");
+}
+
+async function terminarRodadaRegular() {
+    tempoRestante = DURACAO_ESPERA_ATUAL; 
+    // Incrementa o número do sorteio e SALVA no banco
+    numeroDoSorteio++; // Incrementa a variável global
+    try {
+        // Salva o NOVO número no banco
+        const query = `
            INSERT INTO configuracoes (chave, valor) 
            VALUES ($1, $2) 
            ON CONFLICT (chave) 
            DO UPDATE SET valor = EXCLUDED.valor;
        `;
-await db.query(query, ['numero_sorteio_atual', numeroDoSorteio.toString()]);
-console.log(`Servidor: Sorteio #${idSorteioFinalizado} terminado. Próximo será #${numeroDoSorteio} (Salvo no DB).`); 
-} catch (err) {
-console.error("ERRO CRÍTICO AO SALVAR NÚMERO DO SORTEIO:", err);
-// O jogo continua, mas o próximo reinício voltará para o número antigo
+        await db.query(query, ['numero_sorteio_atual', numeroDoSorteio.toString()]);
+        console.log(`Servidor: Próximo sorteio REGULAR será #${numeroDoSorteio} (Salvo no DB).`); 
+    } catch (err) {
+        console.error("ERRO CRÍTICO AO SALVAR NÚMERO DO SORTEIO:", err);
+    }
 }
 
-io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo }); io.emit('atualizarQuaseLa', []);
-console.log("DEBUG: terminarRodada() concluída.");
+async function terminarRodadaEspecial() {
+    // Limpa a flag de controle
+    sorteioEspecialEmAndamento = false;
+    
+    // Reseta o cronômetro regular
+    tempoRestante = DURACAO_ESPERA_ATUAL;
+    
+    // Desativa o sorteio especial no banco para não rodar de novo
+    try {
+        const client = await pool.connect();
+        await client.query('BEGIN');
+        
+        const query = `
+           INSERT INTO configuracoes (chave, valor) 
+           VALUES ($1, $2) 
+           ON CONFLICT (chave) 
+           DO UPDATE SET valor = EXCLUDED.valor;
+       `;
+        // Limpa a data e desativa
+        await client.query(query, ['sorteio_especial_ativo', 'false']);
+        await client.query(query, ['sorteio_especial_datahora', '']);
+        
+        await client.query('COMMIT');
+        
+        // Recarrega as configurações globais
+        await carregarConfiguracoes();
+        
+        console.log(`Servidor: Sorteio Especial desativado no DB. Próximo sorteio REGULAR será #${numeroDoSorteio}.`);
+
+    } catch (err) {
+        console.error("ERRO CRÍTICO AO DESATIVAR SORTEIO ESPECIAL:", err);
+        await client.query('ROLLBACK');
+    } finally {
+        if(client) client.release();
+    }
 }
+
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (TERMINAR RODADA) ---
+// ==================================================
 
 function getContagemJogadores() { 
 let total = 0; let reais = 0; 
@@ -1250,24 +1555,53 @@ return [];
 
 // Convertido para 'async'
 async function getAdminStatusData() {
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (ADMIN STATUS) ---
+// ==================================================
+const idSorteioAtual = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
 const statusData = {
 estado: estadoJogo,
-sorteioAtual: numeroDoSorteio,
+sorteioAtual: idSorteioAtual,
 tempoRestante: estadoJogo === 'ESPERANDO' ? tempoRestante : null,
 jogadoresReais: getContagemJogadores().reais
 };
 
 try {
-const proximoSorteioId = estadoJogo === 'ESPERANDO' ? numeroDoSorteio : numeroDoSorteio + 1;
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (ADMIN STATUS VENDAS) ---
+// ==================================================
+let proximoSorteioId = 0;
+let vendasProximoRes = null;
 
-const vendasProximoRes = await db.query(`
-           SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
-           FROM vendas 
-           WHERE sorteio_id = $1
-       `, [proximoSorteioId]);
+if (sorteioEspecialEmAndamento) {
+    // Se o especial está rolando, não há "próximo" sorteio
+    proximoSorteioId = idSorteioAtual;
+    vendasProximoRes = await db.query(`
+        SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
+        FROM vendas 
+        WHERE tipo_sorteio = 'especial_agendado' AND sorteio_id_especial = $1
+    `, [idSorteioAtual]);
+    
+} else {
+    // Se estamos no regular, o próximo é o regular
+    proximoSorteioId = estadoJogo === 'ESPERANDO' ? numeroDoSorteio : numeroDoSorteio + 1;
+    vendasProximoRes = await db.query(`
+        SELECT COUNT(*) as qtd_cartelas, SUM(valor_total) as valor_total 
+        FROM vendas 
+        WHERE tipo_sorteio = 'regular' AND sorteio_id = $1
+    `, [proximoSorteioId]);
+}
 
 statusData.vendasProximoSorteio = vendasProximoRes.rows[0] || { qtd_cartelas: 0, valor_total: 0 };
 statusData.proximoSorteioId = proximoSorteioId;
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
 
 // 'date()' (SQLite) vira '::date' (PostgreSQL)
 const receitaDiaRes = await db.query(`
@@ -1290,6 +1624,15 @@ return statusData;
 // Convertido para 'async'
 io.on('connection', async (socket) => {
 console.log(`Novo usuário conectado: ${socket.id}`);
+
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (ID SORTEIO INICIAL) ---
+// ==================================================
+const idSorteioAtual = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
+
 try {
 const contagemInicial = getContagemJogadores(); 
 const ultimosVencedoresDB = await getUltimosVencedoresDoDB(); // 'await'
@@ -1301,9 +1644,9 @@ const configs = resDB.rows;
 const configMap = configs.reduce((acc, config) => { acc[config.chave] = config.valor; return acc; }, {});
 
 socket.emit('estadoInicial', { 
-sorteioId: numeroDoSorteio, 
+sorteioId: idSorteioAtual, // Usa o ID correto
 estado: estadoJogo, 
-tempoRestante: estadoJogo === 'ESPERANDO' ? tempoRestante : 0, 
+tempoRestante: (estadoJogo === 'ESPERANDO' && !sorteioEspecialEmAndamento) ? tempoRestante : 0, // Só manda timer do regular
 jogadoresOnline: totalOnline, 
 jogadoresReais: reaisOnline, 
 ultimosVencedores: ultimosVencedoresDB, 
@@ -1324,7 +1667,7 @@ const preco = precoRes.rows[0];
 const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
 const valorTotal = quantidade * precoUnitarioAtual;
 
-console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade} cartela(s). Total: R$${valorTotal.toFixed(2)}.`);
+console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade} cartela(s) REGULAR. Total: R$${valorTotal.toFixed(2)}.`);
 
 // Verifica se a BASE_URL foi configurada
 if (!process.env.BASE_URL) {
@@ -1355,7 +1698,14 @@ const response = await payment.create({ body });
 const paymentId = response.id.toString();
 
 // *** ATUALIZAÇÃO (PAGAMENTOS PENDENTES) ***
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (CRIAR PAGAMENTO REGULAR) ---
+// ==================================================
 // Salva o pagamento pendente no DB, não na variável
+dadosCompra.tipo_compra = 'regular'; // Adiciona o tipo
+// ==================================================
+// --- FIM DA MODIFICAÇÃO ---
+// ==================================================
 const dadosCompraJSON = JSON.stringify(dadosCompra);
 const query = `
                INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
@@ -1387,6 +1737,95 @@ callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access T
 });
 // --- FIM DA FUNÇÃO DE PAGAMENTO ---
 
+
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (NOVO SOCKET EVENT: CRIAR PAGAMENTO ESPECIAL) ---
+// ==================================================
+socket.on('criarPagamentoEspecial', async (dadosCompra, callback) => {
+    try {
+        const { nome, telefone, quantidade } = dadosCompra;
+
+        // 1. Verifica se o Sorteio Especial está ativo
+        if (SORTEIO_ESPECIAL_ATIVO !== 'true' || !SORTEIO_ESPECIAL_DATAHORA) {
+            if (typeof callback === 'function') callback({ success: false, message: 'As vendas para o Sorteio Especial não estão ativas no momento.' });
+            return;
+        }
+        
+        // 2. Verifica se a data do sorteio já passou
+        try {
+             const dataAgendada = new Date(SORTEIO_ESPECIAL_DATAHORA);
+             if (new Date() >= dataAgendada) {
+                 if (typeof callback === 'function') callback({ success: false, message: 'As vendas para este Sorteio Especial já foram encerradas.' });
+                return;
+             }
+        } catch (e) {
+             if (typeof callback === 'function') callback({ success: false, message: 'Data do sorteio inválida. Contate o admin.' });
+             return;
+        }
+
+        // 3. Usa o PREÇO ESPECIAL
+        const precoUnitarioAtual = parseFloat(PRECO_CARTELA_ESPECIAL_ATUAL);
+        const valorTotal = quantidade * precoUnitarioAtual;
+
+        console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade} cartela(s) ESPECIAL. Total: R$${valorTotal.toFixed(2)}.`);
+
+        if (!process.env.BASE_URL) {
+            console.error("ERRO GRAVE: BASE_URL não está configurada! O Webhook do MercadoPago falhará.");
+            if (typeof callback === 'function') callback({ success: false, message: 'Erro no servidor: URL de pagamento não configurada.' });
+            return;
+        }
+
+        const payment = new Payment(mpClient);
+        const body = {
+            transaction_amount: valorTotal,
+            description: `Compra de ${quantidade} cartela(s) - SORTEIO ESPECIAL`, // Descrição diferente
+            payment_method_id: 'pix',
+            notification_url: `${process.env.BASE_URL}/webhook-mercadopago`,
+            payer: {
+                email: `jogador_${telefone}@bingo.com`, 
+                first_name: nome,
+                last_name: "Jogador (Especial)",
+            },
+            date_of_expiration: new Date(Date.now() + (10 * 60 * 1000)).toISOString().replace("Z", "-03:00") // 10 min
+        };
+
+        const response = await payment.create({ body });
+        const paymentId = response.id.toString();
+
+        // 4. Salva o pagamento pendente com o TIPO 'especial'
+        dadosCompra.tipo_compra = 'especial'; // Adiciona o tipo
+        const dadosCompraJSON = JSON.stringify(dadosCompra);
+        
+        const query = `
+               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
+               VALUES ($1, $2, $3)
+               ON CONFLICT (payment_id) DO UPDATE SET
+                   socket_id = EXCLUDED.socket_id,
+                   dados_compra_json = EXCLUDED.dados_compra_json,
+                   timestamp = CURRENT_TIMESTAMP
+           `;
+        await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
+        console.log(`Pagamento PIX (ESPECIAL) ${paymentId} salvo no DB para socket ${socket.id}.`);
+
+        const qrCodeBase64 = response.point_of_interaction.transaction_data.qr_code_base64;
+        const qrCodeCopiaCola = response.point_of_interaction.transaction_data.qr_code;
+
+        if (typeof callback === 'function') {
+            callback({ success: true, qrCodeBase64, qrCodeCopiaCola, paymentId: paymentId });
+        }
+
+    } catch(error) {
+        console.error("Erro em criarPagamentoEspecial no Mercado Pago:", error.cause || error.message);
+        if (typeof callback === 'function') {
+            callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access Token do Servidor.' });
+        }
+    }
+});
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (NOVO SOCKET EVENT) ---
+// ==================================================
+
+
 // ==========================================================
 // ===== OUVINTE "BUSCAR CARTELAS POR TELEFONE" (MODIFICADO) =====
 // ==========================================================
@@ -1401,26 +1840,38 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
 
     try {
         // Determina o ID do próximo sorteio
-        const proximoSorteioId = (estadoJogo === "ESPERANDO") ? numeroDoSorteio : numeroDoSorteio + 1;
+        const proximoSorteioId = (estadoJogo === "ESPERANDO" && !sorteioEspecialEmAndamento) ? numeroDoSorteio : numeroDoSorteio + 1;
 
-        // ***** INÍCIO DA ATUALIZAÇÃO *****
-        // Query modificada: remove 'AND sorteio_id >= $2', aumenta o LIMIT e remove o parâmetro $2
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (BUSCAR CARTELAS) ---
+        // ==================================================
+        // Query modificada: Pega as colunas 'tipo_sorteio' e 'sorteio_id_especial'
+        // Também busca vendas do tipo 'especial_agendado'
         const query = `
             SELECT 
                 id, 
                 sorteio_id, 
                 quantidade_cartelas, 
                 to_char(timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY às HH24:MI') as data_formatada,
-                nome_jogador
+                nome_jogador,
+                tipo_sorteio, 
+                sorteio_id_especial
             FROM vendas 
-            WHERE telefone = $1 
-            ORDER BY sorteio_id DESC, timestamp DESC
+            WHERE 
+                telefone = $1 
+                AND (
+                    (tipo_sorteio = 'regular' AND sorteio_id >= $2) OR 
+                    (tipo_sorteio = 'especial_agendado')
+                )
+            ORDER BY timestamp DESC
             LIMIT 20; 
         `;
-        // NOTA: Removi 'AND sorteio_id >= $2' e aumentei o limite para 20
         
-        const res = await db.query(query, [telefone]);
-        // ***** FIM DA ATUALIZAÇÃO *****
+        // Passa o ID do *sorteio atual* para filtrar apenas os regulares recentes
+        const res = await db.query(query, [telefone, numeroDoSorteio]);
+        // ==================================================
+        // --- FIM DA MODIFICAÇÃO ---
+        // ==================================================
 
         if (res.rows.length > 0) {
             // Encontrou! Retorna a lista de vendas.
@@ -1428,7 +1879,7 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
                 callback({ 
                     success: true, 
                     vendas: res.rows,
-                    proximoSorteioId: proximoSorteioId // Envia o ID do próximo sorteio
+                    proximoSorteioId: proximoSorteioId // Envia o ID do próximo sorteio regular
                 });
             }
         } else {
@@ -1493,7 +1944,47 @@ socket.on('checarMeusPremios', async (data, callback) => {
 // ==========================================================
 
 
-socket.on('registerPlayer', (playerData) => { try { if (playerData && playerData.cartelas && playerData.cartelas.length > 0) { const s_id_cartela = playerData.cartelas[0].s_id; if (s_id_cartela === numeroDoSorteio || (estadoJogo === "ESPERANDO")) { console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio #${numeroDoSorteio}.`); jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; io.emit('contagemJogadores', getContagemJogadores()); } else { console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio #${numeroDoSorteio} com cartela inválida (Sorteio #${s_id_cartela}, Estado: ${estadoJogo}). REJEITADO.`); socket.emit('cartelaAntiga'); } } } catch(error) { console.error("Erro em registerPlayer:", error); } });
+socket.on('registerPlayer', (playerData) => { 
+    try { 
+        if (playerData && playerData.cartelas && playerData.cartelas.length > 0) {
+            const s_id_cartela = playerData.cartelas[0].s_id;
+            
+            // ==================================================
+            // --- INÍCIO DA MODIFICAÇÃO (REGISTER PLAYER) ---
+            // ==================================================
+            
+            let idSorteioValido = null;
+            let nomeSorteio = "";
+
+            if (sorteioEspecialEmAndamento) {
+                // Se o sorteio especial está rolando, o ID válido é a data/hora
+                idSorteioValido = SORTEIO_ESPECIAL_DATAHORA;
+                nomeSorteio = "ESPECIAL";
+            } else {
+                // Se o sorteio regular está rolando ou em espera
+                idSorteioValido = numeroDoSorteio;
+                nomeSorteio = "REGULAR";
+            }
+
+            // A lógica de registro é: A cartela (s_id) deve bater com o sorteio que está ATIVO (regular ou especial)
+            if (s_id_cartela == idSorteioValido) {
+                console.log(`Servidor: Registrando jogador ${playerData.nome} (${socket.id}) para o Sorteio ${nomeSorteio} #${idSorteioValido}.`);
+                jogadores[socket.id] = { nome: playerData.nome, telefone: playerData.telefone, isBot: false, isManual: false, cartelas: playerData.cartelas }; 
+                io.emit('contagemJogadores', getContagemJogadores());
+            } else {
+                // Se não bate, é cartela antiga ou de um sorteio futuro (ex: comprou regular durante especial)
+                console.warn(`Servidor: Jogador ${playerData.nome} (${socket.id}) tentou entrar no Sorteio ${nomeSorteio} #${idSorteioValido} com cartela inválida (Sorteio #${s_id_cartela}). REJEITADO.`); 
+                socket.emit('cartelaAntiga');
+            }
+            // ==================================================
+            // --- FIM DA MODIFICAÇÃO ---
+            // ==================================================
+            
+        } 
+    } catch(error) { 
+        console.error("Erro em registerPlayer:", error); 
+    } 
+});
 socket.on('disconnect', () => { console.log(`Usuário desconectado: ${socket.id}`); const eraJogadorRegistrado = jogadores[socket.id] && jogadores[socket.id].nome && !jogadores[socket.id].isBot && !jogadores[socket.id].isManual; delete jogadores[socket.id]; if (eraJogadorRegistrado) { try { io.emit('contagemJogadores', getContagemJogadores()); } catch (error) { console.error("Erro ao emitir contagemJogadores no disconnect:", error); } } });
 
 // Convertido para 'async'
@@ -1575,6 +2066,118 @@ console.error("Erro ao checar status de pagamento (checarMeuPagamento):", err);
 
 });
 // ==========================================================
+
+
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (NOVAS FUNÇÕES DE JOGO ESPECIAL) ---
+// ==================================================
+
+// Nova função: O "agendador" que roda dentro do ticker principal
+async function verificarSorteioEspecial() {
+    // Se o sorteio não está ativo, ou não tem data, ou já está rolando, não faz nada
+    if (SORTEIO_ESPECIAL_ATIVO !== 'true' || !SORTEIO_ESPECIAL_DATAHORA || sorteioEspecialEmAndamento) {
+        return;
+    }
+
+    // Se o sorteio regular estiver no meio, não interrompe (apenas se estiver em ESPERA)
+    if (estadoJogo !== 'ESPERANDO') {
+        return;
+    }
+
+    try {
+        const dataAgendada = new Date(SORTEIO_ESPECIAL_DATAHORA);
+        const agora = new Date();
+
+        if (agora >= dataAgendada) {
+            console.log(`HORA DO SORTEIO ESPECIAL! Agendado para: ${dataAgendada.toISOString()}, Agora: ${agora.toISOString()}`);
+            await iniciarSorteioEspecial();
+        }
+    } catch (e) {
+        console.error("Erro ao verificar data do Sorteio Especial. Verifique o formato:", e.message);
+        // Desativa para evitar loops de erro
+        await db.query("UPDATE configuracoes SET valor = 'false' WHERE chave = 'sorteio_especial_ativo'");
+        await carregarConfiguracoes();
+    }
+}
+
+// Nova função: Inicia o Sorteio Especial
+async function iniciarSorteioEspecial() {
+    console.log(`Servidor: Iniciando Sorteio ESPECIAL #${SORTEIO_ESPECIAL_DATAHORA}...`);
+    
+    // 1. Trava o servidor para este sorteio
+    sorteioEspecialEmAndamento = true;
+    estadoJogo = "JOGANDO_LINHA";
+    
+    // 2. Limpa jogadores (bots/manuais) da rodada regular anterior
+    jogadores = {};
+    
+    // 3. Reseta os números
+    numerosDisponiveis = Array.from({ length: 75 }, (_, i) => i + 1);
+    numerosSorteados = [];
+    if (intervaloSorteio) { clearInterval(intervaloSorteio); }
+
+    // 4. Carregar Jogadores Reais (vendas antecipadas) do DB
+    try {
+        const queryVendas = `
+            SELECT id, nome_jogador, telefone, cartelas_json 
+            FROM vendas 
+            WHERE tipo_sorteio = 'especial_agendado' AND sorteio_id_especial = $1
+        `;
+        const resVendas = await db.query(queryVendas, [SORTEIO_ESPECIAL_DATAHORA]);
+        
+        for (const venda of resVendas.rows) {
+            const cartelas = JSON.parse(venda.cartelas_json);
+            const playerId = `especial_venda_${venda.id}`;
+            // Adiciona como 'isManual' para que não precise de socket conectado
+            jogadores[playerId] = { 
+                nome: venda.nome_jogador, 
+                telefone: venda.telefone, 
+                isBot: false, 
+                isManual: true, // Importante!
+                cartelas: cartelas 
+            };
+        }
+        console.log(`Carregados ${resVendas.rows.length} jogadores reais (vendas) para o Sorteio Especial.`);
+
+    } catch (e) {
+        console.error("ERRO CRÍTICO ao carregar vendas do Sorteio Especial:", e);
+        // Não podemos continuar se as vendas não carregarem
+        sorteioEspecialEmAndamento = false;
+        estadoJogo = "ESPERANDO";
+        return;
+    }
+
+    // 5. Adicionar Bots
+    const numBots = Math.floor(Math.random() * (MAX_BOTS_ATUAL - MIN_BOTS_ATUAL + 1)) + MIN_BOTS_ATUAL;
+    console.log(`Servidor: Adicionando ${numBots} bots para o Sorteio Especial.`);
+    for (let i = 0; i < numBots; i++) {
+        const botId = `bot_${gerarIdUnico()}`;
+        const botNome = nomesBots[Math.floor(Math.random() * nomesBots.length)];
+        const numCartelasBot = Math.floor(Math.random() * (MAX_CARTELAS_POR_BOT - MIN_CARTELAS_POR_BOT + 1)) + MIN_CARTELAS_POR_BOT;
+        const botCartelas = [];
+        for (let j = 0; j < numCartelasBot; j++) {
+            // Gera cartelas com o ID (datahora) do sorteio especial
+            botCartelas.push(gerarDadosCartela(SORTEIO_ESPECIAL_DATAHORA));
+        }
+        jogadores[botId] = { nome: botNome, telefone: null, isBot: true, cartelas: botCartelas };
+    }
+
+    // 6. Avisa todo mundo para ir para a tela de jogo
+    io.emit('iniciarJogo');
+    io.emit('estadoJogoUpdate', { sorteioId: SORTEIO_ESPECIAL_DATAHORA, estado: estadoJogo });
+    io.emit('contagemJogadores', getContagemJogadores());
+    io.emit('atualizarQuaseLa', []);
+
+    // 7. Começa a sortear números
+    setTimeout(() => {
+        console.log("Servidor (ESPECIAL): Começando a sortear números.");
+        intervaloSorteio = setInterval(sortearNumero, TEMPO_ENTRE_NUMEROS);
+    }, 5000); // Delay inicial
+}
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (NOVAS FUNÇÕES DE JOGO ESPECIAL) ---
+// ==================================================
+
 
 // ==========================================================
 // Iniciar o Servidor

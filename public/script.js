@@ -7,13 +7,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     catch (err) { console.error("Erro ao conectar ao Socket.IO:", err); alert("Erro de conexão com o servidor. Recarregue."); }
 
-    // --- Variável Global para Preço (será atualizada) ---
+    // --- Variáveis Globais para Preço (será atualizada) ---
     let PRECO_CARTELA_ATUAL = 5.00; // Valor padrão inicial
+    
+    // ==================================================
+    // --- INÍCIO DAS MODIFICAÇÕES ---
+    // ==================================================
+    let PRECO_CARTELA_ESPECIAL_ATUAL = 10.00; // Valor padrão inicial
+    let TIPO_COMPRA_ATUAL = 'regular'; // Controla qual tipo de compra está no modal
+    // ==================================================
+    // --- FIM DAS MODIFICAÇÕES ---
+    // ==================================================
+
 
     // --- Seletores do DOM ---
     const modal = document.getElementById('modal-checkout');
     const btnCloseModal = document.querySelector('.modal-close');
     const btnJogueAgora = document.getElementById('btn-jogue-agora');
+    
+    // ==================================================
+    // --- INÍCIO DAS MODIFICAÇÕES ---
+    // ==================================================
+    const btnJogueEspecial = document.getElementById('btn-jogue-especial'); // Botão novo
+    const modalTitulo = document.getElementById('modal-titulo'); // Título do modal
+    // ==================================================
+    // --- FIM DAS MODIFICAÇÕES ---
+    // ==================================================
     
     const etapaDados = document.getElementById('etapa-dados');
     const etapaPix = document.getElementById('etapa-pix');
@@ -39,6 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const premioEspecialContainer = document.getElementById('premio-especial');
     const especialValorEl = document.getElementById('especial-valor');
     const especialDataEl = document.getElementById('especial-data');
+
+    // ==================================================
+    // --- INÍCIO DAS MODIFICAÇÕES ---
+    // ==================================================
+    const especialPrecoCartelaEl = document.getElementById('especial-preco-cartela'); // Span no botão especial
+    // ==================================================
+    // --- FIM DAS MODIFICAÇÕES ---
+    // ==================================================
 
     const statusSorteioBox = document.getElementById('status-sorteio-box');
     const statusTitulo = document.getElementById('status-titulo');
@@ -71,18 +98,55 @@ document.addEventListener('DOMContentLoaded', () => {
             PRECO_CARTELA_ATUAL = novoPreco; // Atualiza variável global
             const precoFormatado = formatarBRL(PRECO_CARTELA_ATUAL);
             if(indexPrecoCartelaEl) indexPrecoCartelaEl.textContent = precoFormatado;
-            if(modalLabelPrecoEl) modalLabelPrecoEl.textContent = precoFormatado;
-            atualizarPrecoTotalModal(); // Recalcula total no modal
+            // (O label do modal é atualizado quando ele abre)
         }
         
-        // --- LÓGICA DO SORTEIO ESPECIAL ---
+        // ==================================================
+        // --- INÍCIO DAS MODIFICAÇÕES ---
+        // ==================================================
+        
+        // --- LÓGICA DO SORTEIO ESPECIAL (ATUALIZADA) ---
         if (data.sorteio_especial_ativo === 'true') {
             if (especialValorEl) especialValorEl.textContent = formatarBRL(data.sorteio_especial_valor);
-            if (especialDataEl) especialDataEl.textContent = `🗓️ ${data.sorteio_especial_data} 🕖`;
+            
+            // Formata a nova data 'datetime-local' (ex: 2025-11-10T19:00)
+            const dataEspecial = data.sorteio_especial_datahora;
+            if (especialDataEl && dataEspecial) {
+                try {
+                    const dataObj = new Date(dataEspecial);
+                    const dataFormatada = dataObj.toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    especialDataEl.textContent = `🗓️ ${dataFormatada} 🕖`;
+                } catch (e) {
+                    especialDataEl.textContent = `🗓️ Data Inválida 🕖`;
+                }
+            } else if (especialDataEl) {
+                especialDataEl.textContent = `🗓️ Data a definir 🕖`;
+            }
+
+            // Atualiza o preço da cartela especial
+            const novoPrecoEspecial = parseFloat(data.sorteio_especial_preco_cartela);
+            if (!isNaN(novoPrecoEspecial) && novoPrecoEspecial > 0) {
+                PRECO_CARTELA_ESPECIAL_ATUAL = novoPrecoEspecial;
+                if(especialPrecoCartelaEl) especialPrecoCartelaEl.textContent = formatarBRL(PRECO_CARTELA_ESPECIAL_ATUAL);
+            }
+            
             if (premioEspecialContainer) premioEspecialContainer.style.display = 'block'; // Mostra
         } else {
             if (premioEspecialContainer) premioEspecialContainer.style.display = 'none'; // Esconde
         }
+        
+        // Recalcula o total no modal (caso esteja aberto e os preços mudem)
+        atualizarPrecoTotalModal();
+        
+        // ==================================================
+        // --- FIM DAS MODIFICAÇÕES ---
+        // ==================================================
     }
 
     // --- *** INÍCIO DA ATUALIZAÇÃO (Função do Quadro de Status) *** ---
@@ -173,23 +237,62 @@ document.addEventListener('DOMContentLoaded', () => {
         pararVerificadorPagamento(); 
     }
 
-    // --- Event Listeners (Sem alteração) ---
+    // --- Event Listeners (ATUALIZADOS) ---
+    
+    // ==================================================
+    // --- INÍCIO DAS MODIFICAÇÕES ---
+    // ==================================================
+    
+    // --- CLIQUE BOTÃO REGULAR ---
     if (btnJogueAgora && modal) {
         btnJogueAgora.addEventListener('click', () => {
-            console.log("Botão 'Jogue Agora!' clicado.");
+            console.log("Botão 'Jogue Agora!' (Regular) clicado.");
+            TIPO_COMPRA_ATUAL = 'regular';
+            if(modalTitulo) modalTitulo.textContent = 'Complete seu Pedido';
+            
             modal.style.display = 'flex';
             atualizarPrecoTotalModal();
              if(modalNome) modalNome.focus();
         });
     } else { console.error("Erro: Botão 'Jogue Agora' ou Modal não encontrado."); }
 
+    // --- CLIQUE BOTÃO ESPECIAL ---
+    if (btnJogueEspecial && modal) {
+        btnJogueEspecial.addEventListener('click', () => {
+            console.log("Botão 'Jogue Agora!' (Especial) clicado.");
+            TIPO_COMPRA_ATUAL = 'especial';
+            if(modalTitulo) modalTitulo.textContent = 'Sorteio Especial';
+            
+            modal.style.display = 'flex';
+            atualizarPrecoTotalModal();
+             if(modalNome) modalNome.focus();
+        });
+    } else { console.error("Erro: Botão 'Jogue Especial' ou Modal não encontrado."); }
+    
+
+    // --- ATUALIZAR PREÇO MODAL (MODIFICADO) ---
     function atualizarPrecoTotalModal() {
-        if (!modalQuantidadeInput || !modalPrecoEl) return;
+        if (!modalQuantidadeInput || !modalPrecoEl || !modalLabelPrecoEl) return;
+        
+        // Define o preço unitário baseado no tipo de compra
+        const precoUnitario = (TIPO_COMPRA_ATUAL === 'especial') 
+            ? PRECO_CARTELA_ESPECIAL_ATUAL 
+            : PRECO_CARTELA_ATUAL;
+            
+        // Atualiza o label
+        modalLabelPrecoEl.textContent = formatarBRL(precoUnitario);
+        
         let quantidade = parseInt(modalQuantidadeInput.value);
         quantidade = (!quantidade || quantidade < 1) ? 1 : quantidade;
-        const precoTotal = quantidade * PRECO_CARTELA_ATUAL; 
+        
+        const precoTotal = quantidade * precoUnitario; 
         modalPrecoEl.textContent = formatarBRL(precoTotal);
     }
+    // ==================================================
+    // --- FIM DAS MODIFICAÇÕES ---
+    // ==================================================
+    
+    
     if(modalQuantidadeInput) {
         modalQuantidadeInput.addEventListener('input', atualizarPrecoTotalModal);
         modalQuantidadeInput.addEventListener('change', atualizarPrecoTotalModal);
@@ -199,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(modal) modal.addEventListener('click', (event) => { if (event.target === modal) fecharModal(); });
 
     // ==========================================================
-    // --- LÓGICA DE GERAR PIX (VOLTANDO AO ORIGINAL) ---
+    // --- LÓGICA DE GERAR PIX (MODIFICADA) ---
     // ==========================================================
     if (btnGerarPix && modalNome && modalTelefone && modalQuantidadeInput && socket) {
         btnGerarPix.addEventListener('click', () => {
@@ -207,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!nome || !telefone || !quantidade || quantidade < 1) { alert("Preencha todos os campos."); return; }
             if (!/^\d{10,11}$/.test(telefone.replace(/\D/g,''))) { alert("Telefone inválido."); return; }
             
-            console.log("Solicitando PIX..."); 
+            console.log(`Solicitando PIX para compra do tipo: ${TIPO_COMPRA_ATUAL}`); 
             btnGerarPix.textContent = "Gerando..."; 
             btnGerarPix.disabled = true;
             
@@ -215,7 +318,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if(pixQrContainer) pixQrContainer.style.display = 'block';
             if(pixCopiaContainer) pixCopiaContainer.style.display = 'block';
 
-            socket.emit('criarPagamento', { nome, telefone, quantidade }, (data) => {
+            // ==================================================
+            // --- INÍCIO DAS MODIFICAÇÕES ---
+            // ==================================================
+            
+            // Define qual evento de socket chamar (regular ou especial)
+            const eventoSocket = (TIPO_COMPRA_ATUAL === 'especial') 
+                ? 'criarPagamentoEspecial' 
+                : 'criarPagamento';
+                
+            // Salva o tipo de compra no sessionStorage para o 'pagamentoAprovado' saber o que fazer
+            sessionStorage.setItem('bingo_tipo_compra', TIPO_COMPRA_ATUAL);
+
+            socket.emit(eventoSocket, { nome, telefone, quantidade }, (data) => {
+            // ==================================================
+            // --- FIM DAS MODIFICAÇÕES ---
+            // ==================================================
                 
                 // --- VOLTANDO À LÓGICA ORIGINAL QUE USA Base64 ---
                 if (data && data.success) {
@@ -243,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert(`Erro: ${data.message || 'Não foi possível gerar o PIX.'}`);
                     btnGerarPix.textContent = "Gerar PIX"; 
                     btnGerarPix.disabled = false;
+                    sessionStorage.removeItem('bingo_tipo_compra'); // Limpa se falhar
                 }
             });
         });
@@ -311,21 +430,47 @@ document.addEventListener('DOMContentLoaded', () => {
                  return;
             }
             
-            if (modal.style.display === 'flex' && etapaPix.style.display === 'block') {
-                alert("Pagamento confirmado!\n\nCartelas geradas.\nIndo para a sala de espera.");
-                fecharModal(); 
-                modalNome.value = ""; 
-                modalTelefone.value = ""; 
-                modalQuantidadeInput.value = "1";
-            }
+            // ==================================================
+            // --- INÍCIO DAS MODIFICAÇÕES ---
+            // ==================================================
             
-            window.location.href = `espera.html?venda=${data.vendaId}`;
+            // Pega o tipo de compra que foi salvo antes de gerar o PIX
+            const tipoCompraSalvo = sessionStorage.getItem('bingo_tipo_compra') || 'regular';
+            sessionStorage.removeItem('bingo_tipo_compra'); // Limpa
+            
+            // Limpa os campos do modal
+            if(modalNome) modalNome.value = ""; 
+            if(modalTelefone) modalTelefone.value = ""; 
+            if(modalQuantidadeInput) modalQuantidadeInput.value = "1";
+            
+            if (modal.style.display === 'flex' && etapaPix.style.display === 'block') {
+                fecharModal();
+                
+                if (tipoCompraSalvo === 'especial') {
+                    // Se for ESPECIAL, só avisa e fecha o modal
+                    alert("Pagamento confirmado!\n\nSuas cartelas para o Sorteio Especial estão garantidas. Você pode consultá-las a qualquer momento na seção 'Ver Minhas Compras'.");
+                    // Não redireciona
+                } else {
+                    // Se for REGULAR, redireciona para a sala de espera (comportamento antigo)
+                    alert("Pagamento confirmado!\n\nCartelas geradas.\nIndo para a sala de espera.");
+                    window.location.href = `espera.html?venda=${data.vendaId}`;
+                }
+            } else if (tipoCompraSalvo === 'regular') {
+                // Se o modal não estava aberto mas era compra regular (ex: outra aba)
+                window.location.href = `espera.html?venda=${data.vendaId}`;
+            }
+            // Se o modal não estava aberto e era 'especial', não faz nada (só foi aprovado em background)
+
+            // ==================================================
+            // --- FIM DAS MODIFICAÇÕES ---
+            // ==================================================
         });
 
         socket.on('pagamentoErro', (data) => {
             alert(`Erro no servidor de pagamento: ${data.message}`);
             pararVerificadorPagamento();
             sessionStorage.removeItem('bingo_payment_id'); 
+            sessionStorage.removeItem('bingo_tipo_compra'); // Limpa
             fecharModal(); 
         });
 
@@ -413,13 +558,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // ***** INÍCIO DA ATUALIZAÇÃO *****
                 // Mostra "Ver Jogo Encerrado" como texto, não como botão desabilitado
-                const botaoHtml = eProximoSorteio 
-                    ? `<button class="btn-comprar btn-entrar-jogo btn-destaque" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}">
-                           Entrar na Sala de Espera
-                       </button>`
-                    : `<span class="jogo-encerrado-info">Jogo Encerrado</span>`;
-                // ***** FIM DA ATUALIZAÇÃO *****
+                // ==================================================
+                // --- INÍCIO DAS MODIFICAÇÕES (Lógica do Botão Entrar) ---
+                // ==================================================
+                // Agora verifica se é um sorteio especial ou regular
+                
+                let botaoHtml = '';
+                if (venda.tipo_sorteio === 'especial_agendado') {
+                    // Se for especial, o botão sempre diz "Ver Cartelas" e leva para a espera
+                    // (A lógica de redirecionar para o JOGO só acontece quando o server mandar)
+                     botaoHtml = `<button class="btn-comprar btn-entrar-jogo btn-destaque" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}">
+                           Ver Cartelas (Especial)
+                       </button>`;
+                } else {
+                    // Lógica antiga para sorteios regulares
+                    botaoHtml = eProximoSorteio 
+                        ? `<button class="btn-comprar btn-entrar-jogo btn-destaque" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}">
+                               Entrar na Sala de Espera
+                           </button>`
+                        : `<span class="jogo-encerrado-info">Jogo Encerrado</span>`;
+                }
+                
+                // Define um texto para o tipo de sorteio
+                const tipoTexto = venda.tipo_sorteio === 'especial_agendado' 
+                    ? '<span style="color:var(--color-pix-green); font-weight:bold;">(Sorteio Especial)</span>' 
+                    : '(Sorteio Regular)';
 
+                // ==================================================
+                // --- FIM DAS MODIFICAÇÕES ---
+                // ==================================================
                 
                 // Salva o nome e telefone do jogador da primeira venda válida
                 if (!sessionStorage.getItem('bingo_usuario_nome')) {
@@ -429,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 htmlInterno += `
                     <div class="cartela-encontrada-item">
                         <div class="cartela-info-wrapper">
-                            <span class="sorteio-id">Sorteio #${venda.sorteio_id}</span>
+                            <span class="sorteio-id">Sorteio #${venda.sorteio_id} ${tipoTexto}</span>
                             <span class="sorteio-qtd">${venda.quantidade_cartelas} cartela(s)</span>
                             <span class="sorteio-data">Comprada em: ${venda.data_formatada}</span>
                         </div>
@@ -457,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modalResultados = null;
             }
 
-            // Clicar no botão "Entrar"
+            // Clicar no botão "Entrar" (Funciona para ambos os tipos agora)
             if (e.target.classList.contains('btn-entrar-jogo')) {
                 const vendaId = e.target.dataset.vendaId;
                 const nome = e.target.dataset.nome;
@@ -465,6 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Salva o nome para a próxima página
                 sessionStorage.setItem('bingo_usuario_nome', nome);
                 // Redireciona para a sala de espera com o ID da Venda
+                // A sala de espera.js vai lidar com o timer (seja regular ou especial)
                 window.location.href = `espera.html?venda=${vendaId}`;
             }
         });
@@ -534,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const telefone = inputTelefoneRecuperar.value.trim();
             
             if (!/^\d{10,11}$/.test(telefone.replace(/\D/g,''))) {
-                alert("Telefone inválido. Digite apenas números, incluindo o DDD (Ex: 69912345678).");
+                alert("Telefone inválido. Digite apenas números, incluindo o DDD (Ex: 69999658548).");
                 return;
             }
 
@@ -576,7 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const telefone = inputTelefoneRecuperar.value.trim();
             
             if (!/^\d{10,11}$/.test(telefone.replace(/\D/g,''))) {
-                alert("Telefone inválido. Digite apenas números, incluindo o DDD (Ex: 69912345678).");
+                alert("Telefone inválido. Digite apenas números, incluindo o DDD (Ex: 69999658548).");
                 return;
             }
 
