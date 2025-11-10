@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Controle - Admin</title>
+    <title>Painel Admin - Bingo do Pix</title>
     <link rel="stylesheet" href="admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -14,10 +14,9 @@
         <nav class="admin-nav">
             <ul>
                 <li><a href="/admin/painel.html" class="ativo">Painel & Status</a></li>
-                <li><a href="/admin/agendamento.html">Agendamentos</a></li> 
                 <li><a href="/admin/vencedores.html">Gestão Vencedores</a></li>
                 <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
-                <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li>
+                <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li> </ul>
             </ul>
         </nav>
         <div class="logout-link">
@@ -26,135 +25,137 @@
     </aside>
 
     <main class="admin-content">
-         <header class="content-header">
-             <h1>Painel de Controle & Status</h1>
-        </header>
+        <header class="content-header">
+            <h1>Painel de Controle e Status</h1>
+            </header>
 
         <section class="card admin-section admin-status-section">
-            <h2>Status do Próximo Sorteio</h2>
-            <p>Visão geral do sorteio que está recebendo vendas (ou em andamento).</p>
+            <h2>Status Atual do Jogo</h2>
             <div class="status-grid">
                 <div class="status-item">
                     <span class="status-label">Estado Atual:</span>
-                    <span class="status-value" id="status-estado">--</span>
+                    <span class="status-value" id="admin-status-jogo">Carregando...</span>
                 </div>
                  <div class="status-item">
-                    <span class="status-label">Próximo Sorteio ID:</span>
-                    <span class="status-value" id="status-sorteio-id">#---</span>
+                    <span class="status-label">Sorteio Atual/Próximo:</span>
+                    <span class="status-value" id="admin-sorteio-atual">#---</span>
                 </div>
-                <div class="status-item">
+                 <div class="status-item">
                     <span class="status-label">Tempo Restante:</span>
-                    <span class="status-value" id="status-tempo-restante">--:--</span>
-                </div>
-                 <div class="status-item">
-                    <span class="status-label">Vendas (Próximo Sorteio):</span>
-                    <span class="status-value" id="status-vendas-sorteio">R$ --,--</span>
+                    <span class="status-value" id="admin-tempo-restante">--:--</span>
                 </div>
                 <div class="status-item">
-                    <span class="status-label">Cartelas (Próximo Sorteio):</span>
-                    <span class="status-value" id="status-cartelas-sorteio">--</span>
+                    <span class="status-label">Jogadores Reais Ativos:</span>
+                    <span class="status-value" id="admin-jogadores-reais">--</span>
                 </div>
                 <div class="status-item">
-                    <span class="status-label">Jogadores Reais (Online):</span>
-                    <span class="status-value" id="status-jogadores-reais">--</span>
+                    <span class="status-label">Vendas Próximo Sorteio (#<span id="admin-proximo-sorteio-id">---</span>):</span>
+                    <span class="status-value" id="admin-vendas-proximo">-- cartelas (R$ --,--)</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Receita Total do Dia:</span>
+                    <span class="status-value status-destaque" id="admin-receita-dia">R$ --,--</span>
                 </div>
             </div>
-             <div class="status-grid" style="margin-top: 20px; grid-template-columns: 1fr;">
-                 <div class="status-item">
-                    <span class="status-label">Receita Total de Hoje:</span>
-                    <span class="status-value status-destaque" id="status-receita-dia">R$ --,--</span>
-                </div>
-             </div>
+            <p id="admin-status-error" class="status-message status-error" style="display: none;"></p>
         </section>
 
-        <section class="card admin-section">
-            <h2>Configurações Gerais da Rodada</h2>
-            <p>Ajuste os valores para o próximo sorteio regular. <strong>(ATENÇÃO: A seção "Sorteio Especial" será removida futuramente. Use o menu "Agendamentos".)</strong></p>
-            <form id="form-config">
-                <div class="form-grupo-inline">
-                    <label for="premio-linha">Prêmio Linha (R$):</label>
-                    <input type="number" id="premio-linha" step="0.01" min="0" required>
-                </div>
-                <div class="form-grupo-inline">
-                    <label for="premio-cheia">Prêmio Cartela Cheia (R$):</label>
-                    <input type="number" id="premio-cheia" step="0.01" min="1" required>
-                </div>
-                <div class="form-grupo-inline">
-                    <label for="preco-cartela">Preço por Cartela (R$):</label>
-                    <input type="number" id="preco-cartela" step="0.01" min="1" required>
-                </div>
-                <hr style="grid-column: 1 / -1; margin: 15px 0; border: 0; border-top: 1px solid #eee;">
-                
-                <div class="form-grupo-inline">
-                    <label for="duracao-espera">Tempo de Espera (segundos):</label>
-                    <input type="number" id="duracao-espera" min="10" placeholder="Mínimo 10" required>
-                </div>
-                <div class="form-grupo-inline">
-                    <label for="min-bots">Mínimo de Bots:</label>
-                    <input type="number" id="min-bots" min="0" required>
-                </div>
-                <div class="form-grupo-inline">
-                    <label for="max-bots">Máximo de Bots:</label>
-                    <input type="number" id="max-bots" min="0" required>
-                </div>
-                <hr style="grid-column: 1 / -1; margin: 15px 0; border: 0; border-top: 1px solid #eee;">
-
-                <div class="form-grupo-inline">
-                    <label for="sorteio-especial-ativo">(LEGADO) Sorteio Especial Ativo?</label>
-                    <input type="checkbox" id="sorteio-especial-ativo" style="width: auto; height: 20px;">
-                </div>
-                 <div class="form-grupo-inline">
-                    <label for="sorteio-especial-valor">(LEGADO) Valor Prêmio Especial:</label>
-                    <input type="number" id="sorteio-especial-valor" step="0.01" min="1">
-                </div>
-                <div class="form-grupo-inline">
-                    <label for="sorteio-especial-data">(LEGADO) Texto Sorteio Especial:</label>
-                    <input type="text" id="sorteio-especial-data" placeholder="Dia 25/12 às 20:00">
-                </div>
-
-                <div class="form-grupo-inline">
-                    <label></label> <button type="submit" class="btn-comprar btn-destaque">Salvar Configurações</button>
-                </div>
-            </form>
-            <p id="config-status" class="status-message" style="display: none;"></p>
-        </section>
 
         <section class="card admin-section">
-            <h2>Gerador Manual de Cartelas</h2>
-            <p>Gere cartelas para um cliente manualmente. Elas serão válidas para o próximo sorteio (ID: <strong id="gerador-sorteio-id">#...</strong>).</p>
+            <h2>Gerar e Registrar Cartelas Manuais</h2>
+            <p>Gere cartelas para venda física. Elas serão **automaticamente** registradas no próximo sorteio.</p>
 
             <form id="form-gerar-cartelas">
                 <div class="form-grupo-admin">
                     <label for="manual-nome">Nome do Jogador:</label>
                     <input type="text" id="manual-nome" placeholder="Nome para o prêmio" required>
                 </div>
-                <div class="form-grupo-admin">
+                 <div class="form-grupo-admin">
                     <label for="manual-telefone">Telefone (PIX):</label>
                     <input type="tel" id="manual-telefone" placeholder="Telefone (opcional, para prêmio)">
                 </div>
-                <div class="form-grupo-admin">
-                    <label for="quantidade-manual">Quantidade de Cartelas:</label>
+                 <div class="form-grupo-admin">
+                    <label for="quantidade-manual">Quantidade:</label>
                     <input type="number" id="quantidade-manual" min="1" max="100" value="1" required>
                 </div>
-                <button type="submit" id="btn-gerar-manual" class="btn-comprar btn-comprar-azul" style="width: auto; margin-top: 10px;">Gerar Cartelas</button>
+                <button type="submit" id="btn-gerar-manual" class="btn-comprar btn-comprar-azul" style="width: auto; margin-top: 10px;">Gerar e Registrar</button>
             </form>
-            <p id="gerar-status" class="status-message" style="display: none;"></p>
 
             <hr>
 
             <div id="cartelas-geradas-area">
                 <div class="area-titulo-botoes">
                     <h3>Cartelas Geradas (Prontas para Imprimir):</h3>
-                    <button id="btn-imprimir" class="btn-comprar btn-destaque" style="display: none;">Imprimir Cartelas</to_button>
+                    <button id="btn-imprimir" class="btn-comprar btn-destaque" style="display: none;">Imprimir Cartelas</button>
                 </div>
-                <p id="aviso-impressao"><i>Nenhuma cartela gerada ainda. Use o formulário acima.</i></p>
+                <p id="aviso-impressao"><i>Nenhuma cartela gerada ainda.</i></p>
                 <div id="cartelas-preview-container">
                     </div>
             </div>
         </section>
-    </main>
 
-    <script src="/socket.io/socket.io.js"></script>
+        <section class="card admin-section">
+            <h2>Configurações Gerais</h2>
+            <p>Defina os valores dos prêmios, preço, tempo de espera e sorteio especial.</p>
+            <form id="form-config">
+
+                <h3>Sorteio Padrão</h3>
+                <div class="form-grupo form-grupo-inline">
+                    <label for="premio-linha">Prêmio Linha (R$):</label>
+                    <input type="number" id="premio-linha" step="0.01" min="0" placeholder="Ex: 100.00" required>
+                </div>
+                 <div class="form-grupo form-grupo-inline">
+                    <label for="premio-cheia">Prêmio Cartela Cheia (R$):</label>
+                    <input type="number" id="premio-cheia" step="0.01" min="0" placeholder="Ex: 500.00" required>
+                </div>
+                 <div class="form-grupo form-grupo-inline">
+                    <label for="preco-cartela">Preço Cartela (R$):</label>
+                    <input type="number" id="preco-cartela" step="0.01" min="0.01" placeholder="Ex: 5.00" required>
+                </div>
+                <div class="form-grupo form-grupo-inline">
+                    <label for="duracao-espera">Tempo Espera (segundos):</label>
+                    <input type="number" id="duracao-espera" step="1" min="10" placeholder="Ex: 20" required>
+                </div>
+
+                <hr style="margin: 25px 0;">
+                <h3>Controle de Bots</h3>
+                <div class="form-grupo form-grupo-inline">
+                    <label for="min_bots">Nº Mínimo de Bots:</label>
+                    <input type="number" id="min_bots" step="1" min="0" placeholder="Ex: 80" required>
+                </div>
+                <div class="form-grupo form-grupo-inline">
+                    <label for="max_bots">Nº Máximo de Bots:</label>
+                    <input type="number" id="max_bots" step="1" min="0" placeholder="Ex: 150" required>
+                </div>
+                <hr style="margin: 25px 0;">
+
+                <h3>Sorteio Especial (Página Inicial)</h3>
+                <div class="form-grupo form-grupo-inline">
+                    <label for="sorteio-especial-ativo">Exibir Sorteio Especial?</label>
+                    <select id="sorteio-especial-ativo">
+                        <option value="true">Sim, exibir</option>
+                        <option value="false">Não, ocultar</option>
+                    </select>
+                </div>
+                <div class="form-grupo form-grupo-inline">
+                    <label for="sorteio-especial-valor">Valor do Prêmio Especial (R$):</label>
+                    <input type="number" id="sorteio-especial-valor" step="0.01" min="0" placeholder="Ex: 1000.00">
+                </div>
+                <div class="form-grupo form-grupo-inline">
+                    <label for="sorteio-especial-data">Data/Hora do Sorteio (Texto):</label>
+                    <input type="text" id="sorteio-especial-data" placeholder="Ex: Dia 25/10 às 19:00">
+                </div>
+
+                <div class="form-grupo-inline"> <label></label> <button type="submit" id="btn-salvar-config" class="btn-comprar btn-destaque">Salvar Configurações</button>
+                </div>
+            </form>
+            <p id="config-status" class="status-message" style="display: none;"></p>
+        </section>
+
+    </main>
+    
+    <script src="/socket.io/socket.io.js"></script> 
     <script src="painel.js"></script>
 </body>
+
 </html>

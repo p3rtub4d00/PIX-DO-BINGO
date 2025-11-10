@@ -3,106 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bingo Online - Jogo Pausado!</title>
-    
+    <title>Bingo do Pix - Jogue e Ganhe!</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        /* Define as variáveis de cor para fácil customização */
-        :root {
-            --cor-primaria: #dc3545; /* Vermelho vibrante, cor típica de bingo */
-            --cor-fundo: #f8f9fa;   
-            --cor-caixa: #ffffff;   
-            --cor-titulo: #343a40;
-            --cor-texto: #6c757d;
+        .loader-pix {
+            border: 6px solid #f3f3f3; /* Cinza claro */
+            border-top: 6px solid var(--color-pix-green); /* Verde Pix */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1.5s linear infinite;
+            margin: 20px auto 10px auto;
         }
-
-        /* Reseta estilos básicos e define a fonte */
-        body, html {
-            height: 100%;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-        }
-
-        /* Container principal que centraliza tudo */
-        .container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background-color: var(--cor-fundo);
-            padding: 20px;
-            box-sizing: border-box; 
-        }
-
-        /* A caixa de conteúdo */
-        .content {
-            background-color: var(--cor-caixa);
-            padding: 40px 30px;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            text-align: center;
-            max-width: 600px;
-            width: 100%;
-        }
-
-        /* Estilo do ícone SVG (cartela de bingo) */
-        .icon {
-            width: 90px; /* Um pouco maior para o detalhe da cartela */
-            height: 90px;
-            color: var(--cor-primaria); /* Cor do ícone */
-            margin-bottom: 25px;
-        }
-
-        /* Título principal */
-        h1 {
-            font-size: 2.5rem; /* Um pouco maior para o impacto */
-            font-weight: 700;
-            color: var(--cor-titulo);
-            margin-top: 0;
-            margin-bottom: 15px;
-        }
-
-        /* Parágrafo de texto */
-        p {
-            font-size: 1.2rem; /* Um pouco maior também */
-            color: var(--cor-texto);
-            margin-bottom: 0;
-        }
-
-        /* Ajustes para telas menores */
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 2rem;
-            }
-            p {
-                font-size: 1.1rem;
-            }
-            .content {
-                padding: 30px 20px;
-            }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <header>
+        <h1 class="title-gradient">BINGO DO PIX</h1>
+        <p class="slogan">Sua sorte em um clique!</p>
+    </header>
 
-    <div class="container">
-        <div class="content">
+    <main>
 
-            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm4 1h8a1 1 0 0 1 1 1v1h-1V4H4v1H3V4a1 1 0 0 1 1-1zm0 3h8a1 1 0 0 1 1 1v1h-1V7H4v1H3V7a1 1 0 0 1 1-1zm0 3h8a1 1 0 0 1 1 1v1h-1v-1H4v1H3v-1a1 1 0 0 1 1-1z"/>
-                <path d="M4 4h1v1H4V4zm2 0h1v1H6V4zm2 0h1v1H8V4zm2 0h1v1h-1V4zM4 6h1v1H4V6zm2 0h1v1H6V6zm2 0h1v1H8V6zm2 0h1v1h-1V6zM4 8h1v1H4V8zm2 0h1v1H6V8zm2 0h1v1H8V8zm2 0h1v1h-1V8z"/>
-            </svg>
+        <section id="status-sorteio-box" class="card status-esperando"> 
+            <h3 id="status-titulo">CARREGANDO STATUS...</h3>
+            <div id="status-cronometro">--:--</div>
+            <p id="status-subtexto">Garanta já sua cartela!</p>
+            <a href="/dashboard" id="btn-assistir-vivo" class="btn-comprar btn-comprar-azul" style="display: none;">Assistir ao Vivo!</a>
+        </section>
+        <section id="premio-especial" class="card destaque-especial" style="display: none;">
+             <h2>✨ SORTEIO ESPECIAL ✨</h2>
+            <div class="premio-destaque-especial">
+                <span class="premio-valor premio-valor-especial text-pix" id="especial-valor">R$ ...</span>
+                <p class="premio-sub">Cartela Cheia no Pix!</p>
+            </div>
+            <p class="data-sorteio data-especial" id="especial-data">🗓️ ... 🕖</p>
+            <p class="info-especial">(Compre cartelas para os sorteios regulares e concorra também!)</p>
+        </section>
+
+        <section id="premio-info" class="card">
+            <h2>Próximo Sorteio Regular:</h2>
+            <div class="premios-container">
+                <div class="premio-item premio-principal">
+                    <span class="premio-label">Cartela Cheia</span>
+                    <span class="premio-valor premio-valor-cheia text-pix" id="index-premio-cheia">R$ ...</span>
+                    <span class="premio-sub">no Pix!</span>
+                </div>
+                <div class="premio-divisor"></div>
+                <div class="premio-item premio-secundario">
+                     <span class="premio-label">Linha</span>
+                     <span class="premio-valor premio-valor-linha text-pix" id="index-premio-linha">R$ ...</span>
+                    <span class="premio-sub">no Pix!</span>
+                </div>
+            </div>
+            <button id="btn-jogue-agora" class="btn-comprar btn-destaque btn-jogue">
+                Comprar Cartela (<span id="index-preco-cartela">R$ ...</span>)
+            </button>
+            <p class="aviso-preco">*Preço por cartela individual.</p>
+        </section>
+
+        <section id="minhas-cartelas" class="card">
+            <h2>Já jogou? Consulte seu número!</h2>
+            <p>Digite o número de telefone (com DDD) que você usou no PIX.</p>
+            <form id="form-recuperar-cartelas" style="max-width: 450px; margin: 0 auto;">
+                <div class="form-grupo">
+                    <label for="modal-telefone-recuperar" style="font-weight: 700;">Seu Telefone (com DDD):</label>
+                    <input type="tel" id="modal-telefone-recuperar" placeholder="Ex: 69912345678" required>
+                </div>
+
+                <div class="botoes-consulta-container" style="display: flex; gap: 10px; margin-top: 15px;">
+                    
+                    <button type="submit" id="btn-recuperar-cartelas" class="btn-comprar btn-comprar-azul" style="flex: 1;">
+                        Ver Minhas Compras
+                    </button>
+                    
+                    <button type="button" id="btn-checar-premios" class="btn-comprar btn-destaque" style="flex: 1;">
+                        Verificar Prêmios
+                    </button>
+
+                </div>
+            </form>
+        </section>
+        </main>
+
+    <footer>
+        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+    </footer>
+
+    <div id="modal-checkout" class="modal-overlay">
+        <div class="modal-content">
+             <span class="modal-close">&times;</span>
             
-            <h1>Jogo Pausado!</h1>
-            
-            <p>
-                Atenção, jogadores! Estamos sorteando melhorias para o nosso site.
-                Em breve, teremos novos "números" (funcionalidades) e ainda mais diversão para você.
-                Não se preocupe, é só uma pausa rápida!
-            </p>
-            
+            <div id="etapa-dados">
+                <h2 class="title-gradient">Complete seu Pedido</h2>
+                <form id="form-checkout">
+                    <div class="form-grupo"><label for="modal-nome">Seu Nome Completo:</label><input type="text" id="modal-nome" placeholder="Nome para o prêmio" required></div>
+                    <div class="form-grupo"><label for="modal-telefone">Telefone (c/ DDD):</label><input type="tel" id="modal-telefone" placeholder="Ex: 69912345678 (para o Pix)" required></div>
+                    <div class="form-grupo"><label for="modal-quantidade">Quantidade de Cartelas (<span id="modal-label-preco">R$ ...</span> cada):</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
+                </form>
+                <div id="resumo-preco"><p>Valor total: <strong id="modal-preco" class="text-pix">R$ ...</strong></p></div>
+                <p class="modal-info">Um QR Code Pix será gerado para pagamento.</p>
+                <button id="btn-gerar-pix" class="btn-comprar btn-destaque">Gerar PIX</button>
+            </div>
+
+            <div id="etapa-pix" style="display: none;">
+                <h2 class="title-gradient">Pague com PIX</h2>
+                <p>Escaneie o QR Code ou use o "Copia e Cola".</p>
+                <div id="pix-qrcode-container">
+                    <img id="pix-qrcode-img" src="" alt="QR Code PIX" style="max-width: 250px; width: 100%; border: 2px solid #ddd; border-radius: 8px;">
+                </div>
+                <div class="form-grupo" style="margin-top: 15px;">
+                    <label>PIX Copia e Cola:</label>
+                    <input type="text" id="pix-copia-cola" readonly style="font-size: 0.9em; padding: 8px; text-align: center;">
+                    <button id="btn-copiar-pix" class="btn-comprar btn-comprar-azul" style="font-size: 0.9em; padding: 8px; margin-top: 5px;">Copiar Código</button>
+                </div>
+                <div id="aguardando-pagamento">
+                    <div class="loader-pix"></div>
+                    <strong>Aguardando Pagamento...</strong>
+                    <p class="modal-info">Não feche esta janela. Você será redirecionado automaticamente após a confirmação.</p>
+                </div>
+            </div>
+
         </div>
     </div>
-
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

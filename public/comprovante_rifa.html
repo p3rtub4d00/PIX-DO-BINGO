@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprovante da Rifa - Bingo do Pix</title>
+    <link rel="stylesheet" href="style.css"> 
+    <link rel="stylesheet" href="espera.css"> 
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        #rifa-numeros-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            padding: 20px;
+            background-color: var(--color-bg-light);
+            border-radius: 8px;
+            margin-top: 25px;
+            border: 1px solid #eee;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .rifa-numero-chip {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 1.8em;
+            color: var(--color-bg-white);
+            background-color: var(--color-accent-blue);
+            padding: 8px 15px;
+            border-radius: 50px;
+            box-shadow: var(--shadow-soft);
+        }
+        .comprovante-info {
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 class="title-gradient">Rifa Especial</h1>
+    </header>
+
+    <main>
+        <div id="espera-container" class="card" style="max-width: 700px;">
+            
+            <div id="loading-state">
+                <h2 class="text-pix">Pagamento Aprovado!</h2>
+                <p>Buscando seus números da sorte. Aguarde...</p>
+                <div class="loader"></div>
+            </div>
+            
+            <div id="comprovante-state" style="display: none;">
+                <h2>Pagamento Confirmado!</h2>
+                <p>Obrigado, <strong id="comp-nome-jogador">...</strong>! Seus números para o prêmio <strong id="comp-nome-premio" class="text-pix">...</strong> são:</p>
+
+                <div id="rifa-numeros-container">
+                    </div>
+                
+                <hr style="margin: 25px 0;">
+                
+                <p class="comprovante-info">
+                    <strong>Telefone:</strong> <span id="comp-telefone">...</span><br>
+                    <strong>Data da Compra:</strong> <span id="comp-data">...</span><br>
+                    <strong>Total Pago:</strong> <span id="comp-valor" style="font-weight: bold;">R$ --,--</span>
+                </p>
+                
+                <p class="aviso-preco" style="margin-top: 20px;">
+                    O sorteio será realizado com base na Loteria Federal, conforme descrito na página da rifa.
+                    Boa sorte!
+                </p>
+
+                <a href="/" class="btn-comprar btn-comprar-azul" style="margin-top: 20px; width: 80%; max-width: 300px;">Voltar ao Bingo</a>
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+    </footer>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <script src="comprovante_rifa.js"></script>
+</body>
+</html>
