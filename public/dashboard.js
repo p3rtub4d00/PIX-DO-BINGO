@@ -37,12 +37,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const anuncioNomeEl = document.getElementById('anuncio-vencedor-nome');
     const anuncioEsperaOverlay = document.getElementById('anuncio-espera-overlay');
     
-    // *** INÍCIO DA MODIFICAÇÃO: Seletor do Timer ***
     const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
-    // *** FIM DA MODIFICAÇÃO ***
 
     // --- Variável para rastrear o último estado conhecido ---
     let ultimoEstadoConhecido = null;
+    
+    // ==================================================
+    // --- INÍCIO DA MODIFICAÇÃO (CORREÇÃO DE LÓGICA) ---
+    // ==================================================
+    // Variável para guardar a configuração recebida
+    let globalConfig = null;
+    // ==================================================
+    // --- FIM DA MODIFICAÇÃO ---
+    // ==================================================
+
 
     // Verifica elementos
     if (!sorteioIdHeaderEl || !estadoHeaderEl || !jogadoresTotalEl || !ultimoNumeroEl || !globoContainer || !listaVencedoresContainer || !dashPremioLinhaEl || !dashPremioCheiaEl || !btnToggleSom || !areaPrincipalEl || !listaQuaseLaContainer || !anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay || !esperaCronometroDisplay || 
@@ -65,53 +73,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Funções Auxiliares Visuais ---
     function formatarBRL(valor) { const numero = parseFloat(valor); if (isNaN(numero) || valor === null || valor === undefined) return 'R$ --,--'; return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
     
-    // *** INÍCIO DA MODIFICAÇÃO: Função de formatar tempo ***
     function formatarTempo(tempo) {
         const minutos = Math.floor(tempo / 60);
         let segundos = tempo % 60;
         segundos = segundos < 10 ? '0' + segundos : segundos;
         return `${minutos}:${segundos}`;
     }
-    // *** FIM DA MODIFICAÇÃO ***
     
     function gerarGlobo() { if (!globoContainer) return; globoContainer.innerHTML = ''; for (let i = 1; i <= 75; i++) { try { const numeroEl = document.createElement('div'); numeroEl.classList.add('dash-globo-numero'); numeroEl.textContent = i; numeroEl.id = `dash-globo-${i}`; globoContainer.appendChild(numeroEl); } catch (error) { console.error(`Erro globo num ${i}:`, error); } } console.log("Globo gerado."); }
 
     // ==================================================
-    // --- INÍCIO DA MODIFICAÇÃO (NOVA FUNÇÃO: ATUALIZAR PRÊMIOS) ---
+    // --- INÍCIO DA MODIFICAÇÃO (FUNÇÃO ATUALIZAR PRÊMIOS) ---
     // ==================================================
     /**
-     * Atualiza os prêmios exibidos no dashboard, 
-     * mostrando o Prêmio Especial se estiver ativo.
-     * @param {object} config - O objeto de configurações vindo do server.
+     * Atualiza os prêmios exibidos no dashboard.
+     * Agora usa a variável 'globalConfig' e 'ultimoEstadoConhecido'.
      */
-    function atualizarPremiosDashboard(config) {
-        if (!config) {
-            console.warn("Configurações de prêmio não recebidas.");
+    function atualizarPremiosDashboard() {
+        if (!globalConfig) {
+            console.warn("Configurações de prêmio ainda não recebidas.");
             return;
         }
 
-        if (config.sorteio_especial_ativo === 'true' && config.sorteio_especial_valor) {
+        // DECISÃO: Mostra prêmio especial APENAS SE estiver ativo E o jogo estiver EM ESPERA.
+        if (globalConfig.sorteio_especial_ativo === 'true' && ultimoEstadoConhecido === 'ESPERANDO') {
             // MODO SORTEIO ESPECIAL
-            console.log("Dashboard: Exibindo Prêmio Especial");
+            console.log("Dashboard: Exibindo Prêmio Especial (Jogo em Espera).");
             
             // Esconde o prêmio de Linha
             if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'none';
             
             // Atualiza o prêmio Cheia para ser o Especial
             if (dashPremioCheiaLabel) dashPremioCheiaLabel.textContent = 'Prêmio Especial:';
-            if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(config.sorteio_especial_valor);
+            if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(globalConfig.sorteio_especial_valor);
             
         } else {
-            // MODO REGULAR
-            console.log("Dashboard: Exibindo Prêmios Regulares");
+            // MODO REGULAR (ou Jogo em Andamento)
+            console.log("Dashboard: Exibindo Prêmios Regulares.");
 
             // Mostra o prêmio de Linha
             if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'flex';
-            if (dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(config.premio_linha);
+            if (dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(globalConfig.premio_linha);
 
             // Garante que o prêmio Cheia esteja correto
             if (dashPremioCheiaLabel) dashPremioCheiaLabel.textContent = 'Prêmio Cheia:';
-            if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(config.premio_cheia);
+            if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(globalConfig.premio_cheia);
         }
     }
     // ==================================================
@@ -153,21 +159,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function atualizarEstadoVisual(estadoString) {
         console.log("Atualizando Estado Visual para:", estadoString);
-        ultimoEstadoConhecido = estadoString;
+        ultimoEstadoConhecido = estadoString; // Salva o estado atual
         if (!estadoHeaderEl) return;
         try {
             const textoEstado = estadoString ? estadoString.replace('_', ' ') : 'DESCONHECIDO';
             estadoHeaderEl.textContent = textoEstado;
             estadoHeaderEl.className = 'estado-texto';
             
-            // ==================================================
-            // --- INÍCIO DA MODIFICAÇÃO (ESTADO ESPECIAL) ---
-            // ==================================================
             if (estadoString === 'ESPERANDO') { 
                 estadoHeaderEl.classList.add('estado-esperando'); 
             }
             else if (estadoString === 'JOGANDO_LINHA') { 
-                // Se for especial, usa verde, senão azul
                 const classe = (sorteioIdHeaderEl.textContent.includes('ESPECIAL')) ? 'estado-jogando-cheia' : 'estado-jogando-linha';
                 estadoHeaderEl.classList.add(classe);
             }
@@ -177,9 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
             else { 
                 estadoHeaderEl.classList.add('estado-esperando'); 
             }
-            // ==================================================
-            // --- FIM DA MODIFICAÇÃO ---
-            // ==================================================
             
         } catch(error) { console.error("Erro estado visual:", error); }
     }
@@ -226,38 +225,38 @@ document.addEventListener('DOMContentLoaded', () => {
             gerarGlobo();
             
             // ==================================================
-            // --- INÍCIO DA MODIFICAÇÃO (TÍTULO DO SORTEIO) ---
-            // ==================================================
-            let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
-            // Se o ID não for um número (ou seja, for a data/hora do especial), muda o título
-            if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
-                tituloSorteio = "SORTEIO ESPECIAL AGENDADO!";
-            }
-            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
-            // ==================================================
-            // --- FIM DA MODIFICAÇÃO ---
+            // --- INÍCIO DA MODIFICAÇÃO (ORDEM DAS FUNÇÕES) ---
             // ==================================================
             
-            if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
-            atualizarEstadoVisual(data.estado);
-            atualizarListaVencedores(data.ultimosVencedores, false);
-            atualizarGloboSorteados(data.numerosSorteados);
-            
-            // ==================================================
-            // --- INÍCIO DA MODIFICAÇÃO (ATUALIZAR PRÊMIOS) ---
-            // ==================================================
+            // Salva a config ANTES de tudo
             if(data.configuracoes) {
-                // Chama a nova função helper
-                atualizarPremiosDashboard(data.configuracoes);
+                globalConfig = data.configuracoes;
             }
+            
+            // Atualiza o estado (define 'ultimoEstadoConhecido')
+            atualizarEstadoVisual(data.estado);
+            
+            // Atualiza os prêmios (AGORA ele sabe o estado e a config)
+            atualizarPremiosDashboard();
+            
             // ==================================================
             // --- FIM DA MODIFICAÇÃO ---
             // ==================================================
 
+            let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+            if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
+                tituloSorteio = "SORTEIO ESPECIAL AGENDADO!";
+            }
+            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
+            
+            if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
+            
+            atualizarListaVencedores(data.ultimosVencedores, false);
+            atualizarGloboSorteados(data.numerosSorteados);
+            
             if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Aguardando início...</p>';
             if(data.quaseLa) atualizarListaQuaseLa(data.quaseLa);
             
-            // *** INÍCIO DA MODIFICAÇÃO: Timer e Overlay ***
             if (data.estado === 'ESPERANDO') { 
                 anuncioEsperaOverlay.classList.remove('oculto'); 
                 esperaCronometroDisplay.textContent = formatarTempo(data.tempoRestante);
@@ -266,7 +265,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 anuncioEsperaOverlay.classList.add('oculto'); 
                 esperaCronometroDisplay.textContent = "--:--";
             }
-            // *** FIM DA MODIFICAÇÃO ***
             
             console.log("Estado inicial aplicado.");
         } catch (error) { console.error("Erro ao processar 'estadoInicial':", error); }
@@ -275,44 +273,47 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('cronometroUpdate', (data) => {
         if (!data) return;
         
-        // ==================================================
-        // --- INÍCIO DA MODIFICAÇÃO (TÍTULO CRONÔMETRO) ---
-        // ==================================================
-        // Só atualiza o ID do sorteio se for um sorteio REGULAR (o especial não tem cronômetro)
         if (data.estado === 'ESPERANDO' && data.sorteioId && !isNaN(parseInt(data.sorteioId, 10))) {
             if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
         }
+        
+        atualizarEstadoVisual(data.estado);
+        
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (CORREÇÃO DE LÓGICA) ---
+        // ==================================================
+        // Se o estado é 'ESPERANDO', precisamos reavaliar os prêmios
+        // (Isso corrige o bug de quando um jogo especial é agendado)
+        atualizarPremiosDashboard();
         // ==================================================
         // --- FIM DA MODIFICAÇÃO ---
         // ==================================================
         
-        atualizarEstadoVisual(data.estado);
-        
-        // *** INÍCIO DA MODIFICAÇÃO: Atualiza o timer no overlay ***
         if (data.estado === 'ESPERANDO' && esperaCronometroDisplay) {
             esperaCronometroDisplay.textContent = formatarTempo(data.tempo);
         }
-        // *** FIM DA MODIFICAÇÃO ***
     });
 
     socket.on('estadoJogoUpdate', (data) => {
         console.log("Recebido 'estadoJogoUpdate':", data);
         if (!data) return;
         
-        // ==================================================
-        // --- INÍCIO DA MODIFICAÇÃO (TÍTULO UPDATE ESTADO) ---
-        // ==================================================
         let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
         if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
             tituloSorteio = "SORTEIO ESPECIAL AO VIVO!";
         }
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
+        
+        atualizarEstadoVisual(data.estado);
+        
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (CORREÇÃO DE LÓGICA) ---
+        // ==================================================
+        // Se o estado mudou (ex: de JOGANDO para ESPERANDO), reavalia os prêmios
+        atualizarPremiosDashboard();
         // ==================================================
         // --- FIM DA MODIFICAÇÃO ---
         // ==================================================
-        
-        atualizarEstadoVisual(data.estado);
-        // Não mexemos no overlay de espera aqui diretamente
     });
 
     socket.on('novoNumeroSorteado', (numeroSorteado) => { console.log(`Dashboard: Recebido 'novoNumeroSorteado': ${numeroSorteado}`); if (numeroSorteado === undefined || numeroSorteado === null) return; try{ ultimoNumeroEl.textContent = numeroSorteado; const globoNumEl = document.getElementById(`dash-globo-${numeroSorteado}`); if (globoNumEl) { globoNumEl.classList.add('sorteado'); } const letra = getLetraDoNumero(numeroSorteado); falar(`${letra} ${numeroSorteado}`); } catch (error){ console.error(`Erro ao processar 'novoNumeroSorteado' ${numeroSorteado}:`, error); } });
@@ -327,49 +328,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if(ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
             if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Boa sorte!</p>';
             if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.add('oculto');
-            // *** INÍCIO DA MODIFICAÇÃO: Limpa o timer ***
             if (esperaCronometroDisplay) esperaCronometroDisplay.textContent = "--:--";
-            // *** FIM DA MODIFICAÇÃO ***
         } catch (error){ console.error("Erro ao processar 'iniciarJogo':", error); }
     });
 
-    // ==================================================
-    // --- INÍCIO DA MODIFICAÇÃO (CONFIG ATUALIZADA) ---
-    // ==================================================
     socket.on('configAtualizada', (data) => { 
         console.log("Dashboard: Recebido 'configAtualizada':", data); 
         if (!data) return; 
-        // Chama a nova função helper
-        atualizarPremiosDashboard(data); 
+        
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (CORREÇÃO DE LÓGICA) ---
+        // ==================================================
+        globalConfig = data; // Salva a nova config
+        atualizarPremiosDashboard(); // Re-avalia os prêmios
+        // ==================================================
+        // --- FIM DA MODIFICAÇÃO ---
+        // ==================================================
     });
-    // ==================================================
-    // --- FIM DA MODIFICAÇÃO ---
-    // ==================================================
     
     socket.on('connect', () => { console.log(`Dashboard conectado ao servidor com o ID: ${socket.id}`); });
     socket.on('disconnect', (reason) => { console.warn(`Dashboard desconectado do servidor: ${reason}`); if(estadoHeaderEl) estadoHeaderEl.textContent = "DESCONECTADO"; if(estadoHeaderEl) estadoHeaderEl.className = 'estado-texto estado-esperando'; if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.remove('oculto'); ultimoEstadoConhecido = 'DESCONECTADO'; });
     socket.on('connect_error', (err) => { console.error(`Dashboard falhou ao conectar: ${err.message}`); });
 
-    // --- INÍCIO DA ATUALIZAÇÃO (PING DE ATIVIDADE) ---
-// Envia um "ping" para o servidor a cada 10 minutos para
-// impedir que o plano Render Hobby "durma" por inatividade.
-const PING_INTERVALO = 10 * 60 * 1000; // 10 minutos
-
-async function pingServidor() {
-    try {
-        await fetch('/ping');
-        console.log("Ping enviado ao servidor (Keep-Alive).");
-    } catch (err) {
-        console.error("Erro ao enviar ping:", err);
+    // --- PING DE ATIVIDADE ---
+    const PING_INTERVALO = 10 * 60 * 1000; // 10 minutos
+    async function pingServidor() {
+        try {
+            await fetch('/ping');
+            console.log("Ping enviado ao servidor (Keep-Alive).");
+        } catch (err) {
+            console.error("Erro ao enviar ping:", err);
+        }
     }
-}
-
-// Inicia o timer
-setInterval(pingServidor, PING_INTERVALO);
-// Envia um ping inicial 10 segundos após carregar a página
-setTimeout(pingServidor, 10000); 
-// --- FIM DA ATUALIZAÇÃO ---
-
-// (A última linha do seu arquivo deve ser }); )
+    setInterval(pingServidor, PING_INTERVALO);
+    setTimeout(pingServidor, 10000); 
 
 });
