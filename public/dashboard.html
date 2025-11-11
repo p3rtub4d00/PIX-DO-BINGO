@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-g">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Bingo do Pix</title>
     <link rel="stylesheet" href="dashboard.css">
@@ -13,9 +13,20 @@
     <div id="anuncio-espera-overlay" class="anuncio-espera-overlay">
         <div class="anuncio-espera-container">
             <h1>Aguarde o Início do Próximo Sorteio!</h1>
+            
             <div class="anuncio-area-espera">
-                <img src="/imagens/seu-anuncio-espera.gif" alt="Anúncio" style="max-width: 100%; border-radius: 8px;">
+                <div class="anuncio-slider">
+                    
+                    <div class="slide ativo">
+                        <img src="/imagens/seu-anuncio-espera.gif" alt="Anúncio GIF">
+                    </div>
+                    
+                    <div class="slide">
+                        <video src="/imagens/anuncio-video.mp4" muted autoplay loop playsinline alt="Anúncio Vídeo"></video>
+                    </div>
+
                 </div>
+            </div>
             <p>O sorteio começará em breve...</p>
             
             <div id="espera-cronometro-display">--:--</div>
