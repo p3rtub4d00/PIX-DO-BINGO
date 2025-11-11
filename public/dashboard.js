@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Variável para rastrear o último estado conhecido ---
     let ultimoEstadoConhecido = null;
-    
+
     // ==================================================
     // --- INÍCIO DA MODIFICAÇÃO (CORREÇÃO DE LÓGICA) ---
     // ==================================================
@@ -83,22 +83,31 @@ document.addEventListener('DOMContentLoaded', () => {
     function gerarGlobo() { if (!globoContainer) return; globoContainer.innerHTML = ''; for (let i = 1; i <= 75; i++) { try { const numeroEl = document.createElement('div'); numeroEl.classList.add('dash-globo-numero'); numeroEl.textContent = i; numeroEl.id = `dash-globo-${i}`; globoContainer.appendChild(numeroEl); } catch (error) { console.error(`Erro globo num ${i}:`, error); } } console.log("Globo gerado."); }
 
     // ==================================================
-    // --- INÍCIO DA MODIFICAÇÃO (FUNÇÃO ATUALIZAR PRÊMIOS) ---
+    // --- INÍCIO DA MODIFICAÇÃO (FUNÇÃO ATUALIZAR PRÊMIOS - CORRIGIDA) ---
     // ==================================================
     /**
      * Atualiza os prêmios exibidos no dashboard.
-     * Agora usa a variável 'globalConfig' e 'ultimoEstadoConhecido'.
+     * Agora usa a variável 'globalConfig' e o TÍTULO DO SORTEIO.
      */
     function atualizarPremiosDashboard() {
         if (!globalConfig) {
             console.warn("Configurações de prêmio ainda não recebidas.");
             return;
         }
-
-        // DECISÃO: Mostra prêmio especial APENAS SE estiver ativo E o jogo estiver EM ESPERA.
-        if (globalConfig.sorteio_especial_ativo === 'true' && ultimoEstadoConhecido === 'ESPERANDO') {
-            // MODO SORTEIO ESPECIAL
-            console.log("Dashboard: Exibindo Prêmio Especial (Jogo em Espera).");
+    
+        // Pega o ID/Texto do título do sorteio
+        const idSorteioAtual = sorteioIdHeaderEl ? sorteioIdHeaderEl.textContent : '';
+        
+        // ==================================================
+        // --- LÓGICA CORRIGIDA ---
+        // ==================================================
+        // Verifica se o ID do sorteio NÃO é um número (ou seja, é o texto "ESPECIAL" ou a data "2025-11-11T10:15")
+        // O "T" é a parte crucial que diferencia o datetime-local de um número de sorteio como "#700"
+        const isEspecial = idSorteioAtual.includes('ESPECIAL') || idSorteioAtual.includes('T');
+    
+        if (globalConfig.sorteio_especial_ativo === 'true' && isEspecial) {
+            // MODO SORTEIO ESPECIAL (SEMPRE QUE ESTIVER ATIVO)
+            console.log("Dashboard: Exibindo Prêmio Especial.");
             
             // Esconde o prêmio de Linha
             if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'none';
@@ -110,15 +119,18 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // MODO REGULAR (ou Jogo em Andamento)
             console.log("Dashboard: Exibindo Prêmios Regulares.");
-
+    
             // Mostra o prêmio de Linha
             if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'flex';
             if (dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(globalConfig.premio_linha);
-
+    
             // Garante que o prêmio Cheia esteja correto
             if (dashPremioCheiaLabel) dashPremioCheiaLabel.textContent = 'Prêmio Cheia:';
             if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(globalConfig.premio_cheia);
         }
+        // ==================================================
+        // --- FIM DA LÓGICA CORRIGIDA ---
+        // ==================================================
     }
     // ==================================================
     // --- FIM DA MODIFICAÇÃO ---
@@ -236,18 +248,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Atualiza o estado (define 'ultimoEstadoConhecido')
             atualizarEstadoVisual(data.estado);
             
-            // Atualiza os prêmios (AGORA ele sabe o estado e a config)
+            let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+            // Se o ID não for um número (ou seja, for a data/hora do especial), muda o título
+            if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
+                tituloSorteio = "SORTEIO ESPECIAL AGENDADO!";
+            }
+            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
+
+            // Atualiza os prêmios (AGORA ele sabe o estado, a config e o título)
             atualizarPremiosDashboard();
             
             // ==================================================
             // --- FIM DA MODIFICAÇÃO ---
             // ==================================================
-
-            let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
-            if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
-                tituloSorteio = "SORTEIO ESPECIAL AGENDADO!";
-            }
-            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
             
             if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
             
