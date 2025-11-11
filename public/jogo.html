@@ -58,33 +58,49 @@
         <div class="modal-content" id="modal-vencedor-conteudo">
             
             <div id="area-comprovante">
-                <h2 id="resultado-titulo" class="title-gradient">Resultado</h2>
+
+                <div class="comprovante-header">
+                    <h3 class="title-gradient">BINGO DO PIX</h3>
+                    <span>Comprovante de Premiação</span>
+                </div>
+
+                <h2 id="resultado-titulo" class="title-gradient"><i class="fas fa-trophy"></i> PARABÉNS!</h2>
                 
-                <div class="comprovante-ids">
-                    <span id="comprovante-sorteio-id">Sorteio: #...</span>
-                    <span id="comprovante-cartela-id">Cartela: ...</span>
-                </div>
-
-                <div class="comprovante-detalhes">
-                     <span id="comprovante-nome">Nome: ...</span>
-                     <span id="comprovante-premio">Prêmio: ...</span>
-                </div>
-                <div class="comprovante-detalhes">
-                     <span id="comprovante-data">Data: ...</span>
-                </div>
-
                 <p id="resultado-mensagem">O vencedor foi...</p>
+
+                <div class="comprovante-dados-grid">
+                    <div class="dado-item">
+                        <span>Nome:</span>
+                        <strong id="comprovante-nome">...</strong>
+                    </div>
+                    <div class="dado-item">
+                        <span>Prêmio:</span>
+                        <strong id="comprovante-premio" class="text-pix">...</strong>
+                    </div>
+                    <div class="dado-item">
+                        <span>Sorteio:</span>
+                        <strong id="comprovante-sorteio-id">...</strong>
+                    </div>
+                    <div class="dado-item">
+                        <span>Cartela:</span>
+                        <strong id="comprovante-cartela-id">...</strong>
+                    </div>
+                </div>
                 
                 <p class="comprovante-aviso">
                     Atenção: Você tem 48 horas para entrar em contato com a administração e receber seu prêmio.
                 </p>
+
                 <div id="resultado-prova-cartela" style="display: none;">
                     <h4>Sua Cartela Vencedora:</h4>
                     <div id="cartela-vencedora-display" class="cartela-jogador">
                         </div>
                 </div>
-            </div>
 
+                <div class="comprovante-footer">
+                    <span id="comprovante-data">Data: ...</span>
+                </div>
+            </div>
             <div class="modal-botoes">
                 <button id="btn-baixar-comprovante" class="btn-comprar btn-comprar-azul" style="display: none;">
                     Baixar Comprovante (PDF)
