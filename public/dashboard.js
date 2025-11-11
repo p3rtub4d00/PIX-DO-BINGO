@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const anuncioPremioEl = document.getElementById('anuncio-vencedor-premio');
     const anuncioNomeEl = document.getElementById('anuncio-vencedor-nome');
     const anuncioEsperaOverlay = document.getElementById('anuncio-espera-overlay');
-    
     const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
 
     // --- Variável para rastrear o último estado conhecido ---
@@ -138,41 +137,59 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- ========================================================== ---
-    // --- FUNÇÃO CORRIGIDA PARA ATUALIZAR PRÊMIOS (INÍCIO) ---
+    // --- NOVA FUNÇÃO PARA ATUALIZAR PRÊMIOS (INÍCIO) ---
     // --- ========================================================== ---
+    
+    /**
+     * Atualiza os prêmios na barra lateral baseado no tipo de sorteio.
+     * @param {object} configs - O objeto de configurações vindo do servidor.
+     * @param {string|number} sorteioId - O ID do sorteio atual (pode ser número ou timestamp).
+     */
     function atualizarPremios(configs, sorteioId) {
-        if (!configs) return;
+        if (!configs) { 
+            console.error("atualizarPremios foi chamada sem configs.");
+            return; 
+        } 
+        if (!dashPremioLinhaEl || !dashPremioCheiaEl) { 
+            console.error("Elementos de prêmio (Linha/Cheia) não encontrados.");
+            return; 
+        }
+
+        // Pega o elemento pai (o <div class="info-item">) do Prêmio Linha
+        const parentInfoItemLinha = dashPremioLinhaEl.closest('.info-item');
 
         // Verifica se é especial (ID do sorteio especial contém "T" do timestamp)
-        const isSpecial = sorteioId && sorteioId.includes('T');
+        const isSpecial = sorteioId && sorteioId.toString().includes('T');
         
         if (isSpecial) {
             // É Sorteio Especial
-            if(dashPremioLinhaEl) {
-                // Esconde o prêmio da linha
-                const parentInfoItem = dashPremioLinhaEl.closest('.info-item');
-                if(parentInfoItem) parentInfoItem.style.display = 'none'; 
+            console.log("Detectado Sorteio Especial. Atualizando prêmios...");
+            
+            // 1. Esconde a LINHA (o div "info-item" inteiro)
+            //    Sorteios especiais não têm prêmio de linha.
+            if(parentInfoItemLinha) {
+                parentInfoItemLinha.style.display = 'none'; 
             }
-            if(dashPremioCheiaEl) {
-                // Mostra o prêmio especial no campo de "Cartela Cheia"
-                dashPremioCheiaEl.textContent = formatarBRL(configs.sorteio_especial_valor);
-            }
+            
+            // 2. Mostra o prêmio especial no campo de "Cartela Cheia"
+            dashPremioCheiaEl.textContent = formatarBRL(configs.sorteio_especial_valor);
+            
         } else {
             // É Sorteio Regular
-            if(dashPremioLinhaEl) {
-                // Mostra o prêmio da linha
-                dashPremioLinhaEl.textContent = formatarBRL(configs.premio_linha);
-                const parentInfoItem = dashPremioLinhaEl.closest('.info-item');
-                if(parentInfoItem) parentInfoItem.style.display = 'flex'; // Garante que está visível
+            console.log("Detectado Sorteio Regular. Atualizando prêmios...");
+
+            // 1. Mostra a LINHA (caso esteja escondida)
+            if(parentInfoItemLinha) {
+                parentInfoItemLinha.style.display = 'flex';
             }
-            if(dashPremioCheiaEl) {
-                // Mostra o prêmio de cartela cheia regular
-                dashPremioCheiaEl.textContent = formatarBRL(configs.premio_cheia);
-            }
+            dashPremioLinhaEl.textContent = formatarBRL(configs.premio_linha);
+            
+            // 2. Mostra o prêmio de cartela cheia regular
+            dashPremioCheiaEl.textContent = formatarBRL(configs.premio_cheia);
         }
     }
     // --- ========================================================== ---
-    // --- FUNÇÃO CORRIGIDA PARA ATUALIZAR PRÊMIOS (FIM) ---
+    // --- NOVA FUNÇÃO PARA ATUALIZAR PRÊMIOS (FIM) ---
     // --- ========================================================== ---
 
 
@@ -189,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             atualizarGloboSorteados(data.numerosSorteados);
             
             // --- ATUALIZAÇÃO AQUI ---
+            // Usa a nova função para definir os prêmios corretamente
             atualizarPremios(data.configuracoes, data.sorteioId);
             // --- FIM DA ATUALIZAÇÃO ---
 
@@ -247,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- ATUALIZAÇÃO AQUI ---
         // Pega o ID do sorteio que já está na tela para saber se é especial
-        const idNaTela = sorteioIdHeaderEl.textContent || '';
+        const idNaTela = sorteioIdHeaderEl ? sorteioIdHeaderEl.textContent : '';
         atualizarPremios(data, idNaTela);
         // --- FIM DA ATUALIZAÇÃO ---
     });
