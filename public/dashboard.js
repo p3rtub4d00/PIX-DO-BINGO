@@ -23,15 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const anuncioNomeEl = document.getElementById('anuncio-vencedor-nome');
     const anuncioEsperaOverlay = document.getElementById('anuncio-espera-overlay');
     
-    // *** INÍCIO DA MODIFICAÇÃO: Seletor do Timer ***
     const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
-    // *** FIM DA MODIFICAÇÃO ***
 
     // --- Variável para rastrear o último estado conhecido ---
     let ultimoEstadoConhecido = null;
 
-    // Verifica elementos
-    if (!sorteioIdHeaderEl || !estadoHeaderEl || !jogadoresTotalEl || !ultimoNumeroEl || !globoContainer || !listaVencedoresContainer || !dashPremioLinhaEl || !dashPremioCheiaEl || !btnToggleSom || !areaPrincipalEl || !listaQuaseLaContainer || !anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay || !esperaCronometroDisplay ) { // <-- Adicionado ao check
+    if (!sorteioIdHeaderEl || !estadoHeaderEl || !jogadoresTotalEl || !ultimoNumeroEl || !globoContainer || !listaVencedoresContainer || !dashPremioLinhaEl || !dashPremioCheiaEl || !btnToggleSom || !areaPrincipalEl || !listaQuaseLaContainer || !anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay || !esperaCronometroDisplay ) {
         console.error("ERRO CRÍTICO: Um ou mais elementos essenciais do Dashboard não foram encontrados."); alert("Erro ao carregar a interface. Verifique o HTML e o Console (F12)."); return;
     }
     console.log("Elementos do DOM selecionados com sucesso.");
@@ -50,14 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Funções Auxiliares Visuais ---
     function formatarBRL(valor) { const numero = parseFloat(valor); if (isNaN(numero) || valor === null || valor === undefined) return 'R$ --,--'; return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
     
-    // *** INÍCIO DA MODIFICAÇÃO: Função de formatar tempo ***
     function formatarTempo(tempo) {
         const minutos = Math.floor(tempo / 60);
         let segundos = tempo % 60;
         segundos = segundos < 10 ? '0' + segundos : segundos;
         return `${minutos}:${segundos}`;
     }
-    // *** FIM DA MODIFICAÇÃO ***
     
     function gerarGlobo() { if (!globoContainer) return; globoContainer.innerHTML = ''; for (let i = 1; i <= 75; i++) { try { const numeroEl = document.createElement('div'); numeroEl.classList.add('dash-globo-numero'); numeroEl.textContent = i; numeroEl.id = `dash-globo-${i}`; globoContainer.appendChild(numeroEl); } catch (error) { console.error(`Erro globo num ${i}:`, error); } } console.log("Globo gerado."); }
 
@@ -142,6 +137,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }, DURACAO_ANUNCIO_VENCEDOR); 
     }
 
+    // --- ========================================================== ---
+    // --- FUNÇÃO CORRIGIDA PARA ATUALIZAR PRÊMIOS (INÍCIO) ---
+    // --- ========================================================== ---
+    function atualizarPremios(configs, sorteioId) {
+        if (!configs) return;
+
+        // Verifica se é especial (ID do sorteio especial contém "T" do timestamp)
+        const isSpecial = sorteioId && sorteioId.includes('T');
+        
+        if (isSpecial) {
+            // É Sorteio Especial
+            if(dashPremioLinhaEl) {
+                // Esconde o prêmio da linha
+                const parentInfoItem = dashPremioLinhaEl.closest('.info-item');
+                if(parentInfoItem) parentInfoItem.style.display = 'none'; 
+            }
+            if(dashPremioCheiaEl) {
+                // Mostra o prêmio especial no campo de "Cartela Cheia"
+                dashPremioCheiaEl.textContent = formatarBRL(configs.sorteio_especial_valor);
+            }
+        } else {
+            // É Sorteio Regular
+            if(dashPremioLinhaEl) {
+                // Mostra o prêmio da linha
+                dashPremioLinhaEl.textContent = formatarBRL(configs.premio_linha);
+                const parentInfoItem = dashPremioLinhaEl.closest('.info-item');
+                if(parentInfoItem) parentInfoItem.style.display = 'flex'; // Garante que está visível
+            }
+            if(dashPremioCheiaEl) {
+                // Mostra o prêmio de cartela cheia regular
+                dashPremioCheiaEl.textContent = formatarBRL(configs.premio_cheia);
+            }
+        }
+    }
+    // --- ========================================================== ---
+    // --- FUNÇÃO CORRIGIDA PARA ATUALIZAR PRÊMIOS (FIM) ---
+    // --- ========================================================== ---
+
+
     // --- OUVINTES DO SOCKET.IO ---
     socket.on('estadoInicial', (data) => {
         console.log("Recebido evento 'estadoInicial':", data);
@@ -153,14 +187,14 @@ document.addEventListener('DOMContentLoaded', () => {
             atualizarEstadoVisual(data.estado);
             atualizarListaVencedores(data.ultimosVencedores, false);
             atualizarGloboSorteados(data.numerosSorteados);
-            if(data.configuracoes) {
-                if(dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(data.configuracoes.premio_linha);
-                if(dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(data.configuracoes.premio_cheia);
-            }
+            
+            // --- ATUALIZAÇÃO AQUI ---
+            atualizarPremios(data.configuracoes, data.sorteioId);
+            // --- FIM DA ATUALIZAÇÃO ---
+
             if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Aguardando início...</p>';
             if(data.quaseLa) atualizarListaQuaseLa(data.quaseLa);
             
-            // *** INÍCIO DA MODIFICAÇÃO: Timer e Overlay ***
             if (data.estado === 'ESPERANDO') { 
                 anuncioEsperaOverlay.classList.remove('oculto'); 
                 esperaCronometroDisplay.textContent = formatarTempo(data.tempoRestante);
@@ -169,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 anuncioEsperaOverlay.classList.add('oculto'); 
                 esperaCronometroDisplay.textContent = "--:--";
             }
-            // *** FIM DA MODIFICAÇÃO ***
             
             console.log("Estado inicial aplicado.");
         } catch (error) { console.error("Erro ao processar 'estadoInicial':", error); }
@@ -180,11 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
         atualizarEstadoVisual(data.estado);
         
-        // *** INÍCIO DA MODIFICAÇÃO: Atualiza o timer no overlay ***
         if (data.estado === 'ESPERANDO' && esperaCronometroDisplay) {
             esperaCronometroDisplay.textContent = formatarTempo(data.tempo);
         }
-        // *** FIM DA MODIFICAÇÃO ***
     });
 
     socket.on('estadoJogoUpdate', (data) => {
@@ -192,7 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data) return;
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
         atualizarEstadoVisual(data.estado);
-        // Não mexemos no overlay de espera aqui diretamente
     });
 
     socket.on('novoNumeroSorteado', (numeroSorteado) => { console.log(`Dashboard: Recebido 'novoNumeroSorteado': ${numeroSorteado}`); if (numeroSorteado === undefined || numeroSorteado === null) return; try{ ultimoNumeroEl.textContent = numeroSorteado; const globoNumEl = document.getElementById(`dash-globo-${numeroSorteado}`); if (globoNumEl) { globoNumEl.classList.add('sorteado'); } const letra = getLetraDoNumero(numeroSorteado); falar(`${letra} ${numeroSorteado}`); } catch (error){ console.error(`Erro ao processar 'novoNumeroSorteado' ${numeroSorteado}:`, error); } });
@@ -207,38 +237,37 @@ document.addEventListener('DOMContentLoaded', () => {
             if(ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
             if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Boa sorte!</p>';
             if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.add('oculto');
-            // *** INÍCIO DA MODIFICAÇÃO: Limpa o timer ***
             if (esperaCronometroDisplay) esperaCronometroDisplay.textContent = "--:--";
-            // *** FIM DA MODIFICAÇÃO ***
         } catch (error){ console.error("Erro ao processar 'iniciarJogo':", error); }
     });
 
-    socket.on('configAtualizada', (data) => { console.log("Dashboard: Recebido 'configAtualizada':", data); if (!data) return; if(dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(data.premio_linha); if(dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(data.premio_cheia); });
+    socket.on('configAtualizada', (data) => { 
+        console.log("Dashboard: Recebido 'configAtualizada':", data); 
+        if (!data) return; 
+
+        // --- ATUALIZAÇÃO AQUI ---
+        // Pega o ID do sorteio que já está na tela para saber se é especial
+        const idNaTela = sorteioIdHeaderEl.textContent || '';
+        atualizarPremios(data, idNaTela);
+        // --- FIM DA ATUALIZAÇÃO ---
+    });
+
     socket.on('connect', () => { console.log(`Dashboard conectado ao servidor com o ID: ${socket.id}`); });
     socket.on('disconnect', (reason) => { console.warn(`Dashboard desconectado do servidor: ${reason}`); if(estadoHeaderEl) estadoHeaderEl.textContent = "DESCONECTADO"; if(estadoHeaderEl) estadoHeaderEl.className = 'estado-texto estado-esperando'; if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.remove('oculto'); ultimoEstadoConhecido = 'DESCONECTADO'; });
     socket.on('connect_error', (err) => { console.error(`Dashboard falhou ao conectar: ${err.message}`); });
 
-    // --- INÍCIO DA ATUALIZAÇÃO (PING DE ATIVIDADE) ---
-// Envia um "ping" para o servidor a cada 10 minutos para
-// impedir que o plano Render Hobby "durma" por inatividade.
-const PING_INTERVALO = 10 * 60 * 1000; // 10 minutos
+    const PING_INTERVALO = 10 * 60 * 1000; 
 
-async function pingServidor() {
-    try {
-        await fetch('/ping');
-        console.log("Ping enviado ao servidor (Keep-Alive).");
-    } catch (err) {
-        console.error("Erro ao enviar ping:", err);
+    async function pingServidor() {
+        try {
+            await fetch('/ping');
+            console.log("Ping enviado ao servidor (Keep-Alive).");
+        } catch (err) {
+            console.error("Erro ao enviar ping:", err);
+        }
     }
-}
 
-// Inicia o timer
-setInterval(pingServidor, PING_INTERVALO);
-// Envia um ping inicial 10 segundos após carregar a página
-setTimeout(pingServidor, 10000); 
-// --- FIM DA ATUALIZAÇÃO ---
-
-// (A última linha do seu arquivo deve ser }); )
+    setInterval(pingServidor, PING_INTERVALO);
+    setTimeout(pingServidor, 10000); 
 
 });
-
