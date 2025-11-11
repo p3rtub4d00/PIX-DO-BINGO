@@ -198,26 +198,22 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
     transition: opacity 0.5s ease, visibility 0s linear 0.5s; /* Delay na visibilidade */
 }
 
-/* --- CORREÇÃO AQUI (REMOVENDO ROLAGEM) --- */
 .anuncio-espera-container {
     background-color: rgba(0, 0, 0, 0.2);
-    padding: 20px 30px; /* Reduzido o padding */
+    padding: 20px 30px; 
     border-radius: 15px;
     max-width: 800px;
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    
     text-align: center;
-    /* max-height: 95vh; <-- REMOVIDO */
-    /* overflow-y: auto;  <-- REMOVIDO */
 }
 
 .anuncio-espera-container h1 {
     font-family: 'Montserrat', sans-serif;
-    font-size: 1.8em; /* Reduzido */
+    font-size: 1.8em; 
     font-weight: 700;
     color: #fff;
-    margin: 0 0 15px 0; /* Margem reduzida */
+    margin: 0 0 15px 0; 
     text-align: center;
 }
 
@@ -231,7 +227,7 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
     overflow: hidden; /* Garante que o slider não vaze */
     position: relative;
     width: 100%;
-    max-width: 640px; /* Limita a largura do anúncio */
+    /* max-width: 640px; */ /* REMOVIDO PARA USAR A LARGURA MÁXIMA DO CONTAINER (800px) */
     margin: 0 auto 15px auto; /* Centraliza e adiciona margem */
     aspect-ratio: 16 / 9; /* Força proporção 16:9 */
     background-color: #000; /* Fundo preto caso a mídia demore */
@@ -275,27 +271,22 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
 
 
 .anuncio-espera-container p {
-    font-size: 1em; /* Reduzido */
+    font-size: 1em; 
     opacity: 0.9;
-    margin: 10px 0 0 0; /* Margem reduzida */
+    margin: 10px 0 0 0; 
     text-align: center;
 }
 
 /* Estilo para mini-cronômetro */
 #espera-cronometro-display {
     font-family: 'Montserrat', sans-serif;
-    font-size: 2.2em; /* Reduzido */
+    font-size: 2.2em; 
     font-weight: 900;
     color: var(--color-pix-green);
-    margin-top: 5px; /* Margem reduzida */
+    margin-top: 5px; 
 }
-/* --- FIM DA CORREÇÃO --- */
 
 
 /* --- Responsividade --- */
 @media (max-width: 1000px) { html, body.dashboard-body { overflow: auto; } .dashboard-main-fullscreen { flex-direction: column; height: auto; align-items: stretch;} .area-principal { order: 1; padding: 20px; min-height: 50vh;} .barra-lateral { order: 2; max-height: none;} #dash-ultimo-numero { font-size: 15vw; width: 30vw; height: 30vw; } #dash-globo-numeros { gap: 1vw; padding: 1.5vw; width: calc(100% - 40px);} .dash-globo-numero { font-size: 2vw; } .barra-lateral h2 { font-size: 3vw; } .info-item, #lista-ganhadores p, #lista-ganhadores div { font-size: 2.2vw; } #quase-la h2 { font-size: 3vw; } #lista-quase-la p { font-size: 2vw; } #lista-quase-la .faltam-contador { font-size: 1.8vw; } }
 @media (max-width: 600px) { .dashboard-header { padding: 10px 15px; height: auto; flex-direction: column; gap: 10px;} #dash-sorteio-id-header { font-size: 5vw; } .header-controls { width: 100%; justify-content: space-around;} #dash-estado-header { font-size: 3.5vw; padding: 5px 10px; min-width: 100px;} #btn-toggle-som { width: 35px; height: 35px; font-size: 4vw;} .dashboard-main-fullscreen { padding: 10px; gap: 10px; } .area-principal { padding: 15px; } #dash-ultimo-numero { font-size: 22vw; width: 40vw; height: 40vw; border-width: 5px;} #dash-globo-numeros { gap: 1.5vw; padding: 2.5vw; width: calc(100% - 30px);} .dash-globo-numero { font-size: 3vw; } .barra-lateral { padding: 15px; max-height: none; } .barra-lateral h2 { font-size: 4vw; } .info-item, #lista-ganhadores p, #lista-ganhadores div { font-size: 3.5vw; } #lista-ganhadores p, #lista-ganhadores div { padding: 8px; } #quase-la h2 { font-size: 4vw; } #lista-quase-la p { font-size: 3vw; } #lista-quase-la .faltam-contador { font-size: 2.5vw; } }
-
-
-/* --- REMOVIDO: Estilos Vencedores no Overlay --- */
-/* (Todos os estilos .espera-conteudo-flex foram removidos) */
