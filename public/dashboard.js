@@ -288,12 +288,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
 
             // ==================================================
-            // --- *** INÍCIO DA CORREÇÃO 2 (BUG STATS) *** ---
+            // --- *** CORREÇÃO: SALVANDO O ID DO SORTEIO *** ---
             // ==================================================
             ultimoSorteioIdConhecido = data.sorteioId; // Salva o ID
             atualizarPremiosDashboard(ultimoSorteioIdConhecido); // Usa o ID salvo
             // ==================================================
-            // --- *** FIM DA CORREÇÃO 2 *** ---
+            // --- *** FIM DA CORREÇÃO *** ---
             // ==================================================
             
             if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
@@ -330,12 +330,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         atualizarEstadoVisual(data.estado);
         // ==================================================
-        // --- *** INÍCIO DA CORREÇÃO 2 (BUG STATS) *** ---
+        // --- *** CORREÇÃO: SALVANDO O ID DO SORTEIO *** ---
         // ==================================================
         ultimoSorteioIdConhecido = data.sorteioId; // Salva o ID
         atualizarPremiosDashboard(ultimoSorteioIdConhecido); // Usa o ID salvo
         // ==================================================
-        // --- *** FIM DA CORREÇÃO 2 *** ---
+        // --- *** FIM DA CORREÇÃO *** ---
         // ==================================================
         
         if (data.estado === 'ESPERANDO' && esperaCronometroDisplay) {
@@ -355,20 +355,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         atualizarEstadoVisual(data.estado);
         // ==================================================
-        // --- *** INÍCIO DA CORREÇÃO 2 (BUG STATS) *** ---
+        // --- *** CORREÇÃO: SALVANDO O ID DO SORTEIO *** ---
         // ==================================================
         ultimoSorteioIdConhecido = data.sorteioId; // Salva o ID
         atualizarPremiosDashboard(ultimoSorteioIdConhecido); // Usa o ID salvo
         // ==================================================
-        // --- *** FIM DA CORREÇÃO 2 *** ---
+        // --- *** FIM DA CORREÇÃO *** ---
         // ==================================================
     });
 
     // ==================================================
-    // --- *** INÍCIO DA CORREÇÃO 1 (TELA TRAVADA) *** ---
+    // --- *** CORREÇÃO: TELA TRAVADA (BUG) *** ---
     // ==================================================
     socket.on('novoNumeroSorteado', (numeroSorteado) => { 
-        if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.add('oculto'); // FORÇA FECHAR O ANÚNCIO
+        // Se a tela de anúncio estiver visível (por causa de um bug/reconexão),
+        // o primeiro número sorteado FORÇA ela a fechar.
+        if (anuncioEsperaOverlay && !anuncioEsperaOverlay.classList.contains('oculto')) {
+            console.log("Forçando fechamento do anúncio de espera ao receber primeiro número...");
+            anuncioEsperaOverlay.classList.add('oculto');
+            stopAnuncioCarousel();
+        }
         
         console.log(`Dashboard: Recebido 'novoNumeroSorteado': ${numeroSorteado}`); 
         if (numeroSorteado === undefined || numeroSorteado === null) return; 
@@ -381,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error){ console.error(`Erro ao processar 'novoNumeroSorteado' ${numeroSorteado}:`, error); } 
     });
     // ==================================================
-    // --- *** FIM DA CORREÇÃO 1 *** ---
+    // --- *** FIM DA CORREÇÃO *** ---
     // ==================================================
     
     socket.on('contagemJogadores', (contagem) => { if (!contagem) return; if(jogadoresTotalEl) jogadoresTotalEl.textContent = contagem.total !== undefined ? contagem.total : '--'; });
@@ -405,11 +411,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data) return; 
         globalConfig = data;
         // ==================================================
-        // --- *** INÍCIO DA CORREÇÃO 2 (BUG STATS) *** ---
+        // --- *** CORREÇÃO: ATUALIZANDO PRÊMIOS CORRETAMENTE *** ---
         // ==================================================
-        atualizarPremiosDashboard(ultimoSorteioIdConhecido); // Usa o ID salvo
+        atualizarPremiosDashboard(ultimoSorteioIdConhecido); // Usa o ID que já salvamos
         // ==================================================
-        // --- *** FIM DA CORREÇÃO 2 *** ---
+        // --- *** FIM DA CORREÇÃO *** ---
         // ==================================================
     });
     
