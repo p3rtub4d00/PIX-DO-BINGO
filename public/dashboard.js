@@ -315,12 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
             atualizarEstadoVisual(data.estado);
             
             let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
-            if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
+            if (data.sorteioId && isNaN(parseInt(data.sorteioId.replace('#', '')))) {
                 tituloSorteio = "SORTEIO ESPECIAL AGENDADO!";
             }
             if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
 
-            atualizarPremiosDashboard(data.sorteioId || `#{data.sorteioId || '???'}`);
+            // Passa o ID do sorteio (que é o título) para a função de prêmios
+            atualizarPremiosDashboard(tituloSorteio);
             
             if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
             
@@ -348,12 +349,14 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('cronometroUpdate', (data) => {
         if (!data) return;
         
-        if (data.estado === 'ESPERANDO' && data.sorteioId && !isNaN(parseInt(data.sorteioId, 10))) {
-            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+        let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+        if (data.estado === 'ESPERANDO' && data.sorteioId && !isNaN(parseInt(data.sorteioId.replace('#', '')))) {
+             tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
         }
+        if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
         
         atualizarEstadoVisual(data.estado);
-        atualizarPremiosDashboard(data.sorteioId || `#{data.sorteioId || '???'}`);
+        atualizarPremiosDashboard(tituloSorteio);
         
         if (data.estado === 'ESPERANDO' && esperaCronometroDisplay) {
             esperaCronometroDisplay.textContent = formatarTempo(data.tempo);
@@ -371,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
         
         atualizarEstadoVisual(data.estado);
-        atualizarPremiosDashboard(data.sorteioId || `#{data.sorteioId || '???'}`);
+        atualizarPremiosDashboard(tituloSorteio);
     });
 
     socket.on('novoNumeroSorteado', (numeroSorteado) => { console.log(`Dashboard: Recebido 'novoNumeroSorteado': ${numeroSorteado}`); if (numeroSorteado === undefined || numeroSorteado === null) return; try{ ultimoNumeroEl.textContent = numeroSorteado; const globoNumEl = document.getElementById(`dash-globo-${numeroSorteado}`); if (globoNumEl) { globoNumEl.classList.add('sorteado'); } const letra = getLetraDoNumero(numeroSorteado); falar(`${letra} ${numeroSorteado}`); } catch (error){ console.error(`Erro ao processar 'novoNumeroSorteado' ${numeroSorteado}:`, error); } });
