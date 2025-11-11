@@ -156,6 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function atualizarGloboSorteados(numerosSorteados) { if (!globoContainer || !ultimoNumeroEl) return; try { const todosNumeros = globoContainer.querySelectorAll('.dash-globo-numero'); if (!todosNumeros || todosNumeros.length === 0) { gerarGlobo(); } todosNumeros.forEach(num => num.classList.remove('sorteado')); if (numerosSorteados && numerosSorteados.length > 0) { numerosSorteados.forEach(num => { const el = document.getElementById(`dash-globo-${num}`); if (el) el.classList.add('sorteado'); }); ultimoNumeroEl.textContent = numerosSorteados[numerosSorteados.length - 1]; } else { ultimoNumeroEl.textContent = '--'; } } catch(error){ console.error("Erro globo sorteados:", error); } }
 
+    // ==================================================
+    // --- *** MUDANÇA 3: LÓGICA DO PRÊMIO LINHA *** ---
+    // ==================================================
     function atualizarEstadoVisual(estadoString) {
         console.log("Atualizando Estado Visual para:", estadoString);
         ultimoEstadoConhecido = estadoString; // Salva o estado atual
@@ -166,21 +169,28 @@ document.addEventListener('DOMContentLoaded', () => {
             estadoHeaderEl.className = 'estado-texto';
             
             if (estadoString === 'ESPERANDO') { 
-                estadoHeaderEl.classList.add('estado-esperando'); 
+                estadoHeaderEl.classList.add('estado-esperando');
+                if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'flex'; // MOSTRA linha
             }
             else if (estadoString === 'JOGANDO_LINHA') { 
                 const classe = (sorteioIdHeaderEl.textContent.includes('ESPECIAL')) ? 'estado-jogando-cheia' : 'estado-jogando-linha';
                 estadoHeaderEl.classList.add(classe);
+                if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'flex'; // MOSTRA linha
             }
             else if (estadoString === 'JOGANDO_CHEIA') { 
                 estadoHeaderEl.classList.add('estado-jogando-cheia'); // Sempre verde
+                if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'none'; // ESCONDE linha
             }
             else { 
-                estadoHeaderEl.classList.add('estado-esperando'); 
+                estadoHeaderEl.classList.add('estado-esperando');
+                if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'flex'; // MOSTRA linha
             }
             
         } catch(error) { console.error("Erro estado visual:", error); }
     }
+    // ==================================================
+    // --- *** FIM DA MUDANÇA 3 *** ---
+    // ==================================================
 
     function getLetraDoNumero(numero) { if (numero >= 1 && numero <= 15) return "B"; if (numero >= 16 && numero <= 30) return "I"; if (numero >= 31 && numero <= 45) return "N"; if (numero >= 46 && numero <= 60) return "G"; if (numero >= 61 && numero <= 75) return "O"; return ""; }
     function atualizarListaQuaseLa(jogadoresPerto) { if (!listaQuaseLaContainer) return; listaQuaseLaContainer.innerHTML = ''; if (!jogadoresPerto || jogadoresPerto.length === 0) { listaQuaseLaContainer.innerHTML = '<p>Ninguém perto ainda...</p>'; return; } try { jogadoresPerto.forEach(j => { const item = document.createElement('p'); const nomeSeguro = j.nome.replace(/</g, "&lt;").replace(/>/g, "&gt;"); item.innerHTML = `<span class="nome-jogador">${nomeSeguro}</span> <span class="faltam-contador">${j.faltam}</span>`; listaQuaseLaContainer.appendChild(item); }); } catch (error) { console.error("Erro ao atualizar lista 'Quase Lá':", error); listaQuaseLaContainer.innerHTML = '<p>Erro ao carregar.</p>'; } }
@@ -321,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
 
             // Passa o ID do sorteio (que é o título) para a função de prêmios
-            atualizarPremiosDashboard(tituloSorteio);
+            atualizarPremiosDashboard(data.sorteioId); // <-- CORRIGIDO DO ORIGINAL (passa o ID, não o título)
             
             if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
             
@@ -356,13 +366,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
         
         atualizarEstadoVisual(data.estado);
-        atualizarPremiosDashboard(tituloSorteio);
+        atualizarPremiosDashboard(data.sorteioId); // <-- CORRIGIDO DO ORIGINAL (passa o ID)
         
         if (data.estado === 'ESPERANDO' && esperaCronometroDisplay) {
             esperaCronometroDisplay.textContent = formatarTempo(data.tempo);
         }
     });
 
+    // ==================================================
+    // --- *** MUDANÇA 2: CORREÇÃO DO BUG R$ ... *** ---
+    // ==================================================
     socket.on('estadoJogoUpdate', (data) => {
         console.log("Recebido 'estadoJogoUpdate':", data);
         if (!data) return;
@@ -374,8 +387,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
         
         atualizarEstadoVisual(data.estado);
-        atualizarPremiosDashboard(tituloSorteio);
+        atualizarPremiosDashboard(data.sorteioId); // <-- ANTES: estava (tituloSorteio)
     });
+    // ==================================================
+    // --- *** FIM DA MUDANÇA 2 *** ---
+    // ==================================================
 
     socket.on('novoNumeroSorteado', (numeroSorteado) => { console.log(`Dashboard: Recebido 'novoNumeroSorteado': ${numeroSorteado}`); if (numeroSorteado === undefined || numeroSorteado === null) return; try{ ultimoNumeroEl.textContent = numeroSorteado; const globoNumEl = document.getElementById(`dash-globo-${numeroSorteado}`); if (globoNumEl) { globoNumEl.classList.add('sorteado'); } const letra = getLetraDoNumero(numeroSorteado); falar(`${letra} ${numeroSorteado}`); } catch (error){ console.error(`Erro ao processar 'novoNumeroSorteado' ${numeroSorteado}:`, error); } });
     socket.on('contagemJogadores', (contagem) => { if (!contagem) return; if(jogadoresTotalEl) jogadoresTotalEl.textContent = contagem.total !== undefined ? contagem.total : '--'; });
