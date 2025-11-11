@@ -202,7 +202,10 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
     background-color: rgba(0, 0, 0, 0.2);
     padding: 20px 30px; 
     border-radius: 15px;
-    max-width: 800px;
+    
+    /* *** MUDANÇA 1: AUMENTANDO LARGURA MÁXIMA *** */
+    max-width: 80vw; /* ANTES: 800px */
+    
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
@@ -210,7 +213,10 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
 
 .anuncio-espera-container h1 {
     font-family: 'Montserrat', sans-serif;
-    font-size: 1.8em; 
+    
+    /* *** MUDANÇA 2: AUMENTANDO FONTE DO TÍTULO *** */
+    font-size: 2.5em; /* ANTES: 1.8em */
+    
     font-weight: 700;
     color: #fff;
     margin: 0 0 15px 0; 
@@ -227,7 +233,7 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
     overflow: hidden; /* Garante que o slider não vaze */
     position: relative;
     width: 100%;
-    /* max-width: 640px; */ /* REMOVIDO PARA USAR A LARGURA MÁXIMA DO CONTAINER (800px) */
+    /* max-width: 640px; */ /* REMOVIDO PARA USAR A LARGURA MÁXIMA DO CONTAINER (80vw) */
     margin: 0 auto 15px auto; /* Centraliza e adiciona margem */
     aspect-ratio: 16 / 9; /* Força proporção 16:9 */
     background-color: #000; /* Fundo preto caso a mídia demore */
