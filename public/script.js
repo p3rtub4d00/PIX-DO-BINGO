@@ -9,31 +9,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Variáveis Globais para Preço (será atualizada) ---
     let PRECO_CARTELA_ATUAL = 5.00; // Valor padrão inicial
-    
-    // ==================================================
-    // --- INÍCIO DAS MODIFICAÇÕES ---
-    // ==================================================
     let PRECO_CARTELA_ESPECIAL_ATUAL = 10.00; // Valor padrão inicial
     let TIPO_COMPRA_ATUAL = 'regular'; // Controla qual tipo de compra está no modal
-    // ==================================================
-    // --- FIM DAS MODIFICAÇÕES ---
-    // ==================================================
-
 
     // --- Seletores do DOM ---
     const modal = document.getElementById('modal-checkout');
     const btnCloseModal = document.querySelector('.modal-close');
     const btnJogueAgora = document.getElementById('btn-jogue-agora');
     
-    // ==================================================
-    // --- INÍCIO DAS MODIFICAÇÕES ---
-    // ==================================================
     const btnJogueEspecial = document.getElementById('btn-jogue-especial'); // Botão novo
-    const modalTitulo = document.getElementById('modal-titulo'); // Título do modal
-    // ==================================================
-    // --- FIM DAS MODIFICAÇÕES ---
-    // ==================================================
     
+    // --- ================================================== ---
+    // --- INÍCIO DA MODIFICAÇÃO (Novos Seletores) ---
+    // --- ================================================== ---
+    const modalTitulo = document.getElementById('modal-titulo') || document.getElementById('modal-titulo-sorteio'); // Pega o ID novo ou antigo
+    const premioInfoContainer = document.getElementById('premio-info'); // O box do sorteio REGULAR
+    // --- ================================================== ---
+    // --- FIM DA MODIFICAÇÃO ---
+    // --- ================================================== ---
+
     const etapaDados = document.getElementById('etapa-dados');
     const etapaPix = document.getElementById('etapa-pix');
     const btnGerarPix = document.getElementById('btn-gerar-pix'); 
@@ -59,13 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const especialValorEl = document.getElementById('especial-valor');
     const especialDataEl = document.getElementById('especial-data');
 
-    // ==================================================
-    // --- INÍCIO DAS MODIFICAÇÕES ---
-    // ==================================================
     const especialPrecoCartelaEl = document.getElementById('especial-preco-cartela'); // Span no botão especial
-    // ==================================================
-    // --- FIM DAS MODIFICAÇÕES ---
-    // ==================================================
 
     const statusSorteioBox = document.getElementById('status-sorteio-box');
     const statusTitulo = document.getElementById('status-titulo');
@@ -83,7 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
-    // --- Função para ATUALIZAR exibição de preços/prêmios (ATUALIZADA) ---
+    // --- ================================================== ---
+    // --- INÍCIO DA MODIFICAÇÃO (Lógica de exibição corrigida) ---
+    // --- ================================================== ---
     function atualizarValoresExibidos(data) {
         if (!data) return;
         console.log("Atualizando exibição de valores:", data);
@@ -92,24 +82,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if(indexPremioLinhaEl) indexPremioLinhaEl.textContent = formatarBRL(data.premio_linha);
         if(indexPremioCheiaEl) indexPremioCheiaEl.textContent = formatarBRL(data.premio_cheia);
 
-        // Atualiza preço da cartela e recalcula o total no modal se estiver aberto
         const novoPreco = parseFloat(data.preco_cartela);
         if (!isNaN(novoPreco) && novoPreco > 0) {
-            PRECO_CARTELA_ATUAL = novoPreco; // Atualiza variável global
+            PRECO_CARTELA_ATUAL = novoPreco;
             const precoFormatado = formatarBRL(PRECO_CARTELA_ATUAL);
             if(indexPrecoCartelaEl) indexPrecoCartelaEl.textContent = precoFormatado;
-            // (O label do modal é atualizado quando ele abre)
         }
         
-        // ==================================================
-        // --- INÍCIO DAS MODIFICAÇÕES ---
-        // ==================================================
-        
         // --- LÓGICA DO SORTEIO ESPECIAL (ATUALIZADA) ---
-        if (data.sorteio_especial_ativo === 'true') {
+        if (data.sorteio_especial_ativo === 'true' && data.sorteio_especial_datahora) {
+            // Se o sorteio especial está ATIVO:
+            
+            // 1. Mostra o box do Sorteio Especial
             if (especialValorEl) especialValorEl.textContent = formatarBRL(data.sorteio_especial_valor);
             
-            // Formata a nova data 'datetime-local' (ex: 2025-11-10T19:00)
             const dataEspecial = data.sorteio_especial_datahora;
             if (especialDataEl && dataEspecial) {
                 try {
@@ -129,35 +115,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 especialDataEl.textContent = `🗓️ Data a definir 🕖`;
             }
 
-            // Atualiza o preço da cartela especial
             const novoPrecoEspecial = parseFloat(data.sorteio_especial_preco_cartela);
             if (!isNaN(novoPrecoEspecial) && novoPrecoEspecial > 0) {
                 PRECO_CARTELA_ESPECIAL_ATUAL = novoPrecoEspecial;
                 if(especialPrecoCartelaEl) especialPrecoCartelaEl.textContent = formatarBRL(PRECO_CARTELA_ESPECIAL_ATUAL);
             }
             
-            if (premioEspecialContainer) premioEspecialContainer.style.display = 'block'; // Mostra
+            if (premioEspecialContainer) premioEspecialContainer.style.display = 'block'; // Mostra o especial
+            
+            // 2. ESCONDE o box do Sorteio Regular
+            if (premioInfoContainer) premioInfoContainer.style.display = 'none';
+
         } else {
-            if (premioEspecialContainer) premioEspecialContainer.style.display = 'none'; // Esconde
+            // Se o sorteio especial está INATIVO:
+            
+            // 1. Esconde o box do Sorteio Especial
+            if (premioEspecialContainer) premioEspecialContainer.style.display = 'none'; 
+            
+            // 2. MOSTRA o box do Sorteio Regular
+            if (premioInfoContainer) premioInfoContainer.style.display = 'block';
         }
         
         // Recalcula o total no modal (caso esteja aberto e os preços mudem)
         atualizarPrecoTotalModal();
-        
-        // ==================================================
-        // --- FIM DAS MODIFICAÇÕES ---
-        // ==================================================
     }
+    // --- ================================================== ---
+    // --- FIM DA MODIFICAÇÃO ---
+    // --- ================================================== ---
 
-    // --- *** INÍCIO DA ATUALIZAÇÃO (Função do Quadro de Status) *** ---
     function atualizarStatusBox(estado, tempo) {
-        if (!statusSorteioBox) return; // Se o elemento não existir, sai
+        if (!statusSorteioBox) return;
 
         if (estado === 'ESPERANDO') {
             statusSorteioBox.className = 'card status-esperando';
             statusTitulo.textContent = 'PRÓXIMO SORTEIO EM:';
             
-            // Formata o tempo
             const minutos = Math.floor(tempo / 60);
             let segundos = tempo % 60;
             segundos = segundos < 10 ? '0' + segundos : segundos;
@@ -167,10 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
             statusSubtexto.textContent = 'Garanta já sua cartela!';
             if (btnAssistirVivo) btnAssistirVivo.style.display = 'none';
             
-            // Muda o botão principal
             if (btnJogueAgora) btnJogueAgora.innerHTML = `Comprar Cartela (<span id="index-preco-cartela">${formatarBRL(PRECO_CARTELA_ATUAL)}</span>)`;
 
-        } else { // JOGANDO_LINHA, JOGANDO_CHEIA, ANUNCIANDO_VENCEDOR
+        } else { 
             statusSorteioBox.className = 'card status-jogando';
             
             let textoEstado = 'SORTEIO AO VIVO!';
@@ -183,18 +174,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             statusTitulo.textContent = textoEstado;
-            if (statusCronometro) statusCronometro.style.display = 'none'; // Esconde o timer
+            if (statusCronometro) statusCronometro.style.display = 'none';
             if (statusSubtexto) statusSubtexto.textContent = 'As compras agora valem para o próximo sorteio.';
-            if (btnAssistirVivo) btnAssistirVivo.style.display = 'block'; // Mostra o botão de assistir
+            if (btnAssistirVivo) btnAssistirVivo.style.display = 'block'; 
 
-            // Muda o botão principal
             if (btnJogueAgora) btnJogueAgora.innerHTML = `Comprar p/ Próximo Sorteio (<span id="index-preco-cartela">${formatarBRL(PRECO_CARTELA_ATUAL)}</span>)`;
         }
     }
-    // --- *** FIM DA ATUALIZAÇÃO *** ---
 
-
-    // --- Funções de Polling de Pagamento (Sem alteração) ---
     function checarPagamento() {
         if (currentPaymentId && socket.connected) {
             console.log(`Polling: Checando status do pagamento ${currentPaymentId}...`);
@@ -216,11 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(pollerInterval);
             pollerInterval = null;
         }
-        currentPaymentId = null; // Limpa o ID
+        currentPaymentId = null;
     }
 
-
-    // --- Função para Fechar o Modal ---
     function fecharModal() { 
         if(modal) modal.style.display = 'none'; 
         if(etapaDados) etapaDados.style.display = 'block';
@@ -230,20 +215,16 @@ document.addEventListener('DOMContentLoaded', () => {
             btnGerarPix.textContent = "Gerar PIX"; 
         } 
         
-        // --- CORREÇÃO: Garante que os campos reapareçam ---
         if(pixQrContainer) pixQrContainer.style.display = 'block';
         if(pixCopiaContainer) pixCopiaContainer.style.display = 'block';
         
         pararVerificadorPagamento(); 
     }
 
-    // --- Event Listeners (ATUALIZADOS) ---
+    // --- ================================================== ---
+    // --- INÍCIO DA MODIFICAÇÃO (Listeners dos botões) ---
+    // --- ================================================== ---
     
-    // ==================================================
-    // --- INÍCIO DAS MODIFICAÇÕES ---
-    // ==================================================
-    
-    // --- CLIQUE BOTÃO REGULAR ---
     if (btnJogueAgora && modal) {
         btnJogueAgora.addEventListener('click', () => {
             console.log("Botão 'Jogue Agora!' (Regular) clicado.");
@@ -254,9 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
             atualizarPrecoTotalModal();
              if(modalNome) modalNome.focus();
         });
-    } else { console.error("Erro: Botão 'Jogue Agora' ou Modal não encontrado."); }
+    } else { console.warn("Aviso: Botão 'Jogue Agora' (regular) ou Modal não encontrado."); }
 
-    // --- CLIQUE BOTÃO ESPECIAL ---
     if (btnJogueEspecial && modal) {
         btnJogueEspecial.addEventListener('click', () => {
             console.log("Botão 'Jogue Agora!' (Especial) clicado.");
@@ -267,19 +247,16 @@ document.addEventListener('DOMContentLoaded', () => {
             atualizarPrecoTotalModal();
              if(modalNome) modalNome.focus();
         });
-    } else { console.error("Erro: Botão 'Jogue Especial' ou Modal não encontrado."); }
+    } else { console.warn("Aviso: Botão 'Jogue Especial' ou Modal não encontrado."); }
     
 
-    // --- ATUALIZAR PREÇO MODAL (MODIFICADO) ---
     function atualizarPrecoTotalModal() {
         if (!modalQuantidadeInput || !modalPrecoEl || !modalLabelPrecoEl) return;
         
-        // Define o preço unitário baseado no tipo de compra
         const precoUnitario = (TIPO_COMPRA_ATUAL === 'especial') 
             ? PRECO_CARTELA_ESPECIAL_ATUAL 
             : PRECO_CARTELA_ATUAL;
             
-        // Atualiza o label
         modalLabelPrecoEl.textContent = formatarBRL(precoUnitario);
         
         let quantidade = parseInt(modalQuantidadeInput.value);
@@ -288,9 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const precoTotal = quantidade * precoUnitario; 
         modalPrecoEl.textContent = formatarBRL(precoTotal);
     }
-    // ==================================================
-    // --- FIM DAS MODIFICAÇÕES ---
-    // ==================================================
+    // --- ================================================== ---
+    // --- FIM DA MODIFICAÇÃO ---
+    // --- ================================================== ---
     
     
     if(modalQuantidadeInput) {
@@ -301,9 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnCloseModal) btnCloseModal.addEventListener('click', fecharModal);
     if(modal) modal.addEventListener('click', (event) => { if (event.target === modal) fecharModal(); });
 
-    // ==========================================================
-    // --- LÓGICA DE GERAR PIX (MODIFICADA) ---
-    // ==========================================================
     if (btnGerarPix && modalNome && modalTelefone && modalQuantidadeInput && socket) {
         btnGerarPix.addEventListener('click', () => {
             const nome = modalNome.value.trim(); const telefone = modalTelefone.value.trim(); const quantidade = parseInt(modalQuantidadeInput.value);
@@ -314,36 +288,28 @@ document.addEventListener('DOMContentLoaded', () => {
             btnGerarPix.textContent = "Gerando..."; 
             btnGerarPix.disabled = true;
             
-            // Garante que os campos estão visíveis
             if(pixQrContainer) pixQrContainer.style.display = 'block';
             if(pixCopiaContainer) pixCopiaContainer.style.display = 'block';
 
-            // ==================================================
-            // --- INÍCIO DAS MODIFICAÇÕES ---
-            // ==================================================
-            
-            // Define qual evento de socket chamar (regular ou especial)
+            // --- ================================================== ---
+            // --- INÍCIO DA MODIFICAÇÃO (Lógica de emissão) ---
+            // --- ================================================== ---
             const eventoSocket = (TIPO_COMPRA_ATUAL === 'especial') 
                 ? 'criarPagamentoEspecial' 
                 : 'criarPagamento';
                 
-            // Salva o tipo de compra no sessionStorage para o 'pagamentoAprovado' saber o que fazer
             sessionStorage.setItem('bingo_tipo_compra', TIPO_COMPRA_ATUAL);
 
             socket.emit(eventoSocket, { nome, telefone, quantidade }, (data) => {
-            // ==================================================
-            // --- FIM DAS MODIFICAÇÕES ---
-            // ==================================================
+            // --- ================================================== ---
+            // --- FIM DA MODIFICAÇÃO ---
+            // --- ================================================== ---
                 
-                // --- VOLTANDO À LÓGICA ORIGINAL QUE USA Base64 ---
                 if (data && data.success) {
                     console.log("PIX Recebido, Payment ID:", data.paymentId);
 
-                    // --- INÍCIO DA CORREÇÃO ---
-                    // Usando o 'qrCodeBase64' original
                     pixQrCodeImg.src = `data:image/png;base64,${data.qrCodeBase64}`;
                     pixQrCodeImg.style.display = 'block';
-                    // --- FIM DA CORREÇÃO ---
 
                     pixCopiaColaInput.value = data.qrCodeCopiaCola;
                     
@@ -361,18 +327,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert(`Erro: ${data.message || 'Não foi possível gerar o PIX.'}`);
                     btnGerarPix.textContent = "Gerar PIX"; 
                     btnGerarPix.disabled = false;
-                    sessionStorage.removeItem('bingo_tipo_compra'); // Limpa se falhar
+                    sessionStorage.removeItem('bingo_tipo_compra'); 
                 }
             });
         });
     } else { console.error("Erro: Elementos do modal ou socket não encontrados para 'Gerar PIX'."); }
     
-    // CORRIGIDO (btnCopiarPix agora está definido)
     if(btnCopiarPix && pixCopiaColaInput) {
         btnCopiarPix.addEventListener('click', () => {
             pixCopiaColaInput.select();
             try {
-                navigator.clipboard.writeText(pixCopiaColaInput.value); // API moderna
+                navigator.clipboard.writeText(pixCopiaColaInput.value);
                 btnCopiarPix.textContent = "Copiado!";
                 setTimeout(() => { btnCopiarPix.textContent = "Copiar Código"; }, 2000);
             } catch (err) {
@@ -387,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Ouvintes do Socket.IO (ATUALIZADOS) ---
     if (socket) {
         socket.on('configAtualizada', (data) => {
             console.log("Recebida atualização de configurações via Socket.IO.");
@@ -399,24 +363,18 @@ document.addEventListener('DOMContentLoaded', () => {
              if (data.configuracoes) {
                  atualizarValoresExibidos(data.configuracoes);
              }
-             // *** INÍCIO DA ATUALIZAÇÃO (Estado Inicial) ***
              atualizarStatusBox(data.estado, data.tempoRestante); 
-             // *** FIM DA ATUALIZAÇÃO ***
         });
 
-        // *** INÍCIO DA ATUALIZAÇÃO (Novos Ouvintes de Status) ***
         socket.on('cronometroUpdate', (data) => {
-            // data = { tempo, sorteioId, estado }
             if (data.estado === 'ESPERANDO') {
                 atualizarStatusBox(data.estado, data.tempo);
             }
         });
 
         socket.on('estadoJogoUpdate', (data) => {
-            // data = { sorteioId, estado }
-            atualizarStatusBox(data.estado, 0); // O tempo não importa aqui
+            atualizarStatusBox(data.estado, 0);
         });
-        // *** FIM DA ATUALIZAÇÃO ***
 
         socket.on('pagamentoAprovado', (data) => {
             console.log(`Pagamento Aprovado! Venda ID: ${data.vendaId}`);
@@ -430,47 +388,38 @@ document.addEventListener('DOMContentLoaded', () => {
                  return;
             }
             
-            // ==================================================
-            // --- INÍCIO DAS MODIFICAÇÕES ---
-            // ==================================================
-            
-            // Pega o tipo de compra que foi salvo antes de gerar o PIX
+            // --- ================================================== ---
+            // --- INÍCIO DA MODIFICAÇÃO (Lógica de redirecionamento) ---
+            // --- ================================================== ---
             const tipoCompraSalvo = sessionStorage.getItem('bingo_tipo_compra') || 'regular';
-            sessionStorage.removeItem('bingo_tipo_compra'); // Limpa
+            sessionStorage.removeItem('bingo_tipo_compra'); 
             
-            // Limpa os campos do modal
             if(modalNome) modalNome.value = ""; 
             if(modalTelefone) modalTelefone.value = ""; 
             if(modalQuantidadeInput) modalQuantidadeInput.value = "1";
             
-            if (modal.style.display === 'flex' && etapaPix.style.display === 'block') {
+            if (modal && modal.style.display === 'flex' && etapaPix && etapaPix.style.display === 'block') {
                 fecharModal();
                 
                 if (tipoCompraSalvo === 'especial') {
-                    // Se for ESPECIAL, só avisa e fecha o modal
                     alert("Pagamento confirmado!\n\nSuas cartelas para o Sorteio Especial estão garantidas. Você pode consultá-las a qualquer momento na seção 'Ver Minhas Compras'.");
-                    // Não redireciona
                 } else {
-                    // Se for REGULAR, redireciona para a sala de espera (comportamento antigo)
                     alert("Pagamento confirmado!\n\nCartelas geradas.\nIndo para a sala de espera.");
                     window.location.href = `espera.html?venda=${data.vendaId}`;
                 }
             } else if (tipoCompraSalvo === 'regular') {
-                // Se o modal não estava aberto mas era compra regular (ex: outra aba)
                 window.location.href = `espera.html?venda=${data.vendaId}`;
             }
-            // Se o modal não estava aberto e era 'especial', não faz nada (só foi aprovado em background)
-
-            // ==================================================
-            // --- FIM DAS MODIFICAÇÕES ---
-            // ==================================================
+            // --- ================================================== ---
+            // --- FIM DA MODIFICAÇÃO ---
+            // --- ================================================== ---
         });
 
         socket.on('pagamentoErro', (data) => {
             alert(`Erro no servidor de pagamento: ${data.message}`);
             pararVerificadorPagamento();
             sessionStorage.removeItem('bingo_payment_id'); 
-            sessionStorage.removeItem('bingo_tipo_compra'); // Limpa
+            sessionStorage.removeItem('bingo_tipo_compra'); 
             fecharModal(); 
         });
 
@@ -495,55 +444,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // ==========================================================
-    // --- LÓGICA DE RECARREGAMENTO DE PÁGINA (CORRIGIDA) ---
-    // ==========================================================
     const paymentIdSalvo = sessionStorage.getItem('bingo_payment_id');
     if (paymentIdSalvo) {
         console.log(`Encontrado paymentId ${paymentIdSalvo} no sessionStorage ao carregar. Iniciando verificador.`);
-        modal.style.display = 'flex';
-        etapaDados.style.display = 'none';
-        etapaPix.style.display = 'block';
-        aguardandoPagamentoEl.style.display = 'block';
+        if (modal) modal.style.display = 'flex';
+        if (etapaDados) etapaDados.style.display = 'none';
+        if (etapaPix) etapaPix.style.display = 'block';
+        if (aguardandoPagamentoEl) aguardandoPagamentoEl.style.display = 'block';
 
-        // --- INÍCIO DA CORREÇÃO ---
-        // Oculta a área do QR Code e Copia/Cola, mostrando apenas o spinner,
-        // pois não salvamos o código no sessionStorage (apenas o paymentId).
         if(pixQrContainer) pixQrContainer.style.display = 'none';
         if(pixCopiaContainer) pixCopiaContainer.style.display = 'none';
-        // --- FIM DA CORREÇÃO ---
         
         iniciarVerificadorPagamento(paymentIdSalvo);
     }
 
     
-    // ==========================================================
-    // ===== NOVO CÓDIGO: LÓGICA PARA RECUPERAR CARTELAS (COLE AQUI) =====
-    // ==========================================================
-    
-    // 1. Seleciona o novo formulário e o botão
     const formRecuperar = document.getElementById('form-recuperar-cartelas');
     const inputTelefoneRecuperar = document.getElementById('modal-telefone-recuperar');
     const btnRecuperar = document.getElementById('btn-recuperar-cartelas');
     
-    // ***** INÍCIO DA ATUALIZAÇÃO *****
     const btnChecarPremios = document.getElementById('btn-checar-premios');
-    // ***** FIM DA ATUALIZAÇÃO *****
     
-    
-    // 2. Cria o modal de resultados (mas não o exibe)
-    let modalResultados = null; // Guarda a referência do modal
+    let modalResultados = null;
     
     function criarModalResultados(vendas, proximoSorteioId) {
-        // Se o modal já existe, remove
         if (modalResultados) {
             modalResultados.remove();
         }
 
-        // Cria a estrutura do modal
         modalResultados = document.createElement('div');
         modalResultados.classList.add('modal-overlay');
-        modalResultados.style.display = 'flex'; // Mostra imediatamente
+        modalResultados.style.display = 'flex';
 
         let htmlInterno = `
             <div class="modal-content">
@@ -556,22 +487,16 @@ document.addEventListener('DOMContentLoaded', () => {
             vendas.forEach(venda => {
                 const eProximoSorteio = venda.sorteio_id == proximoSorteioId;
                 
-                // ***** INÍCIO DA ATUALIZAÇÃO *****
-                // Mostra "Ver Jogo Encerrado" como texto, não como botão desabilitado
-                // ==================================================
-                // --- INÍCIO DAS MODIFICAÇÕES (Lógica do Botão Entrar) ---
-                // ==================================================
-                // Agora verifica se é um sorteio especial ou regular
+                // --- ================================================== ---
+                // --- INÍCIO DA MODIFICAÇÃO (Lógica do Botão Entrar) ---
+                // --- ================================================== ---
                 
                 let botaoHtml = '';
                 if (venda.tipo_sorteio === 'especial_agendado') {
-                    // Se for especial, o botão sempre diz "Ver Cartelas" e leva para a espera
-                    // (A lógica de redirecionar para o JOGO só acontece quando o server mandar)
                      botaoHtml = `<button class="btn-comprar btn-entrar-jogo btn-destaque" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}">
                            Ver Cartelas (Especial)
                        </button>`;
                 } else {
-                    // Lógica antiga para sorteios regulares
                     botaoHtml = eProximoSorteio 
                         ? `<button class="btn-comprar btn-entrar-jogo btn-destaque" data-venda-id="${venda.id}" data-nome="${venda.nome_jogador}">
                                Entrar na Sala de Espera
@@ -579,16 +504,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         : `<span class="jogo-encerrado-info">Jogo Encerrado</span>`;
                 }
                 
-                // Define um texto para o tipo de sorteio
                 const tipoTexto = venda.tipo_sorteio === 'especial_agendado' 
                     ? '<span style="color:var(--color-pix-green); font-weight:bold;">(Sorteio Especial)</span>' 
                     : '(Sorteio Regular)';
 
-                // ==================================================
-                // --- FIM DAS MODIFICAÇÕES ---
-                // ==================================================
+                // --- ================================================== ---
+                // --- FIM DA MODIFICAÇÃO ---
+                // --- ================================================== ---
                 
-                // Salva o nome e telefone do jogador da primeira venda válida
                 if (!sessionStorage.getItem('bingo_usuario_nome')) {
                     sessionStorage.setItem('bingo_usuario_nome', venda.nome_jogador);
                 }
@@ -616,30 +539,23 @@ document.addEventListener('DOMContentLoaded', () => {
         modalResultados.innerHTML = htmlInterno;
         document.body.appendChild(modalResultados);
 
-        // Adiciona eventos de clique ao novo modal
         modalResultados.addEventListener('click', (e) => {
-            // Fechar modal
             if (e.target.id === 'modal-resultados-fechar' || e.target === modalResultados) {
                 modalResultados.remove();
                 modalResultados = null;
             }
 
-            // Clicar no botão "Entrar" (Funciona para ambos os tipos agora)
             if (e.target.classList.contains('btn-entrar-jogo')) {
                 const vendaId = e.target.dataset.vendaId;
                 const nome = e.target.dataset.nome;
                 
-                // Salva o nome para a próxima página
                 sessionStorage.setItem('bingo_usuario_nome', nome);
-                // Redireciona para a sala de espera com o ID da Venda
-                // A sala de espera.js vai lidar com o timer (seja regular ou especial)
                 window.location.href = `espera.html?venda=${vendaId}`;
             }
         });
     }
 
-    // ***** INÍCIO DA ATUALIZAÇÃO (Novo Modal de Prêmios) *****
-    let modalPremios = null; // Guarda a referência
+    let modalPremios = null; 
     
     function criarModalPremios(premios) {
         if (modalPremios) {
@@ -673,7 +589,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             htmlInterno += `<p style="text-align: center; margin-top: 15px; font-size: 0.9em;">Se o status estiver "Pendente", entre em contato com a administração para receber.</p>`;
         } else {
-            // Isso não deve acontecer se a 'data.success' for false, mas é um fallback.
             htmlInterno += `<p>Nenhum prêmio encontrado.</p>`;
         }
 
@@ -691,10 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // ***** FIM DA ATUALIZAÇÃO (Novo Modal de Prêmios) *****
 
-
-    // 3. Adiciona o listener ao formulário
     if (formRecuperar && inputTelefoneRecuperar && btnRecuperar && socket) {
         
         formRecuperar.addEventListener('submit', (e) => {
@@ -706,24 +618,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // ***** INÍCIO DA ATUALIZAÇÃO *****
-            // Desabilita os dois botões
             btnRecuperar.disabled = true;
-            btnChecarPremios.disabled = true;
+            if (btnChecarPremios) btnChecarPremios.disabled = true;
             btnRecuperar.textContent = 'Buscando...';
-            // ***** FIM DA ATUALIZAÇÃO *****
 
-
-            // Salva o telefone para usar na próxima compra
             sessionStorage.setItem('bingo_usuario_telefone', telefone);
 
             socket.emit('buscarCartelasPorTelefone', { telefone }, (data) => {
-                // ***** INÍCIO DA ATUALIZAÇÃO *****
-                // Reabilita os dois botões
                 btnRecuperar.disabled = false;
-                btnChecarPremios.disabled = false;
+                if (btnChecarPremios) btnChecarPremios.disabled = false;
                 btnRecuperar.textContent = 'Ver Minhas Compras';
-                // ***** FIM DA ATUALIZAÇÃO *****
 
                 if (data.success) {
                     criarModalResultados(data.vendas, data.proximoSorteioId);
@@ -737,7 +641,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn("Elementos de 'Recuperar Cartelas' não foram encontrados.");
     }
     
-    // ***** INÍCIO DA ATUALIZAÇÃO (Listener do novo botão) *****
     if (btnChecarPremios && inputTelefoneRecuperar && btnRecuperar && socket) {
         
         btnChecarPremios.addEventListener('click', () => {
@@ -748,31 +651,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Desabilita os dois botões
-            btnRecuperar.disabled = true;
+            if (btnRecuperar) btnRecuperar.disabled = true;
             btnChecarPremios.disabled = true;
             btnChecarPremios.textContent = 'Verificando...';
 
             socket.emit('checarMeusPremios', { telefone }, (data) => {
-                // Reabilita os botões
-                btnRecuperar.disabled = false;
+                if (btnRecuperar) btnRecuperar.disabled = false;
                 btnChecarPremios.disabled = false;
                 btnChecarPremios.textContent = 'Verificar Prêmios';
 
                 if (data.success) {
-                    // SUCESSO! Encontrou prêmios.
                     criarModalPremios(data.premios);
                 } else {
-                    // FALHA! Não encontrou.
                     alert(data.message || 'Nenhum prêmio encontrado para este telefone.');
                 }
             });
         });
     }
-    // ***** FIM DA ATUALIZAÇÃO (Listener do novo botão) *****
     
-    // ==========================================================
-    // ===== FIM DO NOVO CÓDIGO "RECUPERAR CARTELAS" =====
-    // ==========================================================
-
 });
