@@ -13,8 +13,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const ultimoNumeroEl = document.getElementById('dash-ultimo-numero');
     const globoContainer = document.getElementById('dash-globo-numeros');
     const listaVencedoresContainer = document.getElementById('lista-ganhadores');
+    
+    // ==================================================
+    // --- INÍCIO DA MODIFICAÇÃO (SELETORES DE PRÊMIO) ---
+    // ==================================================
+    // Seleciona não apenas os valores, mas os 'info-item' (pais) e os 'labels'
     const dashPremioLinhaEl = document.getElementById('dash-premio-linha');
     const dashPremioCheiaEl = document.getElementById('dash-premio-cheia');
+    
+    const dashPremioLinhaContainer = dashPremioLinhaEl ? dashPremioLinhaEl.closest('.info-item') : null;
+    const dashPremioCheiaContainer = dashPremioCheiaEl ? dashPremioCheiaEl.closest('.info-item') : null;
+    // Pega o 'span' (label) dentro do container do prêmio "Cheia"
+    const dashPremioCheiaLabel = dashPremioCheiaContainer ? dashPremioCheiaContainer.querySelector('span') : null; 
+    // ==================================================
+    // --- FIM DA MODIFICAÇÃO ---
+    // ==================================================
+
     const btnToggleSom = document.getElementById('btn-toggle-som');
     const areaPrincipalEl = document.querySelector('.area-principal');
     const listaQuaseLaContainer = document.getElementById('lista-quase-la');
@@ -31,7 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let ultimoEstadoConhecido = null;
 
     // Verifica elementos
-    if (!sorteioIdHeaderEl || !estadoHeaderEl || !jogadoresTotalEl || !ultimoNumeroEl || !globoContainer || !listaVencedoresContainer || !dashPremioLinhaEl || !dashPremioCheiaEl || !btnToggleSom || !areaPrincipalEl || !listaQuaseLaContainer || !anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay || !esperaCronometroDisplay ) { // <-- Adicionado ao check
+    if (!sorteioIdHeaderEl || !estadoHeaderEl || !jogadoresTotalEl || !ultimoNumeroEl || !globoContainer || !listaVencedoresContainer || !dashPremioLinhaEl || !dashPremioCheiaEl || !btnToggleSom || !areaPrincipalEl || !listaQuaseLaContainer || !anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay || !esperaCronometroDisplay || 
+        !dashPremioLinhaContainer || !dashPremioCheiaContainer || !dashPremioCheiaLabel ) { // <-- Adicionado ao check
         console.error("ERRO CRÍTICO: Um ou mais elementos essenciais do Dashboard não foram encontrados."); alert("Erro ao carregar a interface. Verifique o HTML e o Console (F12)."); return;
     }
     console.log("Elementos do DOM selecionados com sucesso.");
@@ -60,6 +75,49 @@ document.addEventListener('DOMContentLoaded', () => {
     // *** FIM DA MODIFICAÇÃO ***
     
     function gerarGlobo() { if (!globoContainer) return; globoContainer.innerHTML = ''; for (let i = 1; i <= 75; i++) { try { const numeroEl = document.createElement('div'); numeroEl.classList.add('dash-globo-numero'); numeroEl.textContent = i; numeroEl.id = `dash-globo-${i}`; globoContainer.appendChild(numeroEl); } catch (error) { console.error(`Erro globo num ${i}:`, error); } } console.log("Globo gerado."); }
+
+    // ==================================================
+    // --- INÍCIO DA MODIFICAÇÃO (NOVA FUNÇÃO: ATUALIZAR PRÊMIOS) ---
+    // ==================================================
+    /**
+     * Atualiza os prêmios exibidos no dashboard, 
+     * mostrando o Prêmio Especial se estiver ativo.
+     * @param {object} config - O objeto de configurações vindo do server.
+     */
+    function atualizarPremiosDashboard(config) {
+        if (!config) {
+            console.warn("Configurações de prêmio não recebidas.");
+            return;
+        }
+
+        if (config.sorteio_especial_ativo === 'true' && config.sorteio_especial_valor) {
+            // MODO SORTEIO ESPECIAL
+            console.log("Dashboard: Exibindo Prêmio Especial");
+            
+            // Esconde o prêmio de Linha
+            if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'none';
+            
+            // Atualiza o prêmio Cheia para ser o Especial
+            if (dashPremioCheiaLabel) dashPremioCheiaLabel.textContent = 'Prêmio Especial:';
+            if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(config.sorteio_especial_valor);
+            
+        } else {
+            // MODO REGULAR
+            console.log("Dashboard: Exibindo Prêmios Regulares");
+
+            // Mostra o prêmio de Linha
+            if (dashPremioLinhaContainer) dashPremioLinhaContainer.style.display = 'flex';
+            if (dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(config.premio_linha);
+
+            // Garante que o prêmio Cheia esteja correto
+            if (dashPremioCheiaLabel) dashPremioCheiaLabel.textContent = 'Prêmio Cheia:';
+            if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(config.premio_cheia);
+        }
+    }
+    // ==================================================
+    // --- FIM DA MODIFICAÇÃO ---
+    // ==================================================
+
 
     function atualizarListaVencedores(vencedores, anunciar = false) {
         console.log("Atualizando Vencedores. Anunciar:", anunciar, "Dados:", vencedores);
@@ -101,10 +159,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const textoEstado = estadoString ? estadoString.replace('_', ' ') : 'DESCONHECIDO';
             estadoHeaderEl.textContent = textoEstado;
             estadoHeaderEl.className = 'estado-texto';
-            if (estadoString === 'ESPERANDO') { estadoHeaderEl.classList.add('estado-esperando'); }
-            else if (estadoString === 'JOGANDO_LINHA') { estadoHeaderEl.classList.add('estado-jogando-linha'); }
-            else if (estadoString === 'JOGANDO_CHEIA') { estadoHeaderEl.classList.add('estado-jogando-cheia'); }
-            else { estadoHeaderEl.classList.add('estado-esperando'); }
+            
+            // ==================================================
+            // --- INÍCIO DA MODIFICAÇÃO (ESTADO ESPECIAL) ---
+            // ==================================================
+            if (estadoString === 'ESPERANDO') { 
+                estadoHeaderEl.classList.add('estado-esperando'); 
+            }
+            else if (estadoString === 'JOGANDO_LINHA') { 
+                // Se for especial, usa verde, senão azul
+                const classe = (sorteioIdHeaderEl.textContent.includes('ESPECIAL')) ? 'estado-jogando-cheia' : 'estado-jogando-linha';
+                estadoHeaderEl.classList.add(classe);
+            }
+            else if (estadoString === 'JOGANDO_CHEIA') { 
+                estadoHeaderEl.classList.add('estado-jogando-cheia'); // Sempre verde
+            }
+            else { 
+                estadoHeaderEl.classList.add('estado-esperando'); 
+            }
+            // ==================================================
+            // --- FIM DA MODIFICAÇÃO ---
+            // ==================================================
+            
         } catch(error) { console.error("Erro estado visual:", error); }
     }
 
@@ -148,15 +224,36 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             if(!data) { console.error("'estadoInicial' sem dados."); return; }
             gerarGlobo();
-            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+            
+            // ==================================================
+            // --- INÍCIO DA MODIFICAÇÃO (TÍTULO DO SORTEIO) ---
+            // ==================================================
+            let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+            // Se o ID não for um número (ou seja, for a data/hora do especial), muda o título
+            if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
+                tituloSorteio = "SORTEIO ESPECIAL AGENDADO!";
+            }
+            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
+            // ==================================================
+            // --- FIM DA MODIFICAÇÃO ---
+            // ==================================================
+            
             if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
             atualizarEstadoVisual(data.estado);
             atualizarListaVencedores(data.ultimosVencedores, false);
             atualizarGloboSorteados(data.numerosSorteados);
+            
+            // ==================================================
+            // --- INÍCIO DA MODIFICAÇÃO (ATUALIZAR PRÊMIOS) ---
+            // ==================================================
             if(data.configuracoes) {
-                if(dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(data.configuracoes.premio_linha);
-                if(dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(data.configuracoes.premio_cheia);
+                // Chama a nova função helper
+                atualizarPremiosDashboard(data.configuracoes);
             }
+            // ==================================================
+            // --- FIM DA MODIFICAÇÃO ---
+            // ==================================================
+
             if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Aguardando início...</p>';
             if(data.quaseLa) atualizarListaQuaseLa(data.quaseLa);
             
@@ -177,7 +274,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('cronometroUpdate', (data) => {
         if (!data) return;
-        if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+        
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (TÍTULO CRONÔMETRO) ---
+        // ==================================================
+        // Só atualiza o ID do sorteio se for um sorteio REGULAR (o especial não tem cronômetro)
+        if (data.estado === 'ESPERANDO' && data.sorteioId && !isNaN(parseInt(data.sorteioId, 10))) {
+            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+        }
+        // ==================================================
+        // --- FIM DA MODIFICAÇÃO ---
+        // ==================================================
+        
         atualizarEstadoVisual(data.estado);
         
         // *** INÍCIO DA MODIFICAÇÃO: Atualiza o timer no overlay ***
@@ -190,7 +298,19 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('estadoJogoUpdate', (data) => {
         console.log("Recebido 'estadoJogoUpdate':", data);
         if (!data) return;
-        if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+        
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (TÍTULO UPDATE ESTADO) ---
+        // ==================================================
+        let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+        if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
+            tituloSorteio = "SORTEIO ESPECIAL AO VIVO!";
+        }
+        if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
+        // ==================================================
+        // --- FIM DA MODIFICAÇÃO ---
+        // ==================================================
+        
         atualizarEstadoVisual(data.estado);
         // Não mexemos no overlay de espera aqui diretamente
     });
@@ -213,7 +333,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error){ console.error("Erro ao processar 'iniciarJogo':", error); }
     });
 
-    socket.on('configAtualizada', (data) => { console.log("Dashboard: Recebido 'configAtualizada':", data); if (!data) return; if(dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(data.premio_linha); if(dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(data.premio_cheia); });
+    // ==================================================
+    // --- INÍCIO DA MODIFICAÇÃO (CONFIG ATUALIZADA) ---
+    // ==================================================
+    socket.on('configAtualizada', (data) => { 
+        console.log("Dashboard: Recebido 'configAtualizada':", data); 
+        if (!data) return; 
+        // Chama a nova função helper
+        atualizarPremiosDashboard(data); 
+    });
+    // ==================================================
+    // --- FIM DA MODIFICAÇÃO ---
+    // ==================================================
+    
     socket.on('connect', () => { console.log(`Dashboard conectado ao servidor com o ID: ${socket.id}`); });
     socket.on('disconnect', (reason) => { console.warn(`Dashboard desconectado do servidor: ${reason}`); if(estadoHeaderEl) estadoHeaderEl.textContent = "DESCONECTADO"; if(estadoHeaderEl) estadoHeaderEl.className = 'estado-texto estado-esperando'; if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.remove('oculto'); ultimoEstadoConhecido = 'DESCONECTADO'; });
     socket.on('connect_error', (err) => { console.error(`Dashboard falhou ao conectar: ${err.message}`); });
@@ -241,4 +373,3 @@ setTimeout(pingServidor, 10000);
 // (A última linha do seu arquivo deve ser }); )
 
 });
-
