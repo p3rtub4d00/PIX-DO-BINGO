@@ -203,7 +203,7 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
     padding: 20px 30px; 
     border-radius: 15px;
     
-    /* *** MUDANÇA 1: AUMENTANDO LARGURA MÁXIMA *** */
+    /* *** CORREÇÃO ANTERIOR MANTIDA *** */
     max-width: 80vw; /* ANTES: 800px */
     
     width: 100%;
@@ -214,7 +214,7 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
 .anuncio-espera-container h1 {
     font-family: 'Montserrat', sans-serif;
     
-    /* *** MUDANÇA 2: AUMENTANDO FONTE DO TÍTULO *** */
+    /* *** CORREÇÃO ANTERIOR MANTIDA *** */
     font-size: 2.5em; /* ANTES: 1.8em */
     
     font-weight: 700;
@@ -268,7 +268,10 @@ html, body.dashboard-body { margin: 0; padding: 0; height: 100%; width: 100%; ov
 .slide video {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Cobre o espaço, cortando se necessário */
+    
+    /* *** CORREÇÃO 2: IMAGEM CORTADA (BUG) *** */
+    object-fit: contain; /* ANTES: cover */
+    
     border-radius: 8px; /* Mantém o arredondamento */
 }
 /* ================================================== */
