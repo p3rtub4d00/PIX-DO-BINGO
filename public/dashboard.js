@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function gerarGlobo() { if (!globoContainer) return; globoContainer.innerHTML = ''; for (let i = 1; i <= 75; i++) { try { const numeroEl = document.createElement('div'); numeroEl.classList.add('dash-globo-numero'); numeroEl.textContent = i; numeroEl.id = `dash-globo-${i}`; globoContainer.appendChild(numeroEl); } catch (error) { console.error(`Erro globo num ${i}:`, error); } } console.log("Globo gerado."); }
 
     // ==================================================
-    // --- INÍCIO DA MODIFICAÇÃO (FUNÇÃO ATUALIZAR PRÊMIOS - CORRIGIDA) ---
+    // --- FUNÇÃO DE ATUALIZAR PRÊMIOS (JÁ CORRIGIDA) ---
     // ==================================================
     function atualizarPremiosDashboard() {
         if (!globalConfig) {
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     // ==================================================
-    // --- FIM DA MODIFICAÇÃO ---
+    // --- FIM DA FUNÇÃO CORRIGIDA ---
     // ==================================================
 
 
@@ -293,19 +293,31 @@ document.addEventListener('DOMContentLoaded', () => {
             if(!data) { console.error("'estadoInicial' sem dados."); return; }
             gerarGlobo();
             
+            // ==================================================
+            // --- INÍCIO DA MODIFICAÇÃO (ORDEM DAS FUNÇÕES) ---
+            // ==================================================
+            
+            // Salva a config ANTES de tudo
             if(data.configuracoes) {
                 globalConfig = data.configuracoes;
             }
             
+            // Atualiza o estado (define 'ultimoEstadoConhecido')
             atualizarEstadoVisual(data.estado);
             
             let tituloSorteio = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
+            // Se o ID não for um número (ou seja, for a data/hora do especial), muda o título
             if (data.sorteioId && isNaN(parseInt(data.sorteioId, 10))) {
                 tituloSorteio = "SORTEIO ESPECIAL AGENDADO!";
             }
             if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = tituloSorteio;
 
+            // Atualiza os prêmios (AGORA ele sabe o estado, a config e o título)
             atualizarPremiosDashboard();
+            
+            // ==================================================
+            // --- FIM DA MODIFICAÇÃO ---
+            // ==================================================
             
             if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
             
