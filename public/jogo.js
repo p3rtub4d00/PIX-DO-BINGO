@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     if (typeof window.html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-        alert("Erro ao carregar recursos do jogo (Cod: PDF_LIB).\n\nPor favor, verifique sua conexão com a internet ou desative seu bloqueador de anúncios e recarregue a página.");
+        alert("Erro ao carregar recursos do jogo (Cod: PDF_LIB).\n\Por favor, verifique sua conexão com a internet ou desative seu bloqueador de anúncios e recarregue a página.");
         return; 
     }
     const { jsPDF } = window.jspdf;
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultadoProvaCartela.style.display = 'block';
     }
 
-    // --- 6. FUNÇÃO DE GERAR COMPROVANTE (Sem alterações) ---
+    // --- 6. FUNÇÃO DE GERAR COMPROVANTE (CORRIGIDA) ---
     btnBaixarComprovante.addEventListener('click', () => {
         console.log("Gerando comprovante em PDF...");
         
@@ -267,17 +267,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
         html2canvas(areaComprovante, { scale: 2, backgroundColor: '#ffffff' })
         .then(canvas => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4'); 
-            const pdfWidth = pdf.internal.pageSize.getWidth();
             
+            // --- INÍCIO DA CORREÇÃO (Lógica do PDF) ---
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4'); // 'p' (retrato), 'mm', 'a4'
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgProps = pdf.getImageProperties(imgData);
+
+            // Define as margens (em mm)
+            const marginX = 10;
+            const marginYTop = 30; // 20 para o título + 10 de margem
+            const marginYBottom = 10;
+            
+            // Calcula a área útil da página
+            const usableWidth = pdfWidth - (marginX * 2);
+            const usableHeight = pdfHeight - marginYTop - marginYBottom;
+
+            // Calcula a proporção da imagem e da página
+            const imgRatio = imgProps.width / imgProps.height;
+            const pageRatio = usableWidth / usableHeight;
+
+            let finalImgWidth, finalImgHeight;
+
+            if (imgRatio > pageRatio) {
+                // Se a imagem for mais "larga" que a página -> limita pela largura
+                finalImgWidth = usableWidth;
+                finalImgHeight = finalImgWidth / imgRatio;
+            } else {
+                // Se a imagem for mais "alta" que a página -> limita pela altura
+                finalImgHeight = usableHeight;
+                finalImgWidth = finalImgHeight * imgRatio;
+            }
+
+            // Centraliza a imagem horizontalmente
+            const xOffset = (pdfWidth - finalImgWidth) / 2;
+
+            // Adiciona o Título (que estava no código original)
             pdf.setFontSize(20);
             pdf.text("Comprovante - Bingo do Pix", pdfWidth / 2, 20, { align: 'center' });
             
-            const imgProps = pdf.getImageProperties(imgData);
-            const imgHeight = (imgProps.height * (pdfWidth - 20)) / imgProps.width; 
-            
-            pdf.addImage(imgData, 'PNG', 10, 30, pdfWidth - 20, imgHeight);
+            // Adiciona a imagem corrigida
+            pdf.addImage(imgData, 'PNG', xOffset, marginYTop, finalImgWidth, finalImgHeight);
+            // --- FIM DA CORREÇÃO ---
             
             const cartelaId = cartelasSalvas[cartelaAtualIndex].c_id; 
             const nomeArquivo = `comprovante_bingo_${nomeJogador.replace(/\s/g, '_')}_${cartelaId}.pdf`;
