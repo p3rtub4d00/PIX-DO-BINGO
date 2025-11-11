@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- LÓGICA CORRIGIDA ---
         // ==================================================
         // Verifica se o ID do sorteio NÃO é um número (ou seja, é o texto "ESPECIAL" ou a data "2025-11-11T10:15")
-        // O "T" é a parte crucial que diferencia o datetime-local de um número de sorteio como "#700"
+        // O "T" é a parte crucial que diferencia o datetime-local de um número de sorteio como "#707"
         const isEspecial = idSorteioAtual.includes('ESPECIAL') || idSorteioAtual.includes('T');
     
         if (globalConfig.sorteio_especial_ativo === 'true' && isEspecial) {
