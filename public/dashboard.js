@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function atualizarGloboSorteados(numerosSorteados) { if (!globoContainer || !ultimoNumeroEl) return; try { const todosNumeros = globoContainer.querySelectorAll('.dash-globo-numero'); if (!todosNumeros || todosNumeros.length === 0) { gerarGlobo(); } todosNumeros.forEach(num => num.classList.remove('sorteado')); if (numerosSorteados && numerosSorteados.length > 0) { numerosSorteados.forEach(num => { const el = document.getElementById(`dash-globo-${num}`); if (el) el.classList.add('sorteado'); }); ultimoNumeroEl.textContent = numerosSorteados[numerosSorteados.length - 1]; } else { ultimoNumeroEl.textContent = '--'; } } catch(error){ console.error("Erro globo sorteados:", error); } }
 
     // ==================================================
-    // --- *** MUDANÇA 3: LÓGICA DO PRÊMIO LINHA *** ---
+    // --- *** CORREÇÃO 1: LÓGICA DO PRÊMIO LINHA *** ---
     // ==================================================
     function atualizarEstadoVisual(estadoString) {
         console.log("Atualizando Estado Visual para:", estadoString);
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(error) { console.error("Erro estado visual:", error); }
     }
     // ==================================================
-    // --- *** FIM DA MUDANÇA 3 *** ---
+    // --- *** FIM DA CORREÇÃO 1 *** ---
     // ==================================================
 
     function getLetraDoNumero(numero) { if (numero >= 1 && numero <= 15) return "B"; if (numero >= 16 && numero <= 30) return "I"; if (numero >= 31 && numero <= 45) return "N"; if (numero >= 46 && numero <= 60) return "G"; if (numero >= 61 && numero <= 75) return "O"; return ""; }
@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==================================================
-    // --- *** MUDANÇA 2: CORREÇÃO DO BUG R$ ... *** ---
+    // --- *** CORREÇÃO 2: CORREÇÃO DO BUG R$ ... *** ---
     // ==================================================
     socket.on('estadoJogoUpdate', (data) => {
         console.log("Recebido 'estadoJogoUpdate':", data);
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarPremiosDashboard(data.sorteioId); // <-- ANTES: estava (tituloSorteio)
     });
     // ==================================================
-    // --- *** FIM DA MUDANÇA 2 *** ---
+    // --- *** FIM DA CORREÇÃO 2 *** ---
     // ==================================================
 
     socket.on('novoNumeroSorteado', (numeroSorteado) => { console.log(`Dashboard: Recebido 'novoNumeroSorteado': ${numeroSorteado}`); if (numeroSorteado === undefined || numeroSorteado === null) return; try{ ultimoNumeroEl.textContent = numeroSorteado; const globoNumEl = document.getElementById(`dash-globo-${numeroSorteado}`); if (globoNumEl) { globoNumEl.classList.add('sorteado'); } const letra = getLetraDoNumero(numeroSorteado); falar(`${letra} ${numeroSorteado}`); } catch (error){ console.error(`Erro ao processar 'novoNumeroSorteado' ${numeroSorteado}:`, error); } });
@@ -419,14 +419,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     socket.on('connect', () => { console.log(`Dashboard conectado ao servidor com o ID: ${socket.id}`); });
+    
+    // ==================================================
+    // --- *** CORREÇÃO 1: TELA TRAVADA (BUG) *** ---
+    // ==================================================
     socket.on('disconnect', (reason) => { 
         console.warn(`Dashboard desconectado do servidor: ${reason}`); 
         if(estadoHeaderEl) estadoHeaderEl.textContent = "DESCONECTADO"; 
         if(estadoHeaderEl) estadoHeaderEl.className = 'estado-texto estado-esperando'; 
-        if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.remove('oculto'); 
+        
+        // if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.remove('oculto'); // <-- BUG: REMOVIDO
+        
         ultimoEstadoConhecido = 'DESCONECTADO'; 
-        startAnuncioCarousel(); // Mostra o carrossel se cair a conexão
+        
+        // stopAnuncioCarousel(); // <-- CORRIGIDO (era startAnuncioCarousel)
     });
+    // ==================================================
+    // --- *** FIM DA CORREÇÃO 1 *** ---
+    // ==================================================
+    
     socket.on('connect_error', (err) => { console.error(`Dashboard falhou ao conectar: ${err.message}`); });
 
     // --- PING DE ATIVIDADE ---
