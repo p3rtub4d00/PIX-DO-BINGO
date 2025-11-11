@@ -1281,7 +1281,7 @@ try { if (intervaloSorteio) { console.warn("DEBUG: Tentativa de iniciar um novo 
 catch (setIntervalError) { console.error("DEBUG: Erro ao iniciar setInterval(sortearNumero):", setIntervalError); }
 }, 5000);
 console.log("DEBUG: setTimeout para iniciar sorteio agendado.");
-} catch (error) { console.error("DEBUG: Erro DENTRO de iniciarNovaRodada:", error); }
+} catch (error) { console.error("Erro DENTRO de iniciarNovaRodada:", error); }
 }
 
 async function sortearNumero() { // Convertido para 'async'
@@ -1753,7 +1753,15 @@ socket.on('criarPagamentoEspecial', async (dadosCompra, callback) => {
         
         // 2. Verifica se a data do sorteio já passou
         try {
-             const dataAgendada = new Date(SORTEIO_ESPECIAL_DATAHORA);
+             // ==================================================
+             // --- INÍCIO DA CORREÇÃO (FUSO HORÁRIO) ---
+             // ==================================================
+             const dataString = SORTEIO_ESPECIAL_DATAHORA;
+             const dataAgendada = new Date(dataString + "-04:00"); // Força o fuso -04:00
+             // ==================================================
+             // --- FIM DA CORREÇÃO ---
+             // ==================================================
+             
              if (new Date() >= dataAgendada) {
                  if (typeof callback === 'function') callback({ success: false, message: 'As vendas para este Sorteio Especial já foram encerradas.' });
                 return;
@@ -2085,11 +2093,25 @@ async function verificarSorteioEspecial() {
     }
 
     try {
-        const dataAgendada = new Date(SORTEIO_ESPECIAL_DATAHORA);
-        const agora = new Date();
+        // ==================================================
+        // --- INÍCIO DA CORREÇÃO (FUSO HORÁRIO) ---
+        // ==================================================
+        // Pega o string (ex: "2025-11-11T10:00")
+        const dataString = SORTEIO_ESPECIAL_DATAHORA;
+        
+        // Anexa o fuso horário de Porto Velho (AMT = -04:00)
+        // Isso força o JS a interpretar o '10:00' como '10:00 -04:00',
+        // convertendo corretamente para '14:00 UTC' para a comparação.
+        const dataAgendada = new Date(dataString + "-04:00"); 
+        // ==================================================
+        // --- FIM DA CORREÇÃO ---
+        // ==================================================
+        
+        const agora = new Date(); // Pega a data UTC atual
 
         if (agora >= dataAgendada) {
-            console.log(`HORA DO SORTEIO ESPECIAL! Agendado para: ${dataAgendada.toISOString()}, Agora: ${agora.toISOString()}`);
+            // A hora de AGORA (UTC) é maior ou igual à hora AGENDADA (convertida para UTC)
+            console.log(`HORA DO SORTEIO ESPECIAL! Agenda para: ${dataAgendada.toISOString()}, Agora: ${agora.toISOString()}`);
             await iniciarSorteioEspecial();
         }
     } catch (e) {
@@ -2177,6 +2199,7 @@ async function iniciarSorteioEspecial() {
 // ==================================================
 // --- FIM DA MODIFICAÇÃO (NOVAS FUNÇÕES DE JOGO ESPECIAL) ---
 // ==================================================
+
 
 
 // ==========================================================
