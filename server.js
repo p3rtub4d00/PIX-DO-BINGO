@@ -1850,6 +1850,11 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
         // Determina o ID do próximo sorteio
         const proximoSorteioId = (estadoJogo === "ESPERANDO" && !sorteioEspecialEmAndamento) ? numeroDoSorteio : numeroDoSorteio + 1;
 
+        // --- INÍCIO DA CORREÇÃO (BUSCAR COMPRAS ANTIGAS) ---
+        // Define um filtro para buscar os últimos 5 sorteios regulares, e não apenas os futuros.
+        const sorteioFiltro = (numeroDoSorteio - 5 > 0) ? numeroDoSorteio - 5 : 0;
+        // --- FIM DA CORREÇÃO ---
+
         // ==================================================
         // --- INÍCIO DA MODIFICAÇÃO (BUSCAR CARTELAS) ---
         // ==================================================
@@ -1876,7 +1881,10 @@ socket.on('buscarCartelasPorTelefone', async (data, callback) => {
         `;
         
         // Passa o ID do *sorteio atual* para filtrar apenas os regulares recentes
-        const res = await db.query(query, [telefone, numeroDoSorteio]);
+        // --- INÍCIO DA CORREÇÃO (BUSCAR COMPRAS ANTIGAS) ---
+        // Usa 'sorteioFiltro' (ex: 496) em vez de 'numeroDoSorteio' (ex: 501)
+        const res = await db.query(query, [telefone, sorteioFiltro]);
+        // --- FIM DA CORREÇÃO ---
         // ==================================================
         // --- FIM DA MODIFICAÇÃO ---
         // ==================================================
@@ -2230,4 +2238,3 @@ process.on('exit', () => pool.end());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
-
