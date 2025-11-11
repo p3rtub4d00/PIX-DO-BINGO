@@ -2128,7 +2128,7 @@ async function iniciarSorteioEspecial() {
     
     // 1. Trava o servidor para este sorteio
     sorteioEspecialEmAndamento = true;
-    estadoJogo = "JOGANDO_LINHA";
+    estadoJogo = "JOGANDO_CHEIA";
     
     // 2. Limpa jogadores (bots/manuais) da rodada regular anterior
     jogadores = {};
@@ -2230,3 +2230,4 @@ process.on('exit', () => pool.end());
 process.on('SIGHUP', () => process.exit(128 + 1));
 process.on('SIGINT', () => process.exit(128 + 2));
 process.on('SIGTERM', () => process.exit(128 + 15));
+
