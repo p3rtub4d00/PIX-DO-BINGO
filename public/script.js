@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- CÓDIGO DO MODAL DE MANUTENÇÃO REMOVIDO ---
+
     let socket;
     try { 
         socket = io(); 
@@ -72,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- ================================================== ---
-    // --- INÍCIO DA MODIFICAÇÃO (Lógica de exibição corrigida) ---
+    // --- INÍCIO DA MODIFICAÇÃO (BOTÃO REGULAR APARECENDO) ---
     // --- ================================================== ---
     function atualizarValoresExibidos(data) {
         if (!data) return;
@@ -123,8 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (premioEspecialContainer) premioEspecialContainer.style.display = 'block'; // Mostra o especial
             
-            // 2. ESCONDE o box do Sorteio Regular (REMOVIDO PARA TESTES)
-            // if (premioInfoContainer) premioInfoContainer.style.display = 'none'; // <-- ESTA LINHA FOI REMOVIDA/COMENTADA
+            // 2. MOSTRA o box do Sorteio Regular (para testes)
+            if (premioInfoContainer) premioInfoContainer.style.display = 'block'; // <-- ESTA LINHA PERMITE TESTES
 
         } else {
             // Se o sorteio especial está INATIVO:
