@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comissões Online - Admin</title>
+    <link rel="stylesheet" href="admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-panel-body">
+
+    <aside class="admin-sidebar">
+        <div class="logo">Bingo PIX</div>
+        <nav class="admin-nav">
+            <ul>
+                <li><a href="/admin/painel.html">Painel & Status</a></li>
+                <li><a href="/admin/vencedores.html">Gestão Vencedores</a></li>
+                <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
+                <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li>
+                <li><a href="/admin/comissoes.html" class="ativo">Comissões Online</a></li>
+            </ul>
+        </nav>
+        <div class="logout-link">
+             <a href="/admin/logout">Sair</a>
+        </div>
+    </aside>
+
+    <main class="admin-content">
+         <header class="content-header">
+             <h1>Controle de Comissões (Afiliados Online)</h1>
+        </header>
+
+        <section class="card admin-section">
+            <h2>Resumo das Comissões</h2>
+            <div class="relatorio-resumo">
+                <div class="resumo-card">
+                    <h3>Total Pendente de Pagamento</h3>
+                    <span class="valor arrecadado" id="total-comissoes-pendentes">R$ 0,00</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="card admin-section">
+            <h2>Histórico de Comissões</h2>
+            <p>Lista de todas as comissões geradas por vendas online de afiliados.</p>
+            
+            <div class="tabela-relatorio-container">
+                <table class="relatorio-vendas relatorio-vencedores"> 
+                    <thead>
+                        <tr>
+                            <th class="col-data">Data/Hora</th>
+                            <th>Cambista</th>
+                            <th>Cliente (Venda)</th>
+                            <th class="col-valor">Valor Venda</th>
+                            <th class="col-valor">Comissão (30%)</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-acao">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-comissoes-corpo">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 20px;">Carregando dados...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </section>
+    </main>
+
+    <script src="comissoes.js"></script>
+</body>
+</html>
