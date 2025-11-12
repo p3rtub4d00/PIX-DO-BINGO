@@ -123,8 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (premioEspecialContainer) premioEspecialContainer.style.display = 'block'; // Mostra o especial
             
-            // 2. ESCONDE o box do Sorteio Regular
-            if (premioInfoContainer) premioInfoContainer.style.display = 'none';
+            // 2. ESCONDE o box do Sorteio Regular (REMOVIDO PARA TESTES)
+            // if (premioInfoContainer) premioInfoContainer.style.display = 'none'; // <-- ESTA LINHA FOI REMOVIDA/COMENTADA
 
         } else {
             // Se o sorteio especial está INATIVO:
