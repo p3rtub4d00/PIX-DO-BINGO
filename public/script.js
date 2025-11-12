@@ -2,6 +2,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CÓDIGO DO MODAL DE MANUTENÇÃO REMOVIDO ---
 
+    // ==================================================
+    // --- INÍCIO DA MODIFICAÇÃO (CAPTURA DE AFILIADO) ---
+    // ==================================================
+    const urlParamsGlobal = new URLSearchParams(window.location.search);
+    const refCodeGlobal = urlParamsGlobal.get('ref'); // ?ref=USUARIO
+
+    if (refCodeGlobal) {
+        console.log(`Link de referência detectado: ${refCodeGlobal}`);
+        // Salva no sessionStorage para não perder se o usuário recarregar
+        sessionStorage.setItem('bingo_ref_code', refCodeGlobal);
+    }
+    // ==================================================
+    // --- FIM DA MODIFICAÇÃO (CAPTURA DE AFILIADO) ---
+    // ==================================================
+
     let socket;
     try { 
         socket = io(); 
@@ -301,8 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 : 'criarPagamento';
                 
             sessionStorage.setItem('bingo_tipo_compra', TIPO_COMPRA_ATUAL);
+            
+            // Pega o código de referência salvo
+            const refCodeAtual = sessionStorage.getItem('bingo_ref_code');
 
-            socket.emit(eventoSocket, { nome, telefone, quantidade }, (data) => {
+            socket.emit(eventoSocket, { nome, telefone, quantidade, refCode: refCodeAtual }, (data) => {
             // --- ================================================== ---
             // --- FIM DA MODIFICAÇÃO ---
             // --- ================================================== ---
@@ -404,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fecharModal();
                 
                 if (tipoCompraSalvo === 'especial') {
-                    alert("Pagamento confirmado!\n\nSuas cartelas para o Sorteio Especial estão garantidas. Você pode consultá-las a qualquer momento na seção 'Ver Minhas Compras'.");
+                    alert("Pagamento confirmado!\n\Suas cartelas para o Sorteio Especial estão garantidas. Você pode consultá-las a qualquer momento na seção 'Ver Minhas Compras'.");
                 } else {
                     alert("Pagamento confirmado!\n\nCartelas geradas.\nIndo para a sala de espera.");
                     window.location.href = `espera.html?venda=${data.vendaId}`;
