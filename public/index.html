@@ -162,12 +162,24 @@
         </div>
     </div>
 
-    " (no final do modal).
+    " depois de </div> (no final do modal).
     
-    PARA DESATIVAR (como está agora):
-    DEIXE O BLOCO <div id="modal-manutencao">...</div> ENTRE =========================================================================
+    PARA ATIVAR (como está agora):
+    DEIXE O BLOCO SEM OS COMENTÁRIOS ""
+    =========================================================================
     -->
 
+    <div id="modal-manutencao" class="modal-overlay">
+        <div class="modal-content maintenance-modal">
+            <h2 class="maintenance-title">!!!!ATENÇÃO!!!!</h2>
+            <h3 class="maintenance-subtitle">SISTEMA EM MANUTENÇÃO</h3>
+            <p>Não compre cartelas. Nenhum sorteio está valendo.</p>
+            <p class="no-refund">Toda e qualquer compra não terá reembolso durante a MANUTENÇÃO.</p>
+            
+            <button id="btn-fechar-manutencao" class="btn-comprar">Fechar</button>
+        </div>
+    </div>
+    
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
