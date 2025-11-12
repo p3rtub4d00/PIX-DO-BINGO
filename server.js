@@ -184,6 +184,41 @@ throw e;
         // *** FIM DA ATUALIZAÇÃO (CAMBISTAS) ***
 
 
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (NOVAS TABELAS/COLUNAS AFILIADOS) ---
+// ==================================================
+
+// 4. Adiciona 'cambista_id' (afiliado) na tabela 'pagamentos_pendentes'
+try {
+    await db.query('ALTER TABLE pagamentos_pendentes ADD COLUMN cambista_id INTEGER NULL REFERENCES cambistas(id)');
+    console.log("Coluna 'cambista_id' adicionada à 'pagamentos_pendentes'.");
+} catch (e) {
+    if (e.code === '42701') {
+        console.log("Coluna 'cambista_id' já existe em 'pagamentos_pendentes'. Ignorando.");
+    } else {
+        throw e;
+    }
+}
+
+// 5. Cria a tabela de Comissões (Afiliados Online)
+await db.query(`
+    CREATE TABLE IF NOT EXISTS comissoes (
+        id SERIAL PRIMARY KEY,
+        cambista_id INTEGER NOT NULL REFERENCES cambistas(id),
+        venda_id INTEGER NOT NULL REFERENCES vendas(id),
+        valor_venda REAL NOT NULL,
+        valor_comissao REAL NOT NULL,
+        status_pagamento TEXT DEFAULT 'pendente' NOT NULL, -- 'pendente' ou 'pago'
+        timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+`);
+console.log("Tabela 'comissoes' (afiliados) verificada.");
+
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (NOVAS TABELAS/COLUNAS AFILIADOS) ---
+// ==================================================
+
+
 // Verifica se o admin existe e qual sua senha (lógica de correção de senha)
 const adminRes = await db.query('SELECT senha FROM usuarios_admin WHERE usuario = $1', ['admin']);
 
@@ -369,12 +404,29 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
                 if (status === 'approved') {
                     console.log(`Buscando payment_id ${paymentId} no banco de dados...`);
-                    const query = "SELECT * FROM pagamentos_pendentes WHERE payment_id = $1";
+                    // ==================================================
+                    // --- INÍCIO DA MODIFICAÇÃO (WEBHOOK COMISSÃO) ---
+                    // ==================================================
+                    // Pega também o cambista_id (afiliado)
+                    const query = "SELECT *, cambista_id FROM pagamentos_pendentes WHERE payment_id = $1";
+                    // ==================================================
+                    // --- FIM DA MODIFICAÇÃO (WEBHOOK COMISSÃO) ---
+                    // ==================================================
                     const pendingPaymentResult = await db.query(query, [paymentId]);
 
                     if (pendingPaymentResult.rows.length > 0) {
                         const pendingPayment = pendingPaymentResult.rows[0];
                         const dadosCompra = JSON.parse(pendingPayment.dados_compra_json);
+                        
+                        // ==================================================
+                        // --- INÍCIO DA MODIFICAÇÃO (WEBHOOK COMISSÃO) ---
+                        // ==================================================
+                        // Pega o ID do cambista que foi salvo
+                        const cambistaIdAfiliado = pendingPayment.cambista_id;
+                        // ==================================================
+                        // --- FIM DA MODIFICAÇÃO (WEBHOOK COMISSÃO) ---
+                        // ==================================================
+
                         console.log(`Pagamento pendente ${paymentId} encontrado. Processando...`);
 
                         try {
@@ -385,16 +437,15 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                             const cartelasGeradas = [];
                             let stmtVenda = '';
                             let paramsVenda = [];
+                            let valorTotalVenda = 0; // Variável para armazenar o valor da venda
 
                             if (dadosCompra.tipo_compra === 'especial') {
                                 // Compra de SORTEIO ESPECIAL
-                                // O ID do sorteio é a data/hora agendada
                                 const idSorteioEspecial = SORTEIO_ESPECIAL_DATAHORA; 
                                 const precoUnitarioEspecial = parseFloat(PRECO_CARTELA_ESPECIAL_ATUAL);
-                                const valorTotal = dadosCompra.quantidade * precoUnitarioEspecial;
+                                valorTotalVenda = dadosCompra.quantidade * precoUnitarioEspecial; // Salva o valor
 
                                 for (let i = 0; i < dadosCompra.quantidade; i++) {
-                                    // Geramos a cartela com o ID especial (data/hora)
                                     cartelasGeradas.push(gerarDadosCartela(idSorteioEspecial));
                                 }
                                 const cartelasJSON = JSON.stringify(cartelasGeradas);
@@ -408,7 +459,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                                 paramsVenda = [
                                     0, // Sorteio ID regular (não se aplica, usamos 0 como placeholder)
                                     dadosCompra.nome, dadosCompra.telefone || null,
-                                    dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId,
+                                    dadosCompra.quantidade, valorTotalVenda, 'Online', cartelasJSON, paymentId,
                                     idSorteioEspecial // Armazena o ID especial
                                 ];
                                 
@@ -420,7 +471,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                                 const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
                                 const preco = precoRes.rows[0];
                                 const precoUnitarioAtual = parseFloat(preco.valor || '5.00');
-                                const valorTotal = dadosCompra.quantidade * precoUnitarioAtual;
+                                valorTotalVenda = dadosCompra.quantidade * precoUnitarioAtual; // Salva o valor
 
                                 for (let i = 0; i < dadosCompra.quantidade; i++) {
                                     cartelasGeradas.push(gerarDadosCartela(sorteioAlvo));
@@ -435,7 +486,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
 
                                 paramsVenda = [
                                     sorteioAlvo, dadosCompra.nome, dadosCompra.telefone || null,
-                                    dadosCompra.quantidade, valorTotal, 'Online', cartelasJSON, paymentId
+                                    dadosCompra.quantidade, valorTotalVenda, 'Online', cartelasJSON, paymentId
                                 ];
                                 
                                 console.log(`Webhook: Venda (REGULAR) para Sorteio #${sorteioAlvo} registrada.`);
@@ -445,6 +496,27 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), (req
                             const vendaResult = await db.query(stmtVenda, paramsVenda);
                             const vendaId = vendaResult.rows[0].id;
                             console.log(`Webhook: Venda #${vendaId} (Payment ID: ${paymentId}) registrada no banco.`);
+
+                            // ==================================================
+                            // --- INÍCIO DA MODIFICAÇÃO (LÓGICA DE COMISSÃO) ---
+                            // ==================================================
+                            
+                            // Se esta venda veio de um afiliado (cambista_id foi encontrado)
+                            if (cambistaIdAfiliado) {
+                                const COMISSAO_PERCENTUAL = 0.30; // 30%
+                                const valorComissao = valorTotalVenda * COMISSAO_PERCENTUAL;
+                                
+                                console.log(`Registrando comissão de ${valorComissao.toFixed(2)} para Cambista ID ${cambistaIdAfiliado} (Venda #${vendaId})`);
+                                
+                                const comissaoQuery = `
+                                    INSERT INTO comissoes (cambista_id, venda_id, valor_venda, valor_comissao, status_pagamento)
+                                    VALUES ($1, $2, $3, $4, 'pendente')
+                                `;
+                                await db.query(comissaoQuery, [cambistaIdAfiliado, vendaId, valorTotalVenda, valorComissao]);
+                            }
+                            // ==================================================
+                            // --- FIM DA MODIFICAÇÃO (LÓGICA DE COMISSÃO) ---
+                            // ==================================================
 
                             await db.query("DELETE FROM pagamentos_pendentes WHERE payment_id = $1", [paymentId]);
                             console.log(`Pagamento ${paymentId} processado e removido do DB pendente.`);
@@ -999,6 +1071,73 @@ app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
 // ==========================================================
 
 
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (ROTAS DE COMISSÃO ONLINE) ---
+// ==================================================
+// Rota para a nova página de Comissões
+app.get('/admin/comissoes.html', checkAdmin, (req, res) => { 
+    res.sendFile(path.join(__dirname, 'public', 'admin', 'comissoes.html')); 
+});
+
+// API para o Admin buscar TODAS as comissões
+app.get('/admin/api/comissoes', checkAdmin, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                c.id, c.valor_venda, c.valor_comissao, c.status_pagamento,
+                to_char(c.timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI') as data_formatada,
+                v.nome_jogador,
+                ca.usuario as cambista_usuario
+            FROM comissoes c
+            JOIN vendas v ON c.venda_id = v.id
+            JOIN cambistas ca ON c.cambista_id = ca.id
+            ORDER BY c.timestamp DESC;
+        `;
+        const comissoesRes = await db.query(query);
+
+        // Calcula o total pendente
+        const totalPendenteRes = await db.query(
+            "SELECT SUM(valor_comissao) as total FROM comissoes WHERE status_pagamento = 'pendente'"
+        );
+
+        res.json({
+            success: true,
+            comissoes: comissoesRes.rows,
+            totalPendente: totalPendenteRes.rows[0].total || 0
+        });
+
+    } catch (err) {
+        console.error("Erro ao buscar comissões (Admin):", err);
+        res.status(500).json({ success: false, message: "Erro interno ao buscar comissões." });
+    }
+});
+
+// API para o Admin MARCAR UMA COMISSÃO COMO PAGA
+app.post('/admin/api/comissao/pagar', checkAdmin, async (req, res) => {
+    const { id } = req.body;
+    if (!id) {
+        return res.status(400).json({ success: false, message: 'ID da comissão é obrigatório.' });
+    }
+    try {
+        const stmt = "UPDATE comissoes SET status_pagamento = 'pago' WHERE id = $1 AND status_pagamento = 'pendente'";
+        const info = await db.query(stmt, [id]);
+
+        if (info.rowCount > 0) {
+            console.log(`Admin ${req.session.usuario} marcou a comissão ID #${id} como 'Paga'.`);
+            res.json({ success: true, message: 'Status atualizado para Pago!' });
+        } else {
+            res.status(404).json({ success: false, message: 'Comissão não encontrada ou já está paga.' });
+        }
+    } catch (error) {
+        console.error("Erro ao atualizar status de comissão:", error);
+        res.status(500).json({ success: false, message: 'Erro interno ao atualizar status.' });
+    }
+});
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (ROTAS DE COMISSÃO ONLINE) ---
+// ==================================================
+
+
 app.use('/admin', checkAdmin, express.static(path.join(__dirname, 'public', 'admin')));
 // ==========================================================
 
@@ -1185,6 +1324,47 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
         client.release();
     }
 });
+
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (ROTAS DE COMISSÃO CAMBISTA) ---
+// ==================================================
+// API para o CAMBISTA buscar suas próprias comissões
+app.get('/cambista/minhas-comissoes', checkCambista, async (req, res) => {
+    try {
+        const cambistaId = req.session.cambistaId;
+        const query = `
+            SELECT 
+                c.id, c.valor_venda, c.valor_comissao, c.status_pagamento,
+                to_char(c.timestamp AT TIME ZONE 'UTC', 'DD/MM/YYYY HH24:MI') as data_formatada,
+                v.nome_jogador
+            FROM comissoes c
+            JOIN vendas v ON c.venda_id = v.id
+            WHERE c.cambista_id = $1
+            ORDER BY c.timestamp DESC;
+        `;
+        const comissoesRes = await db.query(query, [cambistaId]);
+
+        // Calcula o total pendente PARA ESTE cambista
+        const totalPendenteRes = await db.query(
+            "SELECT SUM(valor_comissao) as total FROM comissoes WHERE status_pagamento = 'pendente' AND cambista_id = $1",
+            [cambistaId]
+        );
+
+        res.json({
+            success: true,
+            comissoes: comissoesRes.rows,
+            totalPendente: totalPendenteRes.rows[0].total || 0
+        });
+
+    } catch (err) {
+        console.error("Erro ao buscar comissões (Cambista):", err);
+        res.status(500).json({ success: false, message: "Erro interno ao buscar comissões." });
+    }
+});
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (ROTAS DE COMISSÃO CAMBISTA) ---
+// ==================================================
+
 // ==========================================================
 
 
@@ -1660,7 +1840,25 @@ configuracoes: configMap
 // --- FUNÇÃO DE PAGAMENTO ATUALIZADA (SALVA PENDENTE NO DB) ---
 socket.on('criarPagamento', async (dadosCompra, callback) => {
 try {
-const { nome, telefone, quantidade } = dadosCompra;
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (CRIAR PAGAMENTO COMISSÃO) ---
+// ==================================================
+const { nome, telefone, quantidade, refCode } = dadosCompra;
+let cambistaIdParaSalvar = null;
+
+// Descobre o ID do cambista a partir do 'refCode' (que é o 'usuario')
+if (refCode) {
+    const cambistaRes = await db.query('SELECT id FROM cambistas WHERE usuario = $1 AND ativo = true', [refCode]);
+    if (cambistaRes.rows.length > 0) {
+        cambistaIdParaSalvar = cambistaRes.rows[0].id;
+        console.log(`Pagamento (Regular) referido pelo cambista ID: ${cambistaIdParaSalvar}`);
+    } else {
+        console.warn(`Pagamento (Regular): Código de referência '${refCode}' recebido, mas não encontrado ou inativo.`);
+    }
+}
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (CRIAR PAGAMENTO COMISSÃO) ---
+// ==================================================
 
 const precoRes = await db.query("SELECT valor FROM configuracoes WHERE chave = $1", ['preco_cartela']);
 const preco = precoRes.rows[0];
@@ -1672,7 +1870,6 @@ console.log(`Servidor: Usuário ${nome} (${telefone}) quer comprar ${quantidade}
 // Verifica se a BASE_URL foi configurada
 if (!process.env.BASE_URL) {
 console.error("ERRO GRAVE: BASE_URL não está configurada! O Webhook do MercadoPago falhará.");
-// Retorna um erro para o usuário imediatamente
 if (typeof callback === 'function') {
 callback({ success: false, message: 'Erro no servidor: URL de pagamento não configurada.' });
 }
@@ -1707,15 +1904,22 @@ dadosCompra.tipo_compra = 'regular'; // Adiciona o tipo
 // --- FIM DA MODIFICAÇÃO ---
 // ==================================================
 const dadosCompraJSON = JSON.stringify(dadosCompra);
+// ==================================================
+// --- INÍCIO DA MODIFICAÇÃO (SALVAR COMISSÃO PENDENTE) ---
+// ==================================================
 const query = `
-               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
-               VALUES ($1, $2, $3)
+               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json, cambista_id)
+               VALUES ($1, $2, $3, $4)
                ON CONFLICT (payment_id) DO UPDATE SET
                    socket_id = EXCLUDED.socket_id,
                    dados_compra_json = EXCLUDED.dados_compra_json,
-                   timestamp = CURRENT_TIMESTAMP
+                   timestamp = CURRENT_TIMESTAMP,
+                   cambista_id = EXCLUDED.cambista_id
            `;
-await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
+await db.query(query, [paymentId, socket.id, dadosCompraJSON, cambistaIdParaSalvar]);
+// ==================================================
+// --- FIM DA MODIFICAÇÃO (SALVAR COMISSÃO PENDENTE) ---
+// ==================================================
 console.log(`Pagamento PIX ${paymentId} salvo no DB para socket ${socket.id}.`);
 // *** FIM DA ATUALIZAÇÃO ***
 
@@ -1743,7 +1947,25 @@ callback({ success: false, message: 'Erro ao gerar QR Code. Verifique o Access T
 // ==================================================
 socket.on('criarPagamentoEspecial', async (dadosCompra, callback) => {
     try {
-        const { nome, telefone, quantidade } = dadosCompra;
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (CRIAR PAGAMENTO ESPECIAL COMISSÃO) ---
+        // ==================================================
+        const { nome, telefone, quantidade, refCode } = dadosCompra; // <-- Adicione refCode
+        let cambistaIdParaSalvar = null;
+
+        // Descobre o ID do cambista a partir do 'refCode' (que é o 'usuario')
+        if (refCode) {
+            const cambistaRes = await db.query('SELECT id FROM cambistas WHERE usuario = $1 AND ativo = true', [refCode]);
+            if (cambistaRes.rows.length > 0) {
+                cambistaIdParaSalvar = cambistaRes.rows[0].id;
+                console.log(`Pagamento (Especial) referido pelo cambista ID: ${cambistaIdParaSalvar}`);
+            } else {
+                console.warn(`Pagamento (Especial): Código de referência '${refCode}' recebido, mas não encontrado ou inativo.`);
+            }
+        }
+        // ==================================================
+        // --- FIM DA MODIFICAÇÃO (CRIAR PAGAMENTO ESPECIAL COMISSÃO) ---
+        // ==================================================
 
         // 1. Verifica se o Sorteio Especial está ativo
         if (SORTEIO_ESPECIAL_ATIVO !== 'true' || !SORTEIO_ESPECIAL_DATAHORA) {
@@ -1804,15 +2026,22 @@ socket.on('criarPagamentoEspecial', async (dadosCompra, callback) => {
         dadosCompra.tipo_compra = 'especial'; // Adiciona o tipo
         const dadosCompraJSON = JSON.stringify(dadosCompra);
         
+        // ==================================================
+        // --- INÍCIO DA MODIFICAÇÃO (SALVAR COMISSÃO PENDENTE - ESPECIAL) ---
+        // ==================================================
         const query = `
-               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json)
-               VALUES ($1, $2, $3)
+               INSERT INTO pagamentos_pendentes (payment_id, socket_id, dados_compra_json, cambista_id)
+               VALUES ($1, $2, $3, $4)
                ON CONFLICT (payment_id) DO UPDATE SET
                    socket_id = EXCLUDED.socket_id,
                    dados_compra_json = EXCLUDED.dados_compra_json,
-                   timestamp = CURRENT_TIMESTAMP
+                   timestamp = CURRENT_TIMESTAMP,
+                   cambista_id = EXCLUDED.cambista_id
            `;
-        await db.query(query, [paymentId, socket.id, dadosCompraJSON]);
+        await db.query(query, [paymentId, socket.id, dadosCompraJSON, cambistaIdParaSalvar]);
+        // ==================================================
+        // --- FIM DA MODIFICAÇÃO (SALVAR COMISSÃO PENDENTE - ESPECIAL) ---
+        // ==================================================
         console.log(`Pagamento PIX (ESPECIAL) ${paymentId} salvo no DB para socket ${socket.id}.`);
 
         const qrCodeBase64 = response.point_of_interaction.transaction_data.qr_code_base64;
@@ -2072,8 +2301,7 @@ nome: venda.nome_jogador,
 telefone: venda.telefone
 });
 } else {
-// Pagamento ainda não está na tabela de vendas. O cliente continua esperando.
-// Não fazemos nada, o cliente vai perguntar de novo.
+// Pagamento ainda não está na tabela de vendas. O cliente vai perguntar de novo.
 }
 } catch (err) {
 console.error("Erro ao checar status de pagamento (checarMeuPagamento):", err);
@@ -2108,8 +2336,6 @@ async function verificarSorteioEspecial() {
         const dataString = SORTEIO_ESPECIAL_DATAHORA;
         
         // Anexa o fuso horário de Porto Velho (AMT = -04:00)
-        // Isso força o JS a interpretar o '10:00' como '10:00 -04:00',
-        // convertendo corretamente para '14:00 UTC' para a comparação.
         const dataAgendada = new Date(dataString + "-04:00"); 
         // ==================================================
         // --- FIM DA CORREÇÃO ---
