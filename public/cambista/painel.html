@@ -1,11 +1,30 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-R">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel do Cambista</title>
     <link rel="stylesheet" href="../admin/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos adicionais para o link de afiliado */
+        .link-afiliado-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #cambista-link {
+            flex-grow: 1;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.1em;
+            background-color: #f4f7f6;
+        }
+        #btn-copiar-link {
+            width: auto;
+            flex-shrink: 0;
+            padding: 10px 15px;
+        }
+    </style>
 </head>
 <body class="admin-panel-body">
 
@@ -13,7 +32,7 @@
         <div class="logo">Meu Painel</div>
         <nav class="admin-nav">
             <ul>
-                <li><a href="/cambista/painel.html" class="ativo">Gerar Venda</a></li>
+                <li><a href="/cambista/painel.html" class="ativo">Painel</a></li>
             </ul>
         </nav>
         <div class="logout-link">
@@ -26,20 +45,32 @@
             <h1 id="cambista-welcome">Bem-vindo, Carregando...</h1>
         </header>
 
+        <section class="card admin-section">
+            <h2>Meu Link de Afiliado (Venda Online)</h2>
+            <p>Envie este link para seus clientes. As compras feitas através dele gerarão <strong>30% de comissão</strong> para você.</p>
+            <div class="form-grupo-admin link-afiliado-wrapper">
+                <input type="text" id="cambista-link" value="Carregando seu link..." readonly>
+                <button id="btn-copiar-link" class="btn-comprar btn-comprar-azul">Copiar</button>
+            </div>
+        </section>
+
         <section class="card admin-section admin-status-section">
-            <h2>Meu Saldo</h2>
-            <div class="status-grid" style="grid-template-columns: 1fr;">
+            <h2>Minhas Finanças</h2>
+            <div class="status-grid" style="grid-template-columns: 1fr 1fr;">
                 <div class="status-item">
-                    <span class="status-label">Créditos Disponíveis (R$):</span>
+                    <span class="status-label">Créditos para Venda Física (Pré-pago):</span>
                     <span class="status-value status-destaque" id="cambista-saldo">R$ --,--</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Comissões Online (A Receber):</span>
+                    <span class="status-value status-destaque" id="cambista-comissao-pendente">R$ --,--</span>
                 </div>
             </div>
         </section>
 
         <section class="card admin-section">
-            <h2>Registrar Venda (Gerar Cartelas)</h2>
+            <h2>Registrar Venda Física (Debita do Saldo)</h2>
             <p>Preencha os dados do cliente e a quantidade. O valor será debitado do seu saldo de créditos.</p>
-
             <form id="form-gerar-cartelas-cambista">
                 <div class="form-grupo-admin">
                     <label for="manual-nome">Nome do Jogador:</label>
@@ -57,9 +88,7 @@
                 <button type="submit" id="btn-gerar-manual" class="btn-comprar btn-comprar-azul" style="width: auto; margin-top: 10px;">Gerar e Vender</button>
             </form>
             <p id="venda-status" class="status-message" style="display: none;"></p>
-
             <hr>
-
             <div id="cartelas-geradas-area">
                 <div class="area-titulo-botoes">
                     <h3>Cartelas Geradas (Prontas para Imprimir):</h3>
@@ -70,8 +99,28 @@
                     </div>
             </div>
         </section>
+        
+        <section class="card admin-section">
+            <h2>Meu Extrato de Comissões Online (Afiliado)</h2>
+            <div class="tabela-relatorio-container">
+                <table class="relatorio-vendas">
+                    <thead>
+                        <tr>
+                            <th class="col-data">Data/Hora</th>
+                            <th class="col-nome">Cliente</th>
+                            <th class="col-valor">Valor Venda</th>
+                            <th class="col-valor">Minha Comissão (30%)</th>
+                            <th class="col-status">Status Pgto.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-comissoes-corpo">
+                        <tr><td colspan="5" style="text-align: center;">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-    </main>
+        </main>
 
     <script src="painel.js"></script>
 </body>
