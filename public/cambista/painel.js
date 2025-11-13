@@ -1,12 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ==========================================================
-    // == SELETORES GLOBAIS (Baseado no SEU HTML)
-    // ==========================================================
+    // Seletores (AGORA CORRESPONDEM AO SEU HTML NOVO)
     const welcomeEl = document.getElementById('cambista-welcome');
-    let cambistaUsername = ''; 
-
-    // --- Seletores de Venda Manual (Crédito) ---
     const saldoEl = document.getElementById('cambista-saldo');
     const formGerar = document.getElementById('form-gerar-cartelas-cambista');
     const nomeInput = document.getElementById('manual-nome');
@@ -18,29 +13,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewContainer = document.getElementById('cartelas-preview-container');
     const avisoImpressao = document.getElementById('aviso-impressao');
     const btnImprimir = document.getElementById('btn-imprimir');
-    
-    // --- Seletores de Venda Online (Comissão/Afiliado) ---
-    // CORREÇÃO: ID atualizado para 'cambista-link'
-    const linkAfiliadoInput = document.getElementById('cambista-link'); 
-    const btnCopiarLink = document.getElementById('btn-copiar-link');
-    // CORREÇÃO: ID atualizado para 'cambista-comissao-pendente'
-    const comissaoPendenteEl = document.getElementById('cambista-comissao-pendente'); 
-    // (O ID 'comissao-paga' não existe no seu HTML novo, então foi removido)
-    const tabelaComissoesCorpo = document.getElementById('tabela-comissoes-corpo');
 
+    // ==================================================
+    // --- CORREÇÃO (IDs atualizados para o seu HTML) ---
+    // ==================================================
+    const comissaoPendenteEl = document.getElementById('cambista-comissao-pendente');
+    const linkAfiliadoInput = document.getElementById('cambista-link');
+    const btnCopiarLink = document.getElementById('btn-copiar-link');
+    const tabelaComissoesCorpo = document.getElementById('tabela-comissoes-corpo');
+    // ==================================================
 
     let precoPorCartela = 5.00; // Valor padrão, será atualizado
+    let cambistaUsername = ''; // Salvar o nome de usuário
 
-    // ==========================================================
-    // == FUNÇÕES AUXILIARES
-    // ==========================================================
-    
+    // Função para formatar BRL
     function formatarBRL(valor) {
         const numero = parseFloat(valor);
         if (isNaN(numero)) return 'R$ 0,00';
         return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
+    // Função para exibir mensagens de status
     function mostrarStatus(elemento, mensagem, sucesso = true) {
         if (!elemento) return;
         elemento.textContent = mensagem;
@@ -49,9 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { elemento.style.display = 'none'; }, 5000);
     }
 
-    // ==========================================================
-    // == CARREGAMENTO INICIAL (STATUS DO CAMBISTA)
-    // ==========================================================
+    // 1. Carregar Status do Cambista (Saldo e Nome)
     async function carregarStatus() {
         try {
             const response = await fetch('/cambista/meu-status');
@@ -62,15 +53,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (data.success) {
-                // Salva o nome de usuário para usar no link
-                cambistaUsername = data.usuario; 
-                
+                cambistaUsername = data.usuario; // Salva o nome de usuário
                 welcomeEl.textContent = `Bem-vindo, ${data.usuario}!`;
                 saldoEl.textContent = formatarBRL(data.saldo);
-                precoPorCartela = parseFloat(data.precoCartela || '5.00'); 
-                atualizarCustoVenda(); 
+                precoPorCartela = parseFloat(data.precoCartela || '5.00'); // Pega o preço da cartela
+                atualizarCustoVenda(); // Atualiza o custo
                 
-                gerarLinkAfiliado();
+                // ==================================================
+                // --- CORREÇÃO (Gera o link de afiliado) ---
+                // ==================================================
+                if (linkAfiliadoInput) {
+                    // Monta o link de afiliado
+                    linkAfiliadoInput.value = window.location.origin + '/index.html?ref=' + data.usuario;
+                }
+                // ==================================================
+
             } else {
                 throw new Error(data.message);
             }
@@ -80,18 +77,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ==========================================================
-    // == LÓGICA DE VENDA MANUAL (CRÉDITO)
-    // ==========================================================
-    
+    // 2. Atualizar custo da venda
     function atualizarCustoVenda() {
         if (!quantidadeInput || !custoVendaEl) return;
         const qtd = parseInt(quantidadeInput.value) || 0;
         const custo = qtd * precoPorCartela;
         custoVendaEl.textContent = `Custo total desta venda: ${formatarBRL(custo)}`;
     }
-    if(quantidadeInput) quantidadeInput.addEventListener('input', atualizarCustoVenda);
+    if (quantidadeInput) quantidadeInput.addEventListener('input', atualizarCustoVenda);
 
+    // 3. Listener do formulário "Gerar Venda" (Venda Física)
     if (formGerar) {
         formGerar.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -103,7 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 mostrarStatus(vendaStatusEl, 'Preencha o nome do jogador e a quantidade.', false);
                 return;
             }
-            if (!confirm(`Confirmar venda MANUAL de ${quantidade} cartela(s) para ${nome}? O valor será debitado dos seus créditos.`)) {
+
+            if (!confirm(`Confirmar venda de ${quantidade} cartela(s) para ${nome}?`)) {
                 return;
             }
 
@@ -115,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnImprimir.style.display = 'none';
 
             try {
-                const response = await fetch('/cambista/gerar-cartelas', { // Rota de venda manual
+                const response = await fetch('/cambista/gerar-cartelas', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ nome, telefone, quantidade }),
@@ -124,10 +120,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (response.ok && data.success) {
+                    // Sucesso!
                     mostrarStatus(vendaStatusEl, 'Venda registrada! Cartelas geradas abaixo.', true);
                     formGerar.reset(); 
                     saldoEl.textContent = formatarBRL(data.novoSaldo); // Atualiza o saldo na tela
-                    
+
+                    // Renderiza as cartelas para impressão
                     data.cartelas.forEach(cartelaObj => {
                         previewContainer.appendChild(criarVisualCartela(cartelaObj, nome));
                     });
@@ -135,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnImprimir.style.display = 'block';
 
                 } else {
+                    // Erro (ex: saldo insuficiente)
                     throw new Error(data.message || 'Erro desconhecido.');
                 }
             } catch (error) {
@@ -147,16 +146,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Funções de Impressão (para venda manual)
-    if(btnImprimir) btnImprimir.addEventListener('click', () => { window.print(); });
+    // 4. Funções de Impressão (copiadas do painel.js)
+    if (btnImprimir) btnImprimir.addEventListener('click', () => { window.print(); });
 
-    // ==========================================================
-    // ===== MANTER A MODIFICAÇÃO (Mensagem no Comprovante) =====
-    // ==========================================================
+    // ==================================================
+    // --- ADIÇÃO DA MENSAGEM DO WHATSAPP ---
+    // ==================================================
     function criarVisualCartela(cartelaObj, nomeJogador) {
         const divCartela = document.createElement('div'); divCartela.classList.add('mini-cartela');
-        
-        // 1. Cabeçalho
         const header = document.createElement('div'); header.classList.add('mini-cartela-header');
         header.innerHTML = `
             <span class="nome-jogador">${nomeJogador || ''}</span>
@@ -164,22 +161,20 @@ document.addEventListener('DOMContentLoaded', () => {
             <span>ID: ${cartelaObj?.c_id || '?'}</span>
         `;
         divCartela.appendChild(header);
-        
-        // 2. Grid de Números
         const grid = document.createElement('div'); grid.classList.add('mini-cartela-grid');
         const matriz = cartelaObj?.data || [];
         for (let i = 0; i < 5; i++) {
             for (let j = 0; j < 5; j++) {
                 const numDiv = document.createElement('div'); numDiv.classList.add('mini-cartela-num');
-                const valor = matriz[i]?.[j]; 
+                const valor = matriz[i]?.[j]; // Acesso seguro
                 if (valor === 'FREE') { numDiv.textContent = 'FREE'; numDiv.classList.add('free'); }
                 else { numDiv.textContent = valor || '?'; }
                 grid.appendChild(numDiv);
             }
         }
-        divCartela.appendChild(grid); 
-        
-        // 3. Rodapé com o Aviso (A correção que você pediu)
+        divCartela.appendChild(grid);
+
+        // 3. Rodapé com o Aviso (ADICIONADO)
         const footer = document.createElement('div');
         footer.classList.add('mini-cartela-footer');
         footer.innerHTML = `
@@ -189,87 +184,83 @@ document.addEventListener('DOMContentLoaded', () => {
         
         return divCartela;
     }
-    // ==========================================================
+    // ==================================================
 
 
-    // ==========================================================
-    // == LÓGICA DE VENDA ONLINE (AFILIADO/COMISSÃO)
-    // ==========================================================
+    // ==================================================
+    // --- FUNÇÕES DE AFILIADO (COMISSÃO) ---
+    // ==================================================
 
-    function gerarLinkAfiliado() {
-        // CORREÇÃO: Verifica se o input 'cambista-link' existe
-        if (!linkAfiliadoInput) return; 
-        const urlBase = `${window.location.origin}/index.html`;
-        linkAfiliadoInput.value = `${urlBase}?ref=${cambistaUsername}`;
-    }
-
+    // 5. Botão de Copiar Link
     if (btnCopiarLink) {
         btnCopiarLink.addEventListener('click', () => {
-            // CORREÇÃO: Garante que o input existe antes de copiar
-            if (!linkAfiliadoInput) return; 
+            if (!linkAfiliadoInput) return;
             linkAfiliadoInput.select();
             try {
                 navigator.clipboard.writeText(linkAfiliadoInput.value);
                 btnCopiarLink.textContent = "Copiado!";
                 setTimeout(() => { btnCopiarLink.textContent = "Copiar"; }, 2000);
             } catch (err) {
-                alert('Erro ao copiar. Selecione o link manualmente.');
+                alert('Erro ao copiar. Selecione manualmente.');
             }
         });
     }
-    
+
+    // 6. Carregar Comissões Online
     async function carregarComissoes() {
-        // CORREÇÃO: Verifica os IDs corretos do novo HTML
-        if (!tabelaComissoesCorpo || !comissaoPendenteEl) { 
-            console.warn("Elementos da tabela de comissão não encontrados, pulando carregamento.");
-            return;
+        // CORREÇÃO: Verifica os IDs corretos
+        if (!tabelaComissoesCorpo || !comissaoPendenteEl) {
+             console.warn("Elementos da tabela de comissão não encontrados no HTML.");
+             return;
         }
 
         try {
             const response = await fetch('/cambista/minhas-comissoes');
-            if (!response.ok) {
-                 if(response.status === 403) { window.location.href = '/cambista/login.html'; }
-                 throw new Error('Falha ao carregar comissões.');
-            }
+            if (!response.ok) throw new Error('Falha ao carregar comissões.');
             const data = await response.json();
 
-            tabelaComissoesCorpo.innerHTML = '';
-            
             if (data.success) {
-                // Preenche os totais
-                comissaoPendenteEl.textContent = formatarBRL(data.totais.total_pendente);
-                // (O ID 'comissao-paga' não existe no seu HTML, então não precisamos preenchê-lo)
+                // ==================================================
+                // --- CORREÇÃO (Lógica dos Totais) ---
+                // ==================================================
+                // Verifica se 'totais' existe antes de tentar ler
+                if (data.totais) {
+                    comissaoPendenteEl.textContent = formatarBRL(data.totais.total_pendente);
+                } else {
+                    console.error("Servidor não enviou os totais de comissão.");
+                    comissaoPendenteEl.textContent = "Erro";
+                }
+                // ==================================================
 
                 // Preenche a tabela
-                if (data.comissoes.length > 0) {
-                    data.comissoes.forEach(com => {
+                tabelaComissoesCorpo.innerHTML = ''; // Limpa "Carregando..."
+                if (data.comissoes && data.comissoes.length > 0) {
+                    data.comissoes.forEach(c => {
+                        const statusClasse = c.status_pagamento === 'pendente' ? 'status-pendente' : 'status-pago';
                         const linha = document.createElement('tr');
-                        const statusClasse = com.status_pagamento === 'pendente' ? 'status-pendente' : 'status-pago';
-                        
                         linha.innerHTML = `
-                            <td class="col-data">${com.data_formatada}</td>
-                            <td>${com.cliente_nome}</td>
-                            <td class="col-valor">${formatarBRL(com.valor_venda)}</td>
-                            <td class="col-valor" style="font-weight:bold; color:var(--color-pix-green);">${formatarBRL(com.valor_comissao)}</td>
-                            <td class="col-status"><span class="status-pagamento ${statusClasse}">${com.status_pagamento}</span></td>
+                            <td class="col-data">${c.data_formatada}</td>
+                            <td class="col-nome">${c.cliente_nome}</td>
+                            <td class="col-valor">${formatarBRL(c.valor_venda)}</td>
+                            <td class="col-valor" style="font-weight:bold; color:var(--color-pix-green);">${formatarBRL(c.valor_comissao)}</td>
+                            <td class="col-status"><span class="status-pagamento ${statusClasse}">${c.status_pagamento}</span></td>
                         `;
                         tabelaComissoesCorpo.appendChild(linha);
                     });
                 } else {
-                    tabelaComissoesCorpo.innerHTML = `<tr><td colspan="5" style="text-align: center;">Nenhuma comissão online registrada.</td></tr>`;
+                    tabelaComissoesCorpo.innerHTML = `<tr><td colspan="5" style="text-align: center;">Nenhuma comissão registrada.</td></tr>`;
                 }
             } else {
-                throw new Error(data.message || 'Erro ao processar dados de comissão.');
+                throw new Error(data.message);
             }
         } catch (err) {
             tabelaComissoesCorpo.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">${err.message}</td></tr>`;
+            comissaoPendenteEl.textContent = "Erro";
         }
     }
+    // ==================================================
 
-    // ==========================================================
-    // == INICIALIZAÇÃO
-    // ==========================================================
+    // Carrega tudo ao iniciar
     carregarStatus();
-    carregarComissoes();
-
+    carregarComissoes(); // <-- CHAMA A NOVA FUNÇÃO
 });
