@@ -677,3 +677,95 @@ footer {
     color: var(--color-text-body);
     font-style: italic; /* Adiciona um estilo diferente */
 }
+
+/* ========================================================== */
+/* == ESTILOS PARA O BOTÃO "SEJA UM REVENDEDOR" == */
+/* ========================================================== */
+
+header {
+    position: relative; /* Necessário para posicionar o botão */
+}
+
+.btn-revendedor {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    
+    /* Reutilizando estilos de botão */
+    background-color: var(--color-accent-blue);
+    color: #ffffff;
+    border: none;
+    padding: 8px 15px; /* Um pouco menor que o botão principal */
+    font-size: 0.9em;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    line-height: 1.4;
+}
+
+.btn-revendedor:hover {
+    background-color: #0056b3; 
+    transform: scale(1.05);
+}
+
+/* Esconde o botão em telas muito pequenas */
+@media (max-width: 600px) {
+    .btn-revendedor {
+        display: none;
+    }
+}
+
+
+/* ========================================================== */
+/* == ESTILOS PARA A NOVA PÁGINA (revendedor.html) == */
+/* ========================================================== */
+
+.card-revendedor {
+    text-align: left;
+}
+
+.card-revendedor h2 {
+    font-size: 2em;
+    border-bottom: 2px solid var(--color-pix-green);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.card-revendedor h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.5em;
+    color: var(--color-accent-blue);
+    margin-top: 30px;
+    margin-bottom: 10px;
+}
+
+.card-revendedor p, .card-revendedor li {
+    font-size: 1.1em;
+    line-height: 1.7;
+    margin-bottom: 10px;
+}
+
+.card-revendedor ul {
+    list-style-type: '✅';
+    padding-left: 30px;
+}
+
+.card-revendedor li::marker {
+    padding-right: 10px;
+}
+
+.card-revendedor .cta-final {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+}
+
+.card-revendedor .cta-final p {
+    font-size: 1.2em;
+    font-weight: 700;
+}
