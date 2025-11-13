@@ -364,6 +364,26 @@ table.relatorio-vendas td .tipo-online { font-weight: bold; color: var(--color-a
         size: auto; /* Deixa a impressora térmica decidir o tamanho */
         margin: 5mm; /* Margem pequena para papel térmico */
     }
+
+    /* ========================================================== */
+    /* == MODIFICAÇÃO: Estilo do Rodapé na Impressão == */
+    /* ========================================================== */
+    .mini-cartela-footer {
+        margin-top: 5mm; /* Espaço maior na impressão */
+        padding-top: 3mm;
+        border-top: 1px dashed #000; /* Linha preta para impressão */
+        font-size: 8pt; /* Tamanho bom para impressora térmica */
+        font-weight: bold;
+        color: #000 !important;
+        line-height: 1.3;
+        text-align: center;
+    }
+    
+    .mini-cartela-footer p {
+        padding: 0;
+        margin: 0;
+    }
+    /* ========================================================== */
 }
 /* --- FIM DAS MUDANÇAS DE IMPRESSÃO --- */
 
@@ -417,3 +437,22 @@ table.relatorio-vendas td .tipo-online { font-weight: bold; color: var(--color-a
     background-color: #c82333; /* Vermelho mais escuro */
     border-color: #bd2130;
 }
+
+/* ========================================================== */
+/* == MODIFICAÇÃO: Estilo do Rodapé da Cartela Manual (Preview) == */
+/* ========================================================== */
+.mini-cartela-footer {
+    margin-top: 8px;
+    padding-top: 5px;
+    border-top: 1px dashed #ccc;
+    text-align: center;
+    font-size: 0.8em; /* Pequeno no preview */
+    line-height: 1.4;
+    color: #333;
+}
+
+.mini-cartela-footer p {
+    margin: 0;
+    padding: 0 4px; /* Pequeno padding interno */
+}
+/* ========================================================== */
