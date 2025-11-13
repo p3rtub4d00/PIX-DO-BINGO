@@ -172,11 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         divCartela.appendChild(grid); 
 
-        // 3. Rodapé com o Aviso (NOVO)
+        // 3. Rodapé com o Aviso (ATUALIZADO)
         const footer = document.createElement('div');
         footer.classList.add('mini-cartela-footer');
         footer.innerHTML = `
-            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp 69 99908-3361</strong> para resgatar.</p>
+            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp 69 99908-3361</strong> para resgatar. O pagamento do prêmio pode demorar até 48h.</p>
         `;
         divCartela.appendChild(footer);
         // --- Fim da Modificação ---
@@ -212,7 +212,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (inputs.some(el => !el)) {
             console.error("Um ou mais elementos de configuração não foram encontrados no DOM.");
-            if(configStatus) { configStatus.textContent = `Erro: Elementos do formulário não encontrados.`; configStatus.className = 'status-message status-error'; configStatus.style.display = 'block'; }
+            if(configStatus) { 
+                configStatus.textContent = `Erro: Elementos do formulário não encontrados. Verifique o HTML.`; 
+                configStatus.className = 'status-message status-error'; 
+                configStatus.style.display = 'block'; 
+            }
             return;
         }
 
@@ -250,6 +254,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (formConfig) { 
         formConfig.addEventListener('submit', async (event) => {
             event.preventDefault();
+            
+             // Validação para garantir que os elementos existem antes de tentar salvar
+            if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput ||
+                 !minBotsInput || !maxBotsInput || !especialAtivoInput || !especialValorInput || 
+                 !especialDataHoraInput || !especialPrecoCartelaInput || !comissaoAfiliadoInput || 
+                 !configStatus || !btnSalvarConfig) {
+                  console.error("Erro no submit: Elementos de configuração não encontrados.");
+                  alert("Erro: Elementos do formulário não encontrados. Recarregue a página.");
+                  return;
+             }
             
             configStatus.style.display = 'none';
             btnSalvarConfig.disabled = true; btnSalvarConfig.textContent = 'Salvando...';
