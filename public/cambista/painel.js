@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================================
-    // == SELETORES GLOBAIS
+    // == SELETORES GLOBAIS (Baseado no SEU HTML)
     // ==========================================================
     const welcomeEl = document.getElementById('cambista-welcome');
-    let cambistaUsername = ''; // Vamos salvar o nome de usuário aqui
+    let cambistaUsername = ''; 
 
     // --- Seletores de Venda Manual (Crédito) ---
     const saldoEl = document.getElementById('cambista-saldo');
@@ -20,10 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnImprimir = document.getElementById('btn-imprimir');
     
     // --- Seletores de Venda Online (Comissão/Afiliado) ---
-    const linkAfiliadoInput = document.getElementById('link-afiliado');
+    // CORREÇÃO: ID atualizado para 'cambista-link'
+    const linkAfiliadoInput = document.getElementById('cambista-link'); 
     const btnCopiarLink = document.getElementById('btn-copiar-link');
-    const comissaoPendenteEl = document.getElementById('comissao-pendente');
-    const comissaoPagaEl = document.getElementById('comissao-paga');
+    // CORREÇÃO: ID atualizado para 'cambista-comissao-pendente'
+    const comissaoPendenteEl = document.getElementById('cambista-comissao-pendente'); 
+    // (O ID 'comissao-paga' não existe no seu HTML novo, então foi removido)
     const tabelaComissoesCorpo = document.getElementById('tabela-comissoes-corpo');
 
 
@@ -68,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 precoPorCartela = parseFloat(data.precoCartela || '5.00'); 
                 atualizarCustoVenda(); 
                 
-                // --- NOVO: Gera o link de afiliado ---
                 gerarLinkAfiliado();
             } else {
                 throw new Error(data.message);
@@ -150,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnImprimir) btnImprimir.addEventListener('click', () => { window.print(); });
 
     // ==========================================================
-    // ===== MODIFICAÇÃO: Função criarVisualCartela (CAMBISTA) =====
+    // ===== MANTER A MODIFICAÇÃO (Mensagem no Comprovante) =====
     // ==========================================================
     function criarVisualCartela(cartelaObj, nomeJogador) {
         const divCartela = document.createElement('div'); divCartela.classList.add('mini-cartela');
@@ -178,14 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         divCartela.appendChild(grid); 
         
-        // 3. Rodapé com o Aviso (ADICIONADO)
+        // 3. Rodapé com o Aviso (A correção que você pediu)
         const footer = document.createElement('div');
         footer.classList.add('mini-cartela-footer');
         footer.innerHTML = `
             <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp 69 99908-3361</strong> para resgatar. O pagamento do prêmio pode demorar ate 48h.</p>
         `;
         divCartela.appendChild(footer);
-        // --- Fim da Modificação ---
         
         return divCartela;
     }
@@ -197,19 +197,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================
 
     function gerarLinkAfiliado() {
-        if (!linkAfiliadoInput) return;
-        // Gera o link completo baseado na URL atual, mas aponta para o index.html
+        // CORREÇÃO: Verifica se o input 'cambista-link' existe
+        if (!linkAfiliadoInput) return; 
         const urlBase = `${window.location.origin}/index.html`;
         linkAfiliadoInput.value = `${urlBase}?ref=${cambistaUsername}`;
     }
 
     if (btnCopiarLink) {
         btnCopiarLink.addEventListener('click', () => {
+            // CORREÇÃO: Garante que o input existe antes de copiar
+            if (!linkAfiliadoInput) return; 
             linkAfiliadoInput.select();
             try {
                 navigator.clipboard.writeText(linkAfiliadoInput.value);
                 btnCopiarLink.textContent = "Copiado!";
-                setTimeout(() => { btnCopiarLink.textContent = "Copiar Link"; }, 2000);
+                setTimeout(() => { btnCopiarLink.textContent = "Copiar"; }, 2000);
             } catch (err) {
                 alert('Erro ao copiar. Selecione o link manualmente.');
             }
@@ -217,7 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function carregarComissoes() {
-        if (!tabelaComissoesCorpo || !comissaoPendenteEl || !comissaoPagaEl) {
+        // CORREÇÃO: Verifica os IDs corretos do novo HTML
+        if (!tabelaComissoesCorpo || !comissaoPendenteEl) { 
             console.warn("Elementos da tabela de comissão não encontrados, pulando carregamento.");
             return;
         }
@@ -235,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 // Preenche os totais
                 comissaoPendenteEl.textContent = formatarBRL(data.totais.total_pendente);
-                comissaoPagaEl.textContent = formatarBRL(data.totais.total_pago);
+                // (O ID 'comissao-paga' não existe no seu HTML, então não precisamos preenchê-lo)
 
                 // Preenche a tabela
                 if (data.comissoes.length > 0) {
@@ -262,7 +265,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tabelaComissoesCorpo.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">${err.message}</td></tr>`;
         }
     }
-
 
     // ==========================================================
     // == INICIALIZAÇÃO
