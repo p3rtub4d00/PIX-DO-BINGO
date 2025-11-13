@@ -38,6 +38,7 @@ header {
     background-color: var(--color-bg-white);
     border-bottom: 1px solid #e0e0e0;
     box-shadow: var(--shadow-soft);
+    position: relative; /* Necessário para posicionar o botão */
 }
 
 h1, h2 {
@@ -71,7 +72,7 @@ main {
     padding: 20px;
     max-width: 900px;
     width: 100%;
-    flex-grow: 1; /* <-- ESTA É A CORREÇÃO QUE FOI ADICIONADA */
+    flex-grow: 1; 
 }
 
 .card {
@@ -138,15 +139,15 @@ footer {
 /* --- ESTILOS PARA SEÇÃO DE SORTEIO ESPECIAL --- */
 
 .destaque-especial {
-    background: linear-gradient(135deg, var(--color-pix-green), #007bff); /* Fundo gradiente */
+    background: linear-gradient(135deg, var(--color-pix-green), #007bff); 
     border: none;
-    color: #ffffff; /* Texto branco */
-    padding: 40px; /* Mais padding */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* Sombra mais forte */
+    color: #ffffff; 
+    padding: 40px; 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); 
 }
 
 .destaque-especial h2 {
-    font-size: 2.2em; /* Título maior */
+    font-size: 2.2em; 
     color: #ffffff;
     margin-bottom: 25px;
     text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
@@ -157,32 +158,32 @@ footer {
 }
 
 .premio-valor-especial {
-    font-family: 'Montserrat', sans-serif; /* Adicionado para garantir */
-    font-weight: 900; /* Adicionado para garantir */
-    display: block; /* Adicionado para garantir */
-    line-height: 1.1; /* Adicionado para garantir */
-    font-size: 5em; /* Prêmio especial bem grande */
-    color: #ffffff !important; /* Força cor branca */
+    font-family: 'Montserrat', sans-serif; 
+    font-weight: 900; 
+    display: block; 
+    line-height: 1.1; 
+    font-size: 5em; 
+    color: #ffffff !important; 
     text-shadow: 3px 3px 8px rgba(0,0,0,0.4);
 }
 
 .destaque-especial .premio-sub {
     font-size: 1.2em;
-    color: #f0f0f0; /* Subtexto claro */
+    color: #f0f0f0; 
     font-weight: 700;
-     margin-top: 5px; /* Adicionado para garantir */
+     margin-top: 5px; 
 }
 
 .data-especial {
     font-family: 'Montserrat', sans-serif;
-    font-size: 1.5em; /* Data maior */
+    font-size: 1.5em; 
     font-weight: 700;
     margin: 15px 0 10px 0;
     background-color: rgba(0, 0, 0, 0.2);
     padding: 10px 15px;
     border-radius: 8px;
-    display: inline-block; /* Para o background pegar só o texto */
-    color: #fff; /* Garante cor branca */
+    display: inline-block; 
+    color: #fff; 
 }
 
 .info-especial {
@@ -190,13 +191,13 @@ footer {
     font-style: italic;
     opacity: 0.9;
     margin-top: 15px;
-    color: #fff; /* Garante cor branca */
+    color: #fff; 
 }
 
 /* --- Ajustes na Seção de Prêmios Regulares --- */
 
 #premio-info h2 {
-    font-size: 1.4em; /* Título um pouco menor que o especial */
+    font-size: 1.4em; 
     margin-bottom: 20px; 
 }
 
@@ -261,7 +262,6 @@ footer {
     margin: 0 10px; 
 }
 
-/* Esconde o divisor em telas pequenas onde os itens quebram */
 @media (max-width: 520px) {
     .premios-container {
         flex-direction: column; 
@@ -273,7 +273,7 @@ footer {
     .premio-item {
         border-bottom: 1px solid #eee; 
         padding-bottom: 25px;
-        width: 100%; /* Ocupa toda a largura */
+        width: 100%; 
     }
      .premio-item:last-child {
         border-bottom: none;
@@ -298,13 +298,11 @@ footer {
     animation: throb 1.5s infinite ease-in-out;
 }
 
-/* Animação para o botão */
 @keyframes throb {
     0%, 100% { transform: scale(1); box-shadow: var(--shadow-soft); }
     50% { transform: scale(1.03); box-shadow: 0 0 20px var(--color-pix-green), 0 0 10px var(--color-accent-blue); }
 }
 
-/* Aviso de preço abaixo do botão */
 .aviso-preco {
     font-size: 0.9em;
     margin-top: 10px;
@@ -712,12 +710,15 @@ header {
     transform: scale(1.05);
 }
 
-/* Esconde o botão em telas muito pequenas */
-@media (max-width: 600px) {
+/* ================================================== */
+/* == CORREÇÃO DO BUG: REMOVIDO O @media (max-width: 600px) == */
+/* ================================================== */
+/* @media (max-width: 600px) {
     .btn-revendedor {
         display: none;
     }
-}
+} 
+*/
 
 
 /* ========================================================== */
