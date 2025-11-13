@@ -1,596 +1,679 @@
-/* --- CORREÇÃO BOX-SIZING --- */
-html {
-    box-sizing: border-box;
-}
-*, *:before, *:after {
-    box-sizing: inherit;
-}
-/* --- FIM DA CORREÇÃO --- */
+/* Importação de fontes profissionais */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap');
 
-/* Estilos específicos para a Sala de Jogo */
+:root {
+    /* Paleta de Cores Profissional */
+    --color-pix-green: #00B6AA; 
+    --color-accent-blue: #007bff; 
+    --color-bg-light: #f4f7f6;  
+    --color-bg-white: #ffffff; 
+    --color-text-heading: #2c3e50; 
+    --color-text-body: #555555; 
+    
+    /* Sombras Sutis */
+    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
 
-.jogo-main {
+body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    background-color: var(--color-bg-light);
+    color: var(--color-text-body);
+    margin: 0;
+    padding: 0;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 30px;
-    padding: 20px;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+/* --- Layout Geral --- */
+header {
     width: 100%;
-    max-width: 1400px;
-}
-
-#painel-sorteio {
-    flex: 1;
-    min-width: 300px; /* Garante um mínimo mesmo em telas pequenas */
-    max-width: 500px;
-    padding: 25px;
-    overflow: hidden; /* Evita que conteúdo interno estoure */
-}
-
-#area-jogador {
-    flex: 2;
-    min-width: 320px;
-    max-width: 700px;
-    padding: 25px;
-    overflow: hidden; /* Evita que conteúdo interno estoure */
-}
-
-/* --- Painel de Sorteio (Globo) --- */
-#painel-sorteio h2 {
-    font-size: 1.6em;
-    margin-bottom: 15px;
-}
-
-/* ID do Sorteio no Painel */
-#painel-sorteio #sorteio-id-display {
-    font-size: 1.8em;
-    font-family: 'Montserrat', sans-serif;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--color-pix-green);
-    padding-bottom: 10px;
-}
-
-#ultimo-numero-wrapper {
-    display: flex;
-    justify-content: center;
+    text-align: center;
+    padding: 25px 0;
     margin-bottom: 30px;
+    background-color: var(--color-bg-white);
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: var(--shadow-soft);
 }
 
-#ultimo-numero-sorteado {
+h1, h2 {
     font-family: 'Montserrat', sans-serif;
-    font-weight: 900;
-    font-size: 5em;
-    line-height: 1;
+    font-weight: 700;
     color: var(--color-text-heading);
+    margin: 0;
+}
+
+h1.title-gradient {
+    font-size: 3.5em;
+    font-weight: 900;
+    margin: 10px 0;
     background: linear-gradient(90deg, var(--color-pix-green), var(--color-accent-blue));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     color: transparent;
-
-    padding: 20px;
-    border: 4px solid var(--color-pix-green);
-    border-radius: 50%;
-    width: 100px;
-    height: 100px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 0 15px rgba(0, 182, 170, 0.4);
 }
 
-#globo-numeros {
-    display: grid;
-    grid-template-columns: repeat(15, 1fr);
-    gap: 4px;
-    margin-top: 20px;
-    background-color: var(--color-bg-light);
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-}
-
-.globo-numero {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: 0.8em;
-    padding: 4px; /* Ajuste inicial */
-    border-radius: 50%;
-    background-color: #fff;
-    border: 1px solid #eee;
-    text-align: center;
-    aspect-ratio: 1 / 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 0.5;
-    transition: all 0.3s ease;
+.slogan {
+    font-size: 1.2em;
     color: var(--color-text-body);
-    line-height: 1; /* Garante que o texto não quebre */
-    overflow: hidden; /* Esconde texto que não couber */
+    margin-top: -5px;
 }
 
-.globo-numero.sorteado {
-    background-color: var(--color-pix-green);
-    color: #fff;
-    font-weight: 900;
-    opacity: 1;
-    transform: scale(1.05);
-    border-color: var(--color-pix-green);
-    box-shadow: 0 0 8px rgba(0, 182, 170, 0.6);
-}
-
-/* --- NAVEGADOR DA CARTELA --- */
-#cartela-switcher {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    max-width: 450px;
-    margin: 0 auto 20px auto;
-}
-.cartela-titulo-wrapper {
+main {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center; /* Garante centralização do texto */
-}
-#cartela-titulo-atual {
-    font-size: 1.4em;
-    font-weight: 700;
-    color: var(--color-text-heading);
-    margin: 0;
-}
-#cartela-id-display { /* ID da Cartela */
-    font-size: 0.9em;
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: 700;
-    color: var(--color-text-body);
-    background-color: #eee;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-top: 5px;
-    word-break: break-all; /* Quebra ID se for muito longo */
-}
-
-.btn-switch {
-    background-color: transparent;
-    border: 2px solid var(--color-pix-green);
-    color: var(--color-pix-green);
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 900;
-    font-size: 2em;
-    border-radius: 50%;
-    width: 45px;
-    height: 45px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding-bottom: 5px;
-    flex-shrink: 0; /* Impede que os botões encolham */
-}
-.btn-switch:hover {
-    background-color: var(--color-pix-green);
-    color: #fff;
-}
-.btn-switch:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-    background-color: transparent;
-    color: #aaa;
-    border-color: #ddd;
-}
-
-/* --- Container das Cartelas --- */
-#cartelas-container {
-    position: relative;
-    width: 100%; /* Garante que o container use a largura disponível */
-    max-width: 450px; /* Limita a largura máxima */
-    margin: 0 auto; /* Centraliza o container */
-}
-.cartela-jogador {
-    display: none;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    width: 100%; /* Ocupa a largura do container */
-    aspect-ratio: 1 / 1;
-    background-color: #f0f0f0;
-    padding: 10px;
-    border-radius: 10px;
-    border: 2px solid #ddd;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
-}
-.cartela-jogador.ativa {
-    display: grid;
-}
-.cartela-numero {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 900;
-    font-size: 1.8em;
-    background-color: #fff;
-    color: var(--color-text-heading);
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    text-align: center;
-    aspect-ratio: 1 / 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: all 0.2s ease;
-    user-select: none;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    line-height: 1; /* Garante alinhamento */
-    overflow: hidden; /* Esconde se estourar (improvável com aspect-ratio) */
-}
-.cartela-header {
-    background-color: var(--color-accent-blue);
-    color: #fff;
-    font-weight: 900;
-    font-size: 1.5em;
-    border-radius: 6px;
-}
-.cartela-numero.free {
-    background-color: var(--color-pix-green);
-    color: #fff;
-    font-size: 1.4em;
-    border-color: var(--color-pix-green);
-    font-weight: 700;
-}
-.cartela-numero.marcado {
-    background-color: var(--color-accent-blue);
-    color: #fff;
-    border-color: #0056b3;
-    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-}
-
-/* --- Botão de Bingo --- */
-#btn-bingo {
+    gap: 30px;
+    padding: 20px;
+    max-width: 900px;
     width: 100%;
-    max-width: 450px;
-    padding: 18px;
-    font-size: 1.8em;
-    margin: 20px auto 0 auto; /* Centraliza e adiciona margem */
-    display: block; /* Garante que margin auto funcione */
-    animation: throb 1.5s infinite ease-in-out;
-}
-@keyframes throb {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.02); box-shadow: 0 0 20px var(--color-pix-green), 0 0 10px var(--color-accent-blue); }
+    flex-grow: 1; /* <-- ESTA É A CORREÇÃO QUE FOI ADICIONADA */
 }
 
-/* --- Responsividade do Jogo --- */
-@media (max-width: 900px) {
-    .jogo-main {
-        flex-direction: column;
-        align-items: center;
-    }
-    #painel-sorteio, #area-jogador {
-        max-width: 90%;
-        width: 100%; /* Ocupa a largura disponível */
-    }
-    .cartela-jogador {
-        gap: 8px;
-    }
-    .cartela-numero {
-        font-size: 1.5em;
-    }
-    .cartela-header {
-        font-size: 1.2em;
-    }
-    #btn-bingo {
-        font-size: 1.5em;
-    }
-}
-
-@media (max-width: 580px) {
-    /* Ajustes gerais para telas pequenas */
-    .jogo-main {
-        padding: 10px;
-        gap: 15px;
-    }
-     #painel-sorteio, #area-jogador {
-        padding: 15px;
-        max-width: 100%; /* Remove limite anterior para ocupar tela */
-    }
-
-    #ultimo-numero-sorteado {
-        font-size: 2.8em;   /* <-- Reduzido */
-        width: 65px;     /* <-- Levemente aumentado */
-        height: 65px;    /* <-- Levemente aumentado */
-        padding: 8px;    /* <-- Levemente aumentado */
-        border-width: 2px;
-    }
-
-    #globo-numeros {
-        gap: 2px; /* Espaçamento bem pequeno */
-        padding: 5px; /* Padding pequeno */
-        margin-top: 15px;
-    }
-
-    .globo-numero {
-        font-size: 0.65em; /* Fonte bem pequena */
-        font-weight: 600; /* Levemente menos bold */
-        padding: 2px; /* Padding mínimo */
-    }
-
-    .globo-numero.sorteado {
-        font-weight: 700; /* Bold quando sorteado */
-    }
-
-    #cartela-switcher {
-        gap: 5px; /* Menor espaço */
-        margin-bottom: 15px;
-    }
-    #cartela-titulo-atual {
-        font-size: 1.1em;
-        flex: 1;
-    }
-     #cartela-id-display {
-         font-size: 0.8em;
-     }
-    .btn-switch {
-        font-size: 1.3em; /* Menor */
-        width: 35px; /* Menor */
-        height: 35px; /* Menor */
-        border-width: 1px;
-    }
-    .cartela-jogador {
-        gap: 4px; /* Espaçamento bem pequeno */
-        padding: 5px; /* Padding pequeno */
-    }
-    .cartela-numero {
-        font-size: 1.1em; /* Reduzido */
-        font-weight: 700; /* Menos bold */
-        border-width: 1px;
-        border-radius: 4px; /* Menos arredondado */
-    }
-    .cartela-header {
-        font-size: 0.8em; /* Reduzido */
-        font-weight: 700;
-        border-radius: 3px;
-    }
-     .cartela-numero.free {
-        font-size: 0.9em; /* Reduzido */
-     }
-    #btn-bingo {
-        font-size: 1.2em; /* Reduzido */
-        padding: 10px; /* Reduzido */
-        margin-top: 15px;
-    }
-}
-
-/* --- ESTILOS DO MODAL DE RESULTADO --- */
-
-#modal-resultado .modal-content {
-    max-width: 550px;
-    max-height: 90vh; /* Limita a altura máxima */
-    overflow-y: auto;  /* Adiciona rolagem vertical SE necessário */
-}
-
-/* ================== INÍCIO DA MODIFICAÇÃO (NOVOS ESTILOS COMPROVANTE) ================== */
-
-#area-comprovante {
-    border: 2px solid var(--color-pix-green);
-    border-radius: 12px;
-    padding: 0; /* Padding será interno */
-    background-color: #fff;
-    overflow: hidden; /* Para o border-radius funcionar no header/footer */
-}
-
-.comprovante-header {
+.card {
+    background-color: var(--color-bg-white);
+    padding: 35px;
+    border-radius: 12px; 
     text-align: center;
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-    background-color: #fcfcfc;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid #e9e9e9;
+    transition: all 0.3s ease;
 }
-.comprovante-header h3 {
-    margin: 0 0 5px 0;
-    font-size: 1.8em;
+
+.card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-3px);
 }
-.comprovante-header span {
+
+footer {
+    width: 100%;
+    text-align: center;
+    padding: 20px 0;
+    margin-top: auto;
+    background-color: #333;
+    color: #f0f0f0;
     font-size: 0.9em;
-    color: var(--color-text-body);
+}
+
+/* --- Seções Específicas --- */
+.text-pix {
+    color: var(--color-pix-green);
+    font-weight: 700;
+}
+
+/* --- Botões --- */
+.btn-comprar {
+    background-color: var(--color-accent-blue);
+    color: #ffffff;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1.1em;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    width: 100%;
 }
 
-#resultado-titulo {
-    font-size: 2em;
-    margin-top: 25px; /* Adicionado espaço */
-    margin-bottom: 15px;
+.btn-comprar:hover {
+    background-color: #0056b3; 
+    transform: scale(1.02);
+}
+
+.btn-comprar.btn-destaque {
+    background-color: var(--color-pix-green);
+}
+
+.btn-comprar.btn-destaque:hover {
+    background-color: #008a7e; 
+}
+
+
+/* --- ESTILOS PARA SEÇÃO DE SORTEIO ESPECIAL --- */
+
+.destaque-especial {
+    background: linear-gradient(135deg, var(--color-pix-green), #007bff); /* Fundo gradiente */
+    border: none;
+    color: #ffffff; /* Texto branco */
+    padding: 40px; /* Mais padding */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* Sombra mais forte */
+}
+
+.destaque-especial h2 {
+    font-size: 2.2em; /* Título maior */
+    color: #ffffff;
+    margin-bottom: 25px;
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+}
+
+.premio-destaque-especial {
+    margin-bottom: 20px;
+}
+
+.premio-valor-especial {
+    font-family: 'Montserrat', sans-serif; /* Adicionado para garantir */
+    font-weight: 900; /* Adicionado para garantir */
+    display: block; /* Adicionado para garantir */
+    line-height: 1.1; /* Adicionado para garantir */
+    font-size: 5em; /* Prêmio especial bem grande */
+    color: #ffffff !important; /* Força cor branca */
+    text-shadow: 3px 3px 8px rgba(0,0,0,0.4);
+}
+
+.destaque-especial .premio-sub {
+    font-size: 1.2em;
+    color: #f0f0f0; /* Subtexto claro */
+    font-weight: 700;
+     margin-top: 5px; /* Adicionado para garantir */
+}
+
+.data-especial {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.5em; /* Data maior */
+    font-weight: 700;
+    margin: 15px 0 10px 0;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 10px 15px;
+    border-radius: 8px;
+    display: inline-block; /* Para o background pegar só o texto */
+    color: #fff; /* Garante cor branca */
+}
+
+.info-especial {
+    font-size: 1em;
+    font-style: italic;
+    opacity: 0.9;
+    margin-top: 15px;
+    color: #fff; /* Garante cor branca */
+}
+
+/* --- Ajustes na Seção de Prêmios Regulares --- */
+
+#premio-info h2 {
+    font-size: 1.4em; /* Título um pouco menor que o especial */
+    margin-bottom: 20px; 
+}
+
+.premios-container {
     display: flex;
     justify-content: center;
-    align-items: center;
-    gap: 10px;
-}
-#resultado-titulo .fa-trophy {
-    color: var(--color-pix-green);
-}
-
-#resultado-mensagem {
-    font-size: 1.2em;
-    line-height: 1.6;
-    margin-bottom: 15px;
-    color: var(--color-text-body);
-    padding: 0 20px; /* Adiciona padding lateral */
+    align-items: center; 
+    gap: 20px; 
+    margin: 20px 0 30px 0; 
+    flex-wrap: wrap; 
 }
 
-.comprovante-dados-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* Duas colunas */
-    gap: 20px;
-    padding: 15px 25px;
-    border-top: 1px dashed #ddd;
-    border-bottom: 1px dashed #ddd;
-    margin: 20px 0;
-}
-.dado-item {
+.premio-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    padding: 15px;
+    min-width: 180px; 
 }
-.dado-item span {
-    font-size: 0.9em;
-    color: var(--color-text-body);
-    font-weight: 700;
+
+.premio-principal {
+    flex: 2; 
 }
-.dado-item strong {
-    font-size: 1.2em;
+.premio-secundario {
+    flex: 1;
+}
+
+.premio-label {
     font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 1.3em;
     color: var(--color-text-heading);
-    word-break: break-all; /* Quebra IDs longos */
+    margin-bottom: 5px;
+    text-transform: uppercase;
 }
-.dado-item strong#comprovante-premio {
-    color: var(--color-pix-green);
+
+.premio-valor {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    display: block;
+    line-height: 1.1;
+}
+
+.premio-valor-cheia {
+    font-size: 4em; 
+}
+
+.premio-valor-linha {
+    font-size: 2.8em; 
+}
+
+.premio-sub {
+    font-size: 1em;
+    color: var(--color-text-body);
+    margin-top: 5px;
+}
+
+.premio-divisor {
+    width: 2px;
+    background-color: #e0e0e0;
+    align-self: stretch; 
+    margin: 0 10px; 
+}
+
+/* Esconde o divisor em telas pequenas onde os itens quebram */
+@media (max-width: 520px) {
+    .premios-container {
+        flex-direction: column; 
+        gap: 25px;
+    }
+    .premio-divisor {
+        display: none; 
+    }
+    .premio-item {
+        border-bottom: 1px solid #eee; 
+        padding-bottom: 25px;
+        width: 100%; /* Ocupa toda a largura */
+    }
+     .premio-item:last-child {
+        border-bottom: none;
+        padding-bottom: 15px;
+    }
+    .premio-valor-cheia {
+        font-size: 3.5em; 
+    }
+    .premio-valor-linha {
+        font-size: 2.5em; 
+    }
+}
+
+
+/* BOTÃO "JOGUE AGORA" */
+.btn-jogue {
+    width: 80%;
+    max-width: 400px;
+    padding: 18px; 
+    font-size: 1.6em; 
+    margin-top: 25px;
+    animation: throb 1.5s infinite ease-in-out;
+}
+
+/* Animação para o botão */
+@keyframes throb {
+    0%, 100% { transform: scale(1); box-shadow: var(--shadow-soft); }
+    50% { transform: scale(1.03); box-shadow: 0 0 20px var(--color-pix-green), 0 0 10px var(--color-accent-blue); }
+}
+
+/* Aviso de preço abaixo do botão */
+.aviso-preco {
+    font-size: 0.9em;
+    margin-top: 10px;
+    opacity: 0.8;
+}
+
+/* --- ESTILOS DO MODAL DE CHECKOUT --- */
+
+.modal-overlay {
+    display: none; 
+    position: fixed; 
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); 
+    backdrop-filter: blur(5px);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: var(--color-bg-white);
+    margin: auto;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-medium);
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    position: relative;
+    animation-name: animatetop;
+    animation-duration: 0.4s
+}
+
+@keyframes animatetop {
+    from {top: -300px; opacity: 0}
+    to {top: 0; opacity: 1}
+}
+
+.modal-close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+    color: var(--color-text-heading);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-content h2 {
+    margin-bottom: 25px; 
+    font-size: 1.8em;
+}
+
+/* ESTILOS DO FORMULÁRIO DO MODAL */
+#form-checkout {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.form-grupo {
+    text-align: left;
+}
+.form-grupo label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 700;
+    color: var(--color-text-heading);
+}
+.form-grupo input {
+    width: 100%;
+    padding: 12px;
+    font-family: 'Lato', sans-serif;
+    font-size: 1.1em;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box; 
+}
+.form-grupo input:focus {
+    outline: none;
+    border-color: var(--color-pix-green);
+    box-shadow: 0 0 8px rgba(0, 182, 170, 0.5);
+}
+
+/* Resumo do Preço no Modal*/
+#resumo-preco {
+    margin-top: 15px;
+    font-size: 1.1em;
+}
+#modal-preco {
+    font-size: 1.6em;
     font-weight: 900;
 }
 
-#resultado-prova-cartela {
-    display: none;
+.modal-info {
+    font-size: 0.9em;
+    opacity: 0.8;
+    margin-top: 20px;
     margin-bottom: 25px;
-    border-top: 2px solid #eee;
-    padding-top: 20px;
-}
-#resultado-prova-cartela h4 {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1.3em;
-    color: var(--color-text-heading);
-    margin: 0 0 15px 0;
-}
-#cartela-vencedora-display {
-    display: grid !important; /* Mantém grid */
-    max-width: 350px !important; /* Mantém largura máxima */
-    gap: 5px;
-    padding: 5px;
-    margin: 0 auto;
-}
-#cartela-vencedora-display .cartela-numero {
-    font-size: 1.2em;
-    min-height: 40px;
-}
-#cartela-vencedora-display .cartela-header {
-    font-size: 1em;
 }
 
-.comprovante-footer {
-    text-align: center;
+#btn-gerar-qrcode { 
+    width: 100%;
     padding: 15px;
-    border-top: 1px solid #eee;
-    background-color: #fcfcfc;
+    font-size: 1.2em;
 }
-.comprovante-footer span {
+
+
+/* --- Responsividade --- */
+@media (max-width: 768px) {
+    h1.title-gradient {
+        font-size: 2.8em;
+    }
+    .slogan {
+        font-size: 1.1em;
+    }
+    .destaque-especial h2 {
+        font-size: 1.8em;
+    }
+    .premio-valor-especial {
+        font-size: 4em;
+    }
+    .data-especial {
+        font-size: 1.2em;
+    }
+    .btn-jogue {
+        font-size: 1.4em;
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    h1.title-gradient {
+        font-size: 2.2em;
+    }
+    .slogan {
+        font-size: 1em;
+    }
+    .card {
+        padding: 20px;
+    }
+     .destaque-especial h2 {
+        font-size: 1.6em;
+    }
+    .premio-valor-especial {
+        font-size: 3.5em;
+    }
+    .data-especial {
+        font-size: 1.1em;
+    }
+     .btn-jogue {
+        font-size: 1.3em;
+    }
+    .modal-content {
+        padding: 20px;
+    }
+    .modal-content h2 {
+        font-size: 1.5em;
+    }
+
+    /* --- Estilos do Status Box (NOVO) --- */
+#status-sorteio-box {
+    padding: 20px 25px;
+    border: 2px solid var(--color-pix-green);
+    background: #f0fffb;
+    transition: all 0.5s ease;
+}
+#status-titulo {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: var(--color-pix-green);
+    margin: 0 0 5px 0;
+    text-transform: uppercase;
+}
+#status-cronometro {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 3em;
+    font-weight: 900;
+    color: var(--color-text-heading);
+    line-height: 1.2;
+}
+#status-subtexto {
+    font-size: 1em;
+    margin: 5px 0 0 0;
+}
+#btn-assistir-vivo {
+    width: 80%;
+    max-width: 300px;
+    padding: 12px; 
+    font-size: 1.2em; 
+    margin-top: 15px;
+}
+
+/* Estado JOGANDO */
+#status-sorteio-box.status-jogando {
+    border-color: var(--color-accent-blue);
+    background: #f0f7ff;
+}
+#status-sorteio-box.status-jogando #status-titulo {
+    color: var(--color-accent-blue);
+}
+
+}
+
+/* ========================================================== */
+/* ===== NOVOS ESTILOS PARA "MINHAS CARTELAS" (ADICIONADOS) ===== */
+/* ========================================================== */
+
+/* Estilo para o formulário que acabamos de adicionar */
+#form-recuperar-cartelas {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Modal para exibir os resultados */
+#modal-minhas-cartelas-lista {
+    text-align: left;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 0 15px;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    margin-top: 20px;
+}
+
+.cartela-encontrada-item {
+    padding: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.cartela-encontrada-item:last-child {
+    border-bottom: none;
+}
+
+.cartela-info-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.cartela-info-wrapper .sorteio-id {
+    font-size: 1.3em;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: var(--color-text-heading);
+}
+
+.cartela-info-wrapper .sorteio-data,
+.cartela-info-wrapper .sorteio-qtd {
     font-size: 0.9em;
     color: var(--color-text-body);
 }
 
-/* --- ESTILOS PARA OS BOTÕES DO MODAL (CORREÇÃO DE ROLAGEM) --- */
-.modal-botoes {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 15px;
-    align-items: center;
+/* O botão para "Entrar no Jogo" */
+.btn-entrar-jogo {
+    padding: 10px 15px;
+    font-size: 0.9em;
+    width: auto; /* Tamanho automático */
+    flex-shrink: 0; /* Impede que o botão encolha */
+    white-space: nowrap; /* Não quebra o texto */
+}
+
+/* NOVO: Estilo para "Jogo Encerrado" */
+.jogo-encerrado-info {
+    font-size: 0.9em;
+    font-weight: 700;
+    color: var(--color-text-body);
+    opacity: 0.7;
+    padding: 10px 15px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+
+/* Mensagem de "Nenhuma cartela encontrada" */
+#modal-minhas-cartelas-lista p {
+    padding: 20px;
+    text-align: center;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* ========================================================== */
+/* ===== NOVOS ESTILOS PARA "VERIFICAR PREMIOS" (ADICIONADOS) ===== */
+/* ========================================================== */
+#modal-meus-premios-lista {
+    text-align: left;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 0 15px;
     margin-top: 20px;
-    
-    position: sticky; 
-    
-    /* ================================================== */
-    /* == AQUI ESTÁ A CORREÇÃO == */
-    /* ================================================== */
-    bottom: 0; /* ANTES: -30px */
-    /* ================================================== */
-    
-    background-color: var(--color-bg-white); /* Fundo branco */
-    
-    /* Padding para espaçar e compensar margens */
-    padding: 15px 30px 30px 30px; 
-    
-    border-top: 1px solid #eee; /* Linha sutil */
-    
-    /* Remove margens negativas e ajusta largura */
-    width: 100%; 
-    margin-left: -30px;
-    margin-right: -30px;
-    
-    /* Garante que os botões fiquem no fundo do padding */
-    margin-bottom: -30px; 
 }
 
-#btn-resultado-fechar,
-#btn-baixar-comprovante {
-    width: 90%; 
-    max-width: 300px;
+/* --- Estilos para Modal de Prêmios (Copiado de admin.css) --- */
+.status-pagamento {
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
-.btn-comprar-azul {
-    background-color: var(--color-accent-blue);
+.status-pendente {
+    background-color: #ffc107;
+    color: #333;
 }
-.btn-comprar-azul:hover {
-    background-color: #0056b3;
-}
-
-
-/* --- *** INÍCIO: NOVOS ESTILOS PARA BOTÃO DE SOM *** --- */
-.painel-header-flex {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px; /* Substitui a margem do h2 */
+.status-pago {
+    background-color: #28a745;
 }
 
-#painel-sorteio #sorteio-id-display {
-    margin-bottom: 0; /* Remove a margem original */
-    padding-bottom: 0; /* Remove a borda original */
-    border-bottom: none; /* Remove a borda original */
-}
+/* --- INÍCIO DAS MODIFICAÇÕES (CSS MOVIDO) --- */
 
-#btn-toggle-som {
-    background: none;
-    border: 2px solid #ddd; /* Borda clara */
-    color: var(--color-text-body); /* Cor do texto normal */
+/* CSS do Loader do PIX (que estava no index.html) */
+.loader-pix {
+    border: 6px solid #f3f3f3; /* Cinza claro */
+    border-top: 6px solid var(--color-pix-green); /* Verde Pix */
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    font-size: 1.1em; /* Tamanho de ícone razoável */
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0; /* Não deixa o botão esmagar */
+    animation: spin 1.5s linear infinite;
+    margin: 20px auto 10px auto;
 }
-#btn-toggle-som:hover {
-    background-color: var(--color-pix-green);
-    border-color: var(--color-pix-green);
-    color: #fff;
-}
-#btn-toggle-som.som-ativo {
-    background-color: var(--color-pix-green);
-    border-color: var(--color-pix-green);
-    color: #fff;
-}
-/* --- *** FIM: NOVOS ESTILOS PARA BOTÃO DE SOM *** --- */
-
-
-/* --- ESTILO PARA O AVISO DE 48H NO COMPROVANTE --- */
-
-/* Ajusta a margem da mensagem original para ficar mais bonito */
-#resultado-mensagem {
-    margin-bottom: 15px; 
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.comprovante-aviso {
-    font-size: 1.0em;
-    font-weight: 700;
-    color: #721c24; /* Cor do texto (vermelho escuro) */
-    background-color: #f8d7da; /* Fundo (vermelho claro) */
-    border: 1px solid #f5c6cb; /* Borda (vermelha) */
-    padding: 10px;
-    border-radius: 8px;
-    margin: 15px 25px 25px 25px; /* Espaçamento com padding lateral */
+/* CSS do Aviso Legal do Rodapé (que criei) */
+.legal-links {
+    padding-top: 15px;
+    border-top: 1px solid #444; /* Linha divisória no rodapé escuro */
+    margin-top: 15px;
+    max-width: 800px; /* Limita a largura */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 15px; /* Espaçamento lateral */
+    padding-right: 15px; /* Espaçamento lateral */
+}
+.legal-warning {
+    font-size: 0.85em;
+    color: #ccc; /* Cor mais suave que o copyright */
+    opacity: 0.7;
     line-height: 1.5;
+    margin: 5px 0;
 }
+/* --- FIM DAS MODIFICAÇÕES --- */
 
-/* ================== FIM DA MODIFICAÇÃO (NOVOS ESTILOS COMPROVANTE) ================== */
+
+/* ========================================================== */
+/* ===== ESTILO ADICIONADO PARA TELEFONE NO MODAL DE PRÊMIOS ===== */
+/* ========================================================== */
+
+.cartela-info-wrapper .sorteio-telefone {
+    font-size: 0.9em;
+    color: var(--color-text-body);
+    font-style: italic; /* Adiciona um estilo diferente */
+}
