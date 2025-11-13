@@ -803,3 +803,87 @@ footer {
     font-family: 'Montserrat', sans-serif;
 }
 
+/* ========================================================== */
+/* == ESTILOS PARA TERMOS DE USO (COLAPSÁVEL) == */
+/* ========================================================== */
+
+.card-regras {
+    text-align: left; 
+    background-color: #fcfcfc; 
+    border-top: 4px solid var(--color-pix-green);
+    /* Remove padding padrão para o details/summary funcionar */
+    padding: 0; 
+}
+
+.card-regras details {
+    width: 100%;
+}
+
+.card-regras summary {
+    padding: 25px 35px; /* Recria o padding do card */
+    cursor: pointer;
+    outline: none;
+    list-style: none; /* Remove a seta/triângulo padrão */
+    text-align: center;
+}
+
+/* Remove a seta/triângulo (para Webkit/Chrome) */
+.card-regras summary::-webkit-details-marker {
+    display: none;
+}
+
+.card-regras summary h2 {
+    text-align: center; 
+    font-size: 1.8em;
+    color: var(--color-text-heading);
+    margin: 0;
+    display: block; /* Garante que o H2 ocupe a linha */
+}
+
+.card-regras summary span {
+     font-style: italic;
+     font-size: 0.9em;
+     color: var(--color-text-body);
+     margin-top: 5px;
+     display: block;
+}
+
+/* Adiciona um efeito de "hover" */
+.card-regras summary:hover {
+    background-color: #f7f7f7;
+}
+
+/* Estilos para o conteúdo quando ESTIVER ABERTO */
+.card-regras details[open] summary {
+     border-bottom: 1px solid #eee;
+}
+
+/* Aplica o padding ao 'regras-conteudo' */
+.card-regras .regras-conteudo {
+    padding: 25px 35px;
+}
+
+/* O <p> e <ol> agora estão dentro do <div> */
+.card-regras .regras-conteudo p {
+    text-align: center;
+    font-style: italic;
+    margin-bottom: 25px;
+    margin-top: 0; /* Remove margem do primeiro P */
+}
+
+.card-regras .regras-conteudo ol {
+    padding-left: 20px; 
+    margin: 0;
+}
+
+.card-regras .regras-conteudo li {
+    font-size: 1em;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    padding-left: 10px;
+}
+
+.card-regras .regras-conteudo li::marker {
+    font-weight: bold;
+    font-family: 'Montserrat', sans-serif;
+}
