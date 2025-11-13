@@ -413,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- ================================================== ---
             const tipoCompraSalvo = sessionStorage.getItem('bingo_tipo_compra') || 'regular';
             sessionStorage.removeItem('bingo_tipo_compra'); 
+            sessionStorage.removeItem('bingo_ref_code'); // Limpa o ref code
             
             if(modalNome) modalNome.value = ""; 
             if(modalTelefone) modalTelefone.value = ""; 
@@ -440,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pararVerificadorPagamento();
             sessionStorage.removeItem('bingo_payment_id'); 
             sessionStorage.removeItem('bingo_tipo_compra'); 
+            sessionStorage.removeItem('bingo_ref_code'); // Limpa o ref code
             fecharModal(); 
         });
 
@@ -539,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 htmlInterno += `
                     <div class="cartela-encontrada-item">
                         <div class="cartela-info-wrapper">
-                            <span class="sorteio-id">Sorteio #${venda.sorteio_id} ${tipoTexto}</span>
+                            <span class="sorteio-id">Sorteio #${venda.sorteio_id_especial || venda.sorteio_id} ${tipoTexto}</span>
                             <span class="sorteio-qtd">${venda.quantidade_cartelas} cartela(s)</span>
                             <span class="sorteio-data">Comprada em: ${venda.data_formatada}</span>
                         </div>
@@ -596,18 +598,37 @@ document.addEventListener('DOMContentLoaded', () => {
             htmlInterno += `<p style="text-align: center; font-weight: bold; font-size: 1.1em; color: var(--color-pix-green);">Parabéns! Encontramos ${premios.length} prêmio(s) no seu número!</p>`;
             premios.forEach(premio => {
                 const statusClasse = premio.status_pagamento === 'Pendente' ? 'status-pendente' : 'status-pago';
+                
+                // ==========================================================
+                // ===== 1. MODIFICAÇÃO: ADICIONADO TELEFONE =====
+                // ==========================================================
                 htmlInterno += `
                     <div class="cartela-encontrada-item" style="border-left: 4px solid var(--color-pix-green);">
                         <div class="cartela-info-wrapper">
                             <span class="sorteio-id">Prêmio: ${premio.premio}</span>
                             <span class="sorteio-qtd">Sorteio #${premio.sorteio_id} (Nome: ${premio.nome})</span>
+                            <span class="sorteio-telefone">Telefone: ${premio.telefone || 'Não registrado'}</span>
                             <span class="sorteio-data">Data: ${premio.data_formatada}</span>
                         </div>
                         <span class="status-pagamento ${statusClasse}" style="font-size: 0.9em; flex-shrink: 0;">${premio.status_pagamento}</span>
                     </div>
                 `;
+                // ==========================================================
             });
-            htmlInterno += `<p style="text-align: center; margin-top: 15px; font-size: 0.9em;">Se o status estiver "Pendente", entre em contato com a administração para receber.</p>`;
+
+            // ==========================================================
+            // ===== 2. MODIFICAÇÃO: LINK DE WHATSAPP ADICIONADO =====
+            // ==========================================================
+            htmlInterno += `
+                <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
+                    Se o status estiver "Pendente", entre em contato com a administração pelo 
+                    <a href="https://wa.me/5569999083361" target="_blank" style="color:var(--color-pix-green); font-weight:bold;">
+                        WhatsApp 69 99908-3361
+                    </a> 
+                    para receber.
+                </p>`;
+            // ==========================================================
+
         } else {
             htmlInterno += `<p>Nenhum prêmio encontrado.</p>`;
         }
