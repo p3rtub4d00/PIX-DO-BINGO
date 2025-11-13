@@ -217,7 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function carregarComissoes() {
-        if (!tabelaComissoesCorpo || !comissaoPendenteEl || !comissaoPagaEl) return;
+        if (!tabelaComissoesCorpo || !comissaoPendenteEl || !comissaoPagaEl) {
+            console.warn("Elementos da tabela de comissão não encontrados, pulando carregamento.");
+            return;
+        }
 
         try {
             const response = await fetch('/cambista/minhas-comissoes');
