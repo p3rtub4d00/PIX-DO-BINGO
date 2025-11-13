@@ -38,7 +38,7 @@ header {
     background-color: var(--color-bg-white);
     border-bottom: 1px solid #e0e0e0;
     box-shadow: var(--shadow-soft);
-    position: relative; /* Necessário para posicionar o botão */
+    position: relative; /* Mantém para referência futura, se necessário */
 }
 
 h1, h2 {
@@ -677,23 +677,22 @@ footer {
 }
 
 /* ========================================================== */
-/* == ESTILOS PARA O BOTÃO "SEJA UM REVENDEDOR" == */
+/* == ESTILOS PARA O BOTÃO "SEJA UM REVENDEDOR" (CORRIGIDO) == */
 /* ========================================================== */
 
-header {
-    position: relative; /* Necessário para posicionar o botão */
-}
-
 .btn-revendedor {
-    position: absolute;
-    top: 20px;
-    right: 20px;
+    /* REMOVIDO: position: absolute, top, right */
     
-    /* Reutilizando estilos de botão */
+    /* ADICIONADO: */
+    display: inline-block; /* Faz o botão se comportar como um bloco na linha */
+    width: auto; /* Largura automática */
+    margin-bottom: 20px; /* Espaçamento abaixo do botão */
+
+    /* Estilos antigos mantidos: */
     background-color: var(--color-accent-blue);
     color: #ffffff;
     border: none;
-    padding: 8px 15px; /* Um pouco menor que o botão principal */
+    padding: 8px 15px; 
     font-size: 0.9em;
     font-family: 'Montserrat', sans-serif;
     font-weight: 700;
@@ -711,14 +710,8 @@ header {
 }
 
 /* ================================================== */
-/* == CORREÇÃO DO BUG: REMOVIDO O @media (max-width: 600px) == */
+/* == REMOVIDA A REGRA QUE ESCONDIA O BOTÃO == */
 /* ================================================== */
-/* @media (max-width: 600px) {
-    .btn-revendedor {
-        display: none;
-    }
-} 
-*/
 
 
 /* ========================================================== */
