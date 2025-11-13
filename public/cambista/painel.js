@@ -1,82 +1,184 @@
-@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Seletores
-    // Seletores Antigos
+    // Seletores (Baseado no seu arquivo 100% funcional)
     const welcomeEl = document.getElementById('cambista-welcome');
     const saldoEl = document.getElementById('cambista-saldo');
     const formGerar = document.getElementById('form-gerar-cartelas-cambista');
-@@ -14,6 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
+    const nomeInput = document.getElementById('manual-nome');
+    const telefoneInput = document.getElementById('manual-telefone');
+    const quantidadeInput = document.getElementById('quantidade-manual');
+    const custoVendaEl = document.getElementById('custo-venda');
+    const btnGerar = document.getElementById('btn-gerar-manual');
+    const vendaStatusEl = document.getElementById('venda-status');
+    const previewContainer = document.getElementById('cartelas-preview-container');
     const avisoImpressao = document.getElementById('aviso-impressao');
     const btnImprimir = document.getElementById('btn-imprimir');
 
-    // ==================================================
-    // --- INÍCIO DA MODIFICAÇÃO (NOVOS SELETORES) ---
-    // ==================================================
+    // Seletores do sistema de Afiliado (do seu HTML)
     const comissaoPendenteEl = document.getElementById('cambista-comissao-pendente');
     const linkAfiliadoInput = document.getElementById('cambista-link');
     const btnCopiarLink = document.getElementById('btn-copiar-link');
     const tabelaComissoesCorpo = document.getElementById('tabela-comissoes-corpo');
-    // ==================================================
-    // --- FIM DA MODIFICAÇÃO (NOVOS SELETORES) ---
-    // ==================================================
 
     let precoPorCartela = 5.00; // Valor padrão, será atualizado
 
     // Função para formatar BRL
-@@ -46,6 +57,18 @@ document.addEventListener('DOMContentLoaded', () => {
+    function formatarBRL(valor) {
+        const numero = parseFloat(valor);
+        if (isNaN(numero)) return 'R$ 0,00';
+        return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // Função para exibir mensagens de status
+    function mostrarStatus(elemento, mensagem, sucesso = true) {
+        if (!elemento) return; // Adicionado verificação de segurança
+        elemento.textContent = mensagem;
+        elemento.className = sucesso ? 'status-message status-success' : 'status-message status-error';
+        elemento.style.display = 'block';
+        setTimeout(() => { elemento.style.display = 'none'; }, 5000);
+    }
+
+    // 1. Carregar Status do Cambista (Saldo e Nome)
+    async function carregarStatus() {
+        try {
+            const response = await fetch('/cambista/meu-status');
+            if (!response.ok) {
+                if(response.status === 403) { window.location.href = '/cambista/login.html'; }
+                throw new Error('Falha ao carregar dados.');
+            }
+            const data = await response.json();
+
+            if (data.success) {
+                welcomeEl.textContent = `Bem-vindo, ${data.usuario}!`;
                 saldoEl.textContent = formatarBRL(data.saldo);
                 precoPorCartela = parseFloat(data.precoCartela || '5.00'); // Pega o preço da cartela
                 atualizarCustoVenda(); // Atualiza o custo
                 
-                // ==================================================
-                // --- INÍCIO DA MODIFICAÇÃO (EXIBIR LINK) ---
-                // ==================================================
+                // Lógica para exibir o link de afiliado
                 if (linkAfiliadoInput) {
                     // Monta o link de afiliado
                     linkAfiliadoInput.value = window.location.origin + '/index.html?ref=' + data.usuario;
                 }
-                // ==================================================
-                // --- FIM DA MODIFICAÇÃO (EXIBIR LINK) ---
-                // ==================================================
 
             } else {
                 throw new Error(data.message);
             }
-@@ -63,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
+        } catch (err) {
+            welcomeEl.textContent = "Erro ao carregar";
+            saldoEl.textContent = "R$ --,--";
+        }
     }
-    quantidadeInput.addEventListener('input', atualizarCustoVenda);
 
-    // 3. Listener do formulário "Gerar Venda"
+    // 2. Atualizar custo da venda
+    function atualizarCustoVenda() {
+        if (!quantidadeInput || !custoVendaEl) return; // Adicionado verificação
+        const qtd = parseInt(quantidadeInput.value) || 0;
+        const custo = qtd * precoPorCartela;
+        custoVendaEl.textContent = `Custo total desta venda: ${formatarBRL(custo)}`;
+    }
+    if (quantidadeInput) quantidadeInput.addEventListener('input', atualizarCustoVenda);
+
     // 3. Listener do formulário "Gerar Venda" (Venda Física)
-    formGerar.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const nome = nomeInput.value.trim();
-@@ -96,20 +119,17 @@ document.addEventListener('DOMContentLoaded', () => {
-            const data = await response.json();
+    if (formGerar) {
+        formGerar.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = nomeInput.value.trim();
+            const telefone = telefoneInput.value.trim();
+            const quantidade = parseInt(quantidadeInput.value);
 
-            if (response.ok && data.success) {
-                // Sucesso!
-                mostrarStatus(vendaStatusEl, 'Venda registrada! Cartelas geradas abaixo.', true);
-                formGerar.reset(); // Limpa o formulário
-                formGerar.reset(); 
-                saldoEl.textContent = formatarBRL(data.novoSaldo); // Atualiza o saldo na tela
-
-                // Renderiza as cartelas para impressão
-                data.cartelas.forEach(cartelaObj => {
-                    previewContainer.appendChild(criarVisualCartela(cartelaObj, nome));
-                });
-                avisoImpressao.style.display = 'none';
-                btnImprimir.style.display = 'block';
-
-            } else {
-                // Erro (ex: saldo insuficiente)
-                throw new Error(data.message || 'Erro desconhecido.');
+            if (!nome || !quantidade || quantidade < 1) {
+                mostrarStatus(vendaStatusEl, 'Preencha o nome do jogador e a quantidade.', false);
+                return;
             }
-        } catch (error) {
-@@ -147,6 +167,69 @@ document.addEventListener('DOMContentLoaded', () => {
-        divCartela.appendChild(grid); return divCartela;
+
+            if (!confirm(`Confirmar venda de ${quantidade} cartela(s) para ${nome}?`)) {
+                return;
+            }
+
+            btnGerar.disabled = true;
+            btnGerar.textContent = 'Gerando...';
+            previewContainer.innerHTML = ''; 
+            avisoImpressao.textContent = 'Gerando cartelas...';
+            avisoImpressao.style.display = 'block'; 
+            btnImprimir.style.display = 'none';
+
+            try {
+                const response = await fetch('/cambista/gerar-cartelas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ nome, telefone, quantidade }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Sucesso!
+                    mostrarStatus(vendaStatusEl, 'Venda registrada! Cartelas geradas abaixo.', true);
+                    formGerar.reset(); 
+                    saldoEl.textContent = formatarBRL(data.novoSaldo); // Atualiza o saldo na tela
+
+                    // Renderiza as cartelas para impressão
+                    data.cartelas.forEach(cartelaObj => {
+                        previewContainer.appendChild(criarVisualCartela(cartelaObj, nome));
+                    });
+                    avisoImpressao.style.display = 'none';
+                    btnImprimir.style.display = 'block';
+
+                } else {
+                    // Erro (ex: saldo insuficiente)
+                    throw new Error(data.message || 'Erro desconhecido.');
+                }
+            } catch (error) {
+                mostrarStatus(vendaStatusEl, error.message, false);
+                avisoImpressao.textContent = `Erro: ${error.message}`;
+            } finally {
+                btnGerar.disabled = false;
+                btnGerar.textContent = 'Gerar e Vender';
+            }
+        });
     }
+
+    // 4. Funções de Impressão (copiadas do painel.js)
+    if (btnImprimir) btnImprimir.addEventListener('click', () => { window.print(); });
+
+    // ==================================================
+    // --- INÍCIO DA MODIFICAÇÃO (MENSAGEM NA CARTELA) ---
+    // ==================================================
+    function criarVisualCartela(cartelaObj, nomeJogador) {
+        const divCartela = document.createElement('div'); divCartela.classList.add('mini-cartela');
+        const header = document.createElement('div'); header.classList.add('mini-cartela-header');
+        header.innerHTML = `
+            <span class="nome-jogador">${nomeJogador || ''}</span>
+            <span>Sorteio: #${cartelaObj?.s_id || '?'}</span>
+            <span>ID: ${cartelaObj?.c_id || '?'}</span>
+        `;
+        divCartela.appendChild(header);
+        const grid = document.createElement('div'); grid.classList.add('mini-cartela-grid');
+        const matriz = cartelaObj?.data || [];
+        for (let i = 0; i < 5; i++) {
+            for (let j = 0; j < 5; j++) {
+                const numDiv = document.createElement('div'); numDiv.classList.add('mini-cartela-num');
+                const valor = matriz[i]?.[j]; // Acesso seguro
+                if (valor === 'FREE') { numDiv.textContent = 'FREE'; numDiv.classList.add('free'); }
+                else { numDiv.textContent = valor || '?'; }
+                grid.appendChild(numDiv);
+            }
+        }
+        divCartela.appendChild(grid);
+        
+        // ADICIONADO O RODAPÉ COM A MENSAGEM
+        const footer = document.createElement('div');
+        footer.classList.add('mini-cartela-footer');
+        footer.innerHTML = `
+            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp 69 99908-3361</strong> para resgatar. O pagamento do prêmio pode demorar ate 48h.</p>
+        `;
+        divCartela.appendChild(footer);
+        
+        return divCartela;
+    }
+    // ==================================================
+    // --- FIM DA MODIFICAÇÃO ---
+    // ==================================================
 
 
     // ==================================================
@@ -86,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Botão de Copiar Link
     if (btnCopiarLink) {
         btnCopiarLink.addEventListener('click', () => {
+            if (!linkAfiliadoInput) return; // Adicionado verificação
             linkAfiliadoInput.select();
             try {
                 navigator.clipboard.writeText(linkAfiliadoInput.value);
@@ -107,22 +210,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (data.success) {
-                // Atualiza o total pendente
+                // ==================================================
+                // --- CORREÇÃO (Voltando para a lógica antiga do seu server) ---
+                // ==================================================
+                // Atualiza o total pendente (lendo data.totalPendente)
                 comissaoPendenteEl.textContent = formatarBRL(data.totalPendente);
+                // ==================================================
 
                 // Preenche a tabela
                 tabelaComissoesCorpo.innerHTML = ''; // Limpa "Carregando..."
-                if (data.comissoes.length > 0) {
+                if (data.comissoes && data.comissoes.length > 0) {
                     data.comissoes.forEach(c => {
                         const statusClasse = c.status_pagamento === 'pendente' ? 'status-pendente' : 'status-pago';
                         const linha = document.createElement('tr');
+                        
+                        // ==================================================
+                        // --- CORREÇÃO (Voltando para a lógica antiga do seu server) ---
+                        // ==================================================
                         linha.innerHTML = `
                             <td class="col-data">${c.data_formatada}</td>
                             <td class="col-nome">${c.nome_jogador}</td>
                             <td class="col-valor">${formatarBRL(c.valor_venda)}</td>
-                            <td class="col-valor">${formatarBRL(c.valor_comissao)}</td>
+                            <td class="col-valor" style="font-weight:bold; color:var(--color-pix-green);">${formatarBRL(c.valor_comissao)}</td>
                             <td class="col-status"><span class="status-pagamento ${statusClasse}">${c.status_pagamento}</span></td>
                         `;
+                        // ==================================================
+                        
                         tabelaComissoesCorpo.appendChild(linha);
                     });
                 } else {
