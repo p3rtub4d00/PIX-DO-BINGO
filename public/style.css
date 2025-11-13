@@ -763,3 +763,43 @@ footer {
     font-size: 1.2em;
     font-weight: 700;
 }
+
+/* ========================================================== */
+/* == NOVOS ESTILOS PARA TERMOS DE USO (index.html) == */
+/* ========================================================== */
+
+.card-regras {
+    text-align: left; /* Alinha o texto das regras à esquerda */
+    background-color: #fcfcfc; /* Um fundo levemente diferente */
+    border-top: 4px solid var(--color-pix-green);
+}
+
+.card-regras h2 {
+    text-align: center; /* Centraliza só o título */
+    font-size: 1.8em;
+    color: var(--color-text-heading);
+}
+
+.card-regras p {
+    text-align: center;
+    font-style: italic;
+    margin-bottom: 25px;
+}
+
+.card-regras ol {
+    padding-left: 20px; /* Espaçamento da lista ordenada */
+    margin: 0;
+}
+
+.card-regras li {
+    font-size: 1em;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    padding-left: 10px;
+}
+
+.card-regras li::marker {
+    font-weight: bold;
+    font-family: 'Montserrat', sans-serif;
+}
+
