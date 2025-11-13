@@ -449,13 +449,6 @@ html {
     font-weight: 900;
 }
 
-/* --- REMOÇÃO DOS ESTILOS ANTIGOS --- */
-/* .comprovante-ids { ... }
-.comprovante-detalhes { ... }
-*/
-
-/* --- (FIM DA REMOÇÃO) --- */
-
 #resultado-prova-cartela {
     display: none;
     margin-bottom: 25px;
@@ -502,9 +495,13 @@ html {
     align-items: center;
     margin-top: 20px;
     
-    /* Fica "preso" no final da rolagem */
     position: sticky; 
-    bottom: -30px; /* Ajusta para colar no fundo do padding */
+    
+    /* ================================================== */
+    /* == AQUI ESTÁ A CORREÇÃO == */
+    /* ================================================== */
+    bottom: 0; /* ANTES: -30px */
+    /* ================================================== */
     
     background-color: var(--color-bg-white); /* Fundo branco */
     
@@ -517,7 +514,11 @@ html {
     width: 100%; 
     margin-left: -30px;
     margin-right: -30px;
+    
+    /* Garante que os botões fiquem no fundo do padding */
+    margin-bottom: -30px; 
 }
+
 #btn-resultado-fechar,
 #btn-baixar-comprovante {
     width: 90%; 
