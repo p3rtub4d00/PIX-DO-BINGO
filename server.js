@@ -712,6 +712,66 @@ async function getUltimosVencedores() {
     return v.map(x => ({ sorteioId: x.sorteio_id, premio: x.premio, nome: x.nome }));
 }
 
+// --- FUNÇÃO PARA O PAINEL ADMIN (MONGODB) ---
+async function getAdminStatusData() {
+    const idSorteioAtual = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
+
+    const statusData = {
+        estado: estadoJogo,
+        sorteioAtual: idSorteioAtual,
+        tempoRestante: (estadoJogo === 'ESPERANDO') ? tempoRestante : null,
+        jogadoresReais: getContagemJogadores().reais,
+        vendasProximoSorteio: { qtd_cartelas: 0, valor_total: 0 },
+        receitaDoDia: 0,
+        proximoSorteioId: 0
+    };
+
+    try {
+        let proximoSorteioId = 0;
+        let matchCriteria = {};
+
+        if (sorteioEspecialEmAndamento) {
+            proximoSorteioId = idSorteioAtual;
+            matchCriteria = { tipo_sorteio: 'especial_agendado', sorteio_id_especial: idSorteioAtual };
+        } else {
+            proximoSorteioId = (estadoJogo === 'ESPERANDO') ? numeroDoSorteio : numeroDoSorteio + 1;
+            matchCriteria = { tipo_sorteio: 'regular', sorteio_id: proximoSorteioId };
+        }
+        statusData.proximoSorteioId = proximoSorteioId;
+
+        const vendasRes = await Venda.aggregate([
+            { $match: matchCriteria },
+            { $group: { _id: null, qtd: { $sum: 1 }, total: { $sum: "$valor_total" } } }
+        ]);
+
+        if (vendasRes.length > 0) {
+            statusData.vendasProximoSorteio = { 
+                qtd_cartelas: vendasRes[0].qtd, 
+                valor_total: vendasRes[0].total 
+            };
+        }
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const receitaRes = await Venda.aggregate([
+            { $match: { timestamp: { $gte: startOfDay, $lte: endOfDay } } },
+            { $group: { _id: null, total: { $sum: "$valor_total" } } }
+        ]);
+
+        if (receitaRes.length > 0) {
+            statusData.receitaDoDia = receitaRes[0].total;
+        }
+
+    } catch (error) {
+        console.error("Erro ao calcular status do admin:", error);
+    }
+
+    return statusData;
+}
+
 // Loop Principal
 setInterval(() => {
     verificarSorteioEspecial();
@@ -920,12 +980,14 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('criarPagamento', async (dados, cb) => {
-        // ... (Lógica de pagamento igual à anterior, mas salvando no Mongo)
-        // Por brevidade, use a lógica do Webhook acima para processar.
-        // O socket apenas inicia o processo.
-        const { nome, telefone, quantidade } = dados;
-        // ... (Mesmo código do seu server.js original para criar pagamento MP) ...
-        // ... (Mas salve em PagamentoPendente com .create) ...
+        const { nome, telefone, quantidade, refCode } = dados;
+        let cambistaIdParaSalvar = null;
+
+        if (refCode) {
+            const cambista = await Cambista.findOne({ usuario: refCode, ativo: true });
+            if (cambista) cambistaIdParaSalvar = cambista._id;
+        }
+
         try {
             if(!process.env.BASE_URL) return cb({success:false, message:'URL base não configurada'});
             const preco = parseFloat(PRECO_CARTELA);
@@ -946,7 +1008,7 @@ io.on('connection', async (socket) => {
             
             await PagamentoPendente.updateOne(
                 { payment_id: pid },
-                { socket_id: socket.id, dados_compra_json: JSON.stringify(dados) },
+                { socket_id: socket.id, dados_compra_json: JSON.stringify(dados), cambista_id: cambistaIdParaSalvar },
                 { upsert: true }
             );
             
@@ -955,6 +1017,14 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('criarPagamentoEspecial', async (dados, cb) => {
+        const { nome, telefone, quantidade, refCode } = dados;
+        let cambistaIdParaSalvar = null;
+
+        if (refCode) {
+            const cambista = await Cambista.findOne({ usuario: refCode, ativo: true });
+            if (cambista) cambistaIdParaSalvar = cambista._id;
+        }
+
         try {
             if(!process.env.BASE_URL) return cb({success:false, message:'URL base não configurada'});
             const preco = parseFloat(PRECO_CARTELA_ESPECIAL_ATUAL);
@@ -975,7 +1045,7 @@ io.on('connection', async (socket) => {
             
             await PagamentoPendente.updateOne(
                 { payment_id: pid },
-                { socket_id: socket.id, dados_compra_json: JSON.stringify(dados) },
+                { socket_id: socket.id, dados_compra_json: JSON.stringify(dados), cambista_id: cambistaIdParaSalvar },
                 { upsert: true }
             );
             
@@ -1036,6 +1106,16 @@ io.on('connection', async (socket) => {
                 jogadores[socket.id] = { nome: p.nome, telefone: p.telefone, cartelas: p.cartelas };
                 io.emit('contagemJogadores', getContagemJogadores());
             } else socket.emit('cartelaAntiga');
+        }
+    });
+    
+    // --- ATUALIZAÇÃO DO PAINEL ADMIN (SOCKET) ---
+    socket.on('getAdminStatus', async () => {
+        try {
+            const statusData = await getAdminStatusData();
+            socket.emit('adminStatusUpdate', statusData);
+        } catch (e) {
+            console.error("Erro ao processar getAdminStatus:", e);
         }
     });
     
