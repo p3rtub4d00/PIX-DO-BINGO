@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - Bingo do Pix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1 class="title-gradient"><a href="index.html" style="text-decoration:none; color:inherit;">BINGO DO PIX</a></h1>
+    </header>
+    <main>
+        <div class="card login-container" style="max-width: 400px; margin: 0 auto;">
+            <h2>Crie sua Carteira</h2>
+            <p>Compre cartelas com 1 clique usando seu saldo!</p>
+            <form id="form-register-player">
+                <div class="form-grupo">
+                    <label>Nome Completo:</label>
+                    <input type="text" id="reg-nome" required>
+                </div>
+                <div class="form-grupo">
+                    <label>Telefone (Será seu Login):</label>
+                    <input type="tel" id="reg-telefone" placeholder="Ex: 69999999999" required>
+                </div>
+                <div class="form-grupo">
+                    <label>Senha:</label>
+                    <input type="password" id="reg-senha" required>
+                </div>
+                <button type="submit" class="btn-comprar btn-comprar-azul">Cadastrar</button>
+            </form>
+            <p style="margin-top: 20px;">Já tem conta? <a href="login.html" style="color:var(--color-accent-blue); font-weight:bold;">Faça Login</a></p>
+        </div>
+    </main>
+    <script>
+        document.getElementById('form-register-player').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('reg-nome').value;
+            const telefone = document.getElementById('reg-telefone').value;
+            const senha = document.getElementById('reg-senha').value;
+            
+            try {
+                const res = await fetch('/api/player/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nome, telefone, senha})
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('Cadastro realizado! Você será redirecionado.');
+                    window.location.href = 'minha-conta.html';
+                } else {
+                    alert(data.message || 'Erro ao cadastrar');
+                }
+            } catch(e) { alert('Erro de conexão'); }
+        });
+    </script>
+</body>
+</html>
