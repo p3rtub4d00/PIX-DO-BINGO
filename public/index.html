@@ -6,45 +6,19 @@
     <title>Bingo do Pix - Jogue e Ganhe!</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .loader-pix {
-            border: 6px solid #f3f3f3;
-            border-top: 6px solid var(--color-pix-green);
-            border-radius: 50%;
-            width: 40px; height: 40px;
-            animation: spin 1.5s linear infinite;
-            margin: 20px auto 10px auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .legal-links { padding-top: 15px; border-top: 1px solid #444; margin-top: 15px; max-width: 800px; margin-left: auto; margin-right: auto; padding-left: 15px; padding-right: 15px; }
-        .legal-warning { font-size: 0.85em; color: #ccc; opacity: 0.7; line-height: 1.5; margin: 5px 0; }
-    </style>
 </head>
 <body>
     <header>
-        <div class="header-top">
-            <a href="revendedor.html" class="btn-revendedor">Seja um Revendedor</a>
-            <div id="user-header-area">
-                <div id="guest-buttons">
-                    <button id="btn-login-modal" class="btn-small">Entrar</button>
-                    <button id="btn-cadastro-modal" class="btn-small btn-destaque">Cadastrar</button>
-                </div>
-                <div id="logged-user-info" style="display: none;">
-                    <span id="user-name-display">Olá, Visitante</span>
-                    <div class="user-balance" id="btn-abrir-carteira">
-                        <i class="fas fa-wallet"></i> <span id="user-balance-display">R$ 0,00</span>
-                    </div>
-                    <button id="btn-logout" class="btn-small btn-red">Sair</button>
-                </div>
-            </div>
-        </div>
+        <a href="revendedor.html" class="btn-revendedor">
+            Seja um Revendedor
+        </a>
 
         <h1 class="title-gradient">BINGO DO PIX</h1>
         <p class="slogan">Sua sorte em um clique!</p>
     </header>
 
     <main>
+
         <section id="status-sorteio-box" class="card status-esperando"> 
             <h3 id="status-titulo">CARREGANDO STATUS...</h3>
             <div id="status-cronometro">--:--</div>
@@ -59,9 +33,11 @@
                 <p class="premio-sub">Cartela Cheia no Pix!</p>
             </div>
             <p class="data-sorteio data-especial" id="especial-data">🗓️ ... 🕖</p>
+            
             <button id="btn-jogue-especial" class="btn-comprar btn-destaque btn-jogue" style="background-color: #fff; color: var(--color-pix-green); margin-top: 25px;">
                 Comprar p/ Especial (<span id="especial-preco-cartela">R$ ...</span>)
             </button>
+            
             <p class="info-especial" style="margin-top: 15px;">(A compra é antecipada. O sorteio será automático na data marcada)</p>
         </section>
         
@@ -94,68 +70,79 @@
                     <label for="modal-telefone-recuperar" style="font-weight: 700;">Seu Telefone (com DDD):</label>
                     <input type="tel" id="modal-telefone-recuperar" placeholder="Ex: 69912345678" required>
                 </div>
+
                 <div class="botoes-consulta-container" style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button type="submit" id="btn-recuperar-cartelas" class="btn-comprar btn-comprar-azul" style="flex: 1;">Ver Minhas Compras</button>
-                    <button type="button" id="btn-checar-premios" class="btn-comprar btn-destaque" style="flex: 1;">Verificar Prêmios</button>
+                    
+                    <button type="submit" id="btn-recuperar-cartelas" class="btn-comprar btn-comprar-azul" style="flex: 1;">
+                        Ver Minhas Compras
+                    </button>
+                    
+                    <button type="button" id="btn-checar-premios" class="btn-comprar btn-destaque" style="flex: 1;">
+                        Verificar Prêmios
+                    </button>
+
                 </div>
             </form>
         </section>
         
         <section class="card card-regras">
             <details>
-                <summary><h2>Termos de Uso e Regras do Sorteio</h2><span>(Clique para expandir)</span></summary>
+                <summary>
+                    <h2>Termos de Uso e Regras do Sorteio</h2>
+                    <span>(Clique para expandir)</span>
+                </summary>
+                
                 <div class="regras-conteudo">
-                    <p>Ao adquirir uma ou mais cartelas, você concorda com os seguintes termos:</p>
+                    <p>Ao adquirir uma ou mais cartelas, você declara que leu e concorda com os seguintes termos:</p>
+                    
                     <ol>
-                        <li><strong>Elegibilidade:</strong> Proibido para menores de 18 anos.</li>
-                        <li><strong>Aquisição:</strong> Compras via PIX ou Saldo em Carteira.</li>
-                        <li><strong>Sorteio:</strong> Ocorrem em horários determinados.</li>
-                        <li><strong>Premiação:</strong> Ganha quem completar a cartela ou linha primeiro.</li>
-                        <li><strong>Resgate:</strong> Contate o WhatsApp em até 48h.</li>
+                        <li><strong>Elegibilidade:</strong> A participação é estritamente proibida para menores de 18 anos.</li>
+                        <li><strong>Aquisição:</strong> As cartelas são vendidas exclusivamente via PIX. O comprovante da compra é o seu registro no sistema.</li>
+                        <li><strong>Sorteio:</strong> Os sorteios ocorrem em datas e horários pré-determinados (para sorteios especiais) ou em contagem regressiva (para sorteios regulares), conforme indicado no painel "Status do Sorteio".</li>
+                        <li><strong>Premiação (Linha):</strong> O primeiro jogador (ou jogadores) a completar uma linha horizontal, vertical ou diagonal ganha o prêmio "Linha".</li>
+                        <li><strong>Premiação (Cartela Cheia):</strong> O primeiro jogador (ou jogadores) a completar todos os números da sua cartela ganha o prêmio "Cartela Cheia". O sorteio se encerra neste momento.</li>
+                        <li><strong>Resgate do Prêmio:</strong> O vencedor (seja de Linha ou Cheia) deve entrar em contato com a administração através do <strong>WhatsApp 69 99908-3361</strong> para validar a cartela e receber o prêmio.</li>
+                        <li><strong>Prazo de Pagamento:</strong> O prazo para o pagamento do prêmio pela administração é de até <strong>48 horas</strong> após a validação do comprovante.</li>
+                        <li><strong>Responsabilidade:</strong> É responsabilidade do jogador fornecer o nome e telefone (PIX) corretos no momento da compra. Pagamentos serão enviados para o PIX (telefone) cadastrado.</li>
+                        <li><strong>Reembolso:</strong> Não haverá reembolso de cartelas após o início do sorteio correspondente.</li>
                     </ol>
                 </div>
+
             </details>
         </section>
-    </main>
+        </main>
 
     <footer>
         <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+        
         <div class="legal-links">
-            <p class="legal-warning">Jogue com responsabilidade. Atividade proibida para menores de 18 anos.</p>
+            <p class="legal-warning">Jogue com responsabilidade. Atividade de aposta proibida para menores de 18 anos.</p>
+            <p class="legal-warning">Bingo do Pix é um site operado sob a autorização nº 345.987.221/MFA, em conformidade com as diretrizes do Ministério da Fazenda.</p>
         </div>
     </footer>
 
     <div id="modal-checkout" class="modal-overlay">
         <div class="modal-content">
              <span class="modal-close">&times;</span>
+            
             <div id="etapa-dados">
                 <h2 class="title-gradient" id="modal-titulo">Complete seu Pedido</h2>
-                <div class="tabs-pagamento">
-                    <button class="tab-btn active" data-method="pix">Pagar com PIX</button>
-                    <button class="tab-btn" data-method="carteira" id="tab-carteira">Usar Carteira</button>
-                </div>
                 <form id="form-checkout">
                     <div class="form-grupo"><label for="modal-nome">Seu Nome Completo:</label><input type="text" id="modal-nome" placeholder="Nome para o prêmio" required></div>
-                    <div class="form-grupo"><label for="modal-telefone">Telefone (c/ DDD):</label><input type="tel" id="modal-telefone" placeholder="Ex: 69912345678" required></div>
+                    <div class="form-grupo"><label for="modal-telefone">Telefone (c/ DDD):</label><input type="tel" id="modal-telefone" placeholder="Ex: 69912345678 (para o Pix)" required></div>
                     <div class="form-grupo"><label for="modal-quantidade">Quantidade de Cartelas (<span id="modal-label-preco">R$ ...</span> cada):</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
                 </form>
                 <div id="resumo-preco"><p>Valor total: <strong id="modal-preco" class="text-pix">R$ ...</strong></p></div>
-                
-                <div id="area-pagamento-pix">
-                    <p class="modal-info">Um QR Code Pix será gerado para pagamento.</p>
-                    <button id="btn-gerar-pix" class="btn-comprar btn-destaque">Gerar PIX</button>
-                </div>
-                <div id="area-pagamento-carteira" style="display: none;">
-                    <p class="modal-info">Saldo disponível: <strong id="carteira-saldo-modal" class="text-pix">R$ 0,00</strong></p>
-                    <button id="btn-pagar-saldo" class="btn-comprar btn-comprar-azul">Confirmar Compra</button>
-                    <p id="msg-erro-saldo" class="error-message" style="display:none; text-align:center;">Saldo insuficiente.</p>
-                </div>
+                <p class="modal-info">Um QR Code Pix será gerado para pagamento.</p>
+                <button id="btn-gerar-pix" class="btn-comprar btn-destaque">Gerar PIX</button>
             </div>
 
             <div id="etapa-pix" style="display: none;">
                 <h2 class="title-gradient">Pague com PIX</h2>
                 <p>Escaneie o QR Code ou use o "Copia e Cola".</p>
-                <div id="pix-qrcode-container"><img id="pix-qrcode-img" src="" alt="QR Code PIX" style="max-width: 250px; width: 100%; border: 2px solid #ddd; border-radius: 8px;"></div>
+                <div id="pix-qrcode-container">
+                    <img id="pix-qrcode-img" src="" alt="QR Code PIX" style="max-width: 250px; width: 100%; border: 2px solid #ddd; border-radius: 8px;">
+                </div>
                 <div class="form-grupo" style="margin-top: 15px;">
                     <label>PIX Copia e Cola:</label>
                     <input type="text" id="pix-copia-cola" readonly style="font-size: 0.9em; padding: 8px; text-align: center;">
@@ -164,65 +151,15 @@
                 <div id="aguardando-pagamento">
                     <div class="loader-pix"></div>
                     <strong>Aguardando Pagamento...</strong>
-                    <p class="modal-info">Não feche esta janela. Você será redirecionado automaticamente.</p>
+                    <p class="modal-info">Não feche esta janela. Você será redirecionado automaticamente após a confirmação.</p>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div id="modal-login" class="modal-overlay">
-        <div class="modal-content">
-            <span class="modal-close" id="close-login">&times;</span>
-            <h2 class="title-gradient">Entrar</h2>
-            <form id="form-login">
-                <div class="form-grupo"><label>Telefone:</label><input type="tel" id="login-telefone" required></div>
-                <div class="form-grupo"><label>Senha:</label><input type="password" id="login-senha" required></div>
-                <button type="submit" class="btn-comprar btn-destaque">Entrar</button>
-            </form>
-            <p style="margin-top:15px; font-size:0.9em;">Não tem conta? <a href="#" id="link-ir-cadastro" style="color:var(--color-accent-blue); font-weight:bold;">Cadastre-se</a></p>
-        </div>
-    </div>
-
-    <div id="modal-cadastro" class="modal-overlay">
-        <div class="modal-content">
-            <span class="modal-close" id="close-cadastro">&times;</span>
-            <h2 class="title-gradient">Criar Conta</h2>
-            <form id="form-cadastro">
-                <div class="form-grupo"><label>Nome Completo:</label><input type="text" id="cad-nome" required></div>
-                <div class="form-grupo"><label>Telefone (Login):</label><input type="tel" id="cad-telefone" placeholder="69999..." required></div>
-                <div class="form-grupo"><label>Senha:</label><input type="password" id="cad-senha" required></div>
-                <button type="submit" class="btn-comprar btn-comprar-azul">Cadastrar</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="modal-carteira" class="modal-overlay">
-        <div class="modal-content">
-            <span class="modal-close" id="close-carteira">&times;</span>
-            <h2 class="title-gradient">Minha Carteira</h2>
-            <div class="carteira-saldo-box">
-                <p>Seu Saldo</p>
-                <h1 id="carteira-saldo-valor" class="text-pix">R$ 0,00</h1>
-            </div>
-            <div class="carteira-acoes">
-                <h3>Adicionar Saldo</h3>
-                <div class="form-grupo">
-                    <label>Valor (R$):</label>
-                    <input type="number" id="deposito-valor" min="1" step="1" value="20">
-                </div>
-                <button id="btn-gerar-deposito" class="btn-comprar btn-destaque">Gerar PIX Depósito</button>
-                <div id="deposito-pix-area" style="display:none; margin-top:15px; border-top:1px dashed #ddd; padding-top:15px;">
-                    <p>Pague o PIX para adicionar saldo:</p>
-                    <input type="text" id="deposito-copia-cola" readonly style="width:100%; padding:5px; font-size:0.8em; text-align:center;">
-                    <button id="btn-copiar-deposito" class="btn-small" style="margin-top:5px;">Copiar</button>
-                    <p style="font-size:0.8em; color:#666; margin-top:5px;">Aguardando pagamento...</p>
-                </div>
-            </div>
-            <div id="historico-transacoes" style="margin-top:20px; text-align:left; max-height:150px; overflow-y:auto; border-top:1px solid #eee;"></div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
-</body>
+    
+    </body>
 </html>
