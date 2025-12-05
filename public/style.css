@@ -887,3 +887,103 @@ footer {
     font-weight: bold;
     font-family: 'Montserrat', sans-serif;
 }
+
+/* ... (Mantenha seu CSS existente acima) ... */
+
+/* --- HEADER USUÁRIO --- */
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    margin-bottom: 10px;
+}
+#user-header-area {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.btn-small {
+    padding: 5px 12px;
+    font-size: 0.9em;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    font-weight: bold;
+    background-color: #eee;
+    color: #333;
+}
+.btn-small.btn-destaque {
+    background-color: var(--color-pix-green);
+    color: #fff;
+}
+.btn-small.btn-red {
+    background-color: #dc3545;
+    color: #fff;
+}
+.user-balance {
+    background-color: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    font-weight: bold;
+    color: var(--color-pix-green);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.user-balance:hover {
+    background-color: #e9ecef;
+}
+
+/* --- ABAS DE PAGAMENTO NO MODAL --- */
+.tabs-pagamento {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+}
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: none;
+    border: none;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+}
+.tab-btn.active {
+    color: var(--color-accent-blue);
+    border-bottom-color: var(--color-accent-blue);
+}
+
+/* --- MODAL CARTEIRA --- */
+.carteira-saldo-box {
+    background: linear-gradient(135deg, var(--color-pix-green), #007bff);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+.carteira-saldo-box h1 {
+    font-size: 3em;
+    margin: 5px 0 0 0;
+    color: #fff !important;
+}
+.carteira-acoes {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+}
+.transacao-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9em;
+    display: flex;
+    justify-content: space-between;
+}
+.transacao-item.tipo-deposito { color: green; }
+.transacao-item.tipo-compra { color: red; }
