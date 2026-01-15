@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo do Pix - Jogue e Ganhe!</title>
+    
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00ff88"> <link rel="apple-touch-icon" href="imagens/icon-192.png">
+
+    <style>
+        .btn-instalar-app {
+            background: linear-gradient(45deg, #25D366, #128C7E);
+            color: #fff;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 50px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            text-transform: uppercase;
+            width: 90%;
+            max-width: 400px;
+            margin: 10px auto 20px auto; /* Margem para separar do topo e do resto */
+            display: block; /* Garante que fique em linha própria */
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+            animation: pulse 2s infinite;
+            text-align: center;
+            text-decoration: none;
+            display: none; /* Começa oculto, o script mostra se for celular */
+        }
+        
+        .btn-instalar-app i {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(37, 211, 102, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="revendedor.html" class="btn-revendedor">
+            Seja um Revendedor
+        </a>
+
+        <h1 class="title-gradient">BINGO DO PIX</h1>
+        <p class="slogan">Sua sorte em um clique!</p>
+    </header>
+
+    <main>
+
+        <button id="btn-instalar" class="btn-instalar-app">
+            <i class="fas fa-download"></i> Baixar Aplicativo
+        </button>
+
+        <section id="status-sorteio-box" class="card status-esperando"> 
+            <h3 id="status-titulo">CARREGANDO STATUS...</h3>
+            <div id="status-cronometro">--:--</div>
+            <p id="status-subtexto">Garanta já sua cartela!</p>
+            <a href="/dashboard" id="btn-assistir-vivo" class="btn-comprar btn-comprar-azul" style="display: none;">Assistir ao Vivo!</a>
+        </section>
+
+        <section id="premio-especial" class="card destaque-especial" style="display: none;">
+             <h2>✨ SORTEIO ESPECIAL AGENDADO ✨</h2>
+            <div class="premio-destaque-especial">
+                <span class="premio-valor premio-valor-especial text-pix" id="especial-valor">R$ ...</span>
+                <p class="premio-sub">Cartela Cheia no Pix!</p>
+            </div>
+            <p class="data-sorteio data-especial" id="especial-data">🗓️ ... 🕖</p>
+            
+            <button id="btn-jogue-especial" class="btn-comprar btn-destaque btn-jogue" style="background-color: #fff; color: var(--color-pix-green); margin-top: 25px;">
+                Comprar p/ Especial (<span id="especial-preco-cartela">R$ ...</span>)
+            </button>
+            
+            <p class="info-especial" style="margin-top: 15px;">(A compra é antecipada. O sorteio será automático na data marcada)</p>
+        </section>
+        
+        <section id="premio-info" class="card">
+            <h2>Próximo Sorteio Regular:</h2>
+            <div class="premios-container">
+                <div class="premio-item premio-principal">
+                    <span class="premio-label">Cartela Cheia</span>
+                    <span class="premio-valor premio-valor-cheia text-pix" id="index-premio-cheia">R$ ...</span>
+                    <span class="premio-sub">no Pix!</span>
+                </div>
+                <div class="premio-divisor"></div>
+                <div class="premio-item premio-secundario">
+                     <span class="premio-label">Linha</span>
+                     <span class="premio-valor premio-valor-linha text-pix" id="index-premio-linha">R$ ...</span>
+                    <span class="premio-sub">no Pix!</span>
+                </div>
+            </div>
+            <button id="btn-jogue-agora" class="btn-comprar btn-destaque btn-jogue">
+                Comprar Cartela (<span id="index-preco-cartela">R$ ...</span>)
+            </button>
+            <p class="aviso-preco">*Preço por cartela individual.</p>
+        </section>
+
+        <section id="minhas-cartelas" class="card">
+            <h2>Já jogou? Consulte seu número!</h2>
+            <p>Digite o número de telefone (com DDD) que você usou no PIX.</p>
+            <form id="form-recuperar-cartelas" style="max-width: 450px; margin: 0 auto;">
+                <div class="form-grupo">
+                    <label for="modal-telefone-recuperar" style="font-weight: 700;">Seu Telefone (com DDD):</label>
+                    <input type="tel" id="modal-telefone-recuperar" placeholder="Ex: 69912345678" required>
+                </div>
+
+                <div class="botoes-consulta-container" style="display: flex; gap: 10px; margin-top: 15px;">
+                    
+                    <button type="submit" id="btn-recuperar-cartelas" class="btn-comprar btn-comprar-azul" style="flex: 1;">
+                        Ver Minhas Compras
+                    </button>
+                    
+                    <button type="button" id="btn-checar-premios" class="btn-comprar btn-destaque" style="flex: 1;">
+                        Verificar Prêmios
+                    </button>
+
+                </div>
+            </form>
+        </section>
+        
+        <section class="card card-regras">
+            <details>
+                <summary>
+                    <h2>Termos de Uso e Regras do Sorteio</h2>
+                    <span>(Clique para expandir)</span>
+                </summary>
+                
+                <div class="regras-conteudo">
+                    <p>Ao adquirir uma ou mais cartelas, você declara que leu e concorda com os seguintes termos:</p>
+                    
+                    <ol>
+                        <li><strong>Elegibilidade:</strong> A participação é estritamente proibida para menores de 18 anos.</li>
+                        <li><strong>Aquisição:</strong> As cartelas são vendidas exclusivamente via PIX. O comprovante da compra é o seu registro no sistema.</li>
+                        <li><strong>Sorteio:</strong> Os sorteios ocorrem em datas e horários pré-determinados (para sorteios especiais) ou em contagem regressiva (para sorteios regulares), conforme indicado no painel "Status do Sorteio".</li>
+                        <li><strong>Premiação (Linha):</strong> O primeiro jogador (ou jogadores) a completar uma linha horizontal, vertical ou diagonal ganha o prêmio "Linha".</li>
+                        <li><strong>Premiação (Cartela Cheia):</strong> O primeiro jogador (ou jogadores) a completar todos os números da sua cartela ganha o prêmio "Cartela Cheia". O sorteio se encerra neste momento.</li>
+                        <li><strong>Resgate do Prêmio:</strong> O vencedor (seja de Linha ou Cheia) deve entrar em contato com a administração através do <strong>WhatsApp 69 99908-3361</strong> para validar a cartela e receber o prêmio.</li>
+                        <li><strong>Prazo de Pagamento:</strong> O prazo para o pagamento do prêmio pela administração é de até <strong>48 horas</strong> após a validação do comprovante.</li>
+                        <li><strong>Responsabilidade:</strong> É responsabilidade do jogador fornecer o nome e telefone (PIX) corretos no momento da compra. Pagamentos serão enviados para o PIX (telefone) cadastrado.</li>
+                        <li><strong>Reembolso:</strong> Não haverá reembolso de cartelas após o início do sorteio correspondente.</li>
+                    </ol>
+                </div>
+
+            </details>
+        </section>
+        </main>
+
+    <footer>
+        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
+        
+        <div class="legal-links">
+            <p class="legal-warning">Jogue com responsabilidade. Atividade de aposta proibida para menores de 18 anos.</p>
+            <p class="legal-warning">Bingo do Pix é um site operado sob a autorização nº 345.987.221/MFA, em conformidade com as diretrizes do Ministério da Fazenda.</p>
+        </div>
+    </footer>
+
+    <div id="modal-checkout" class="modal-overlay">
+        <div class="modal-content">
+             <span class="modal-close">&times;</span>
+            
+            <div id="etapa-dados">
+                <h2 class="title-gradient" id="modal-titulo">Complete seu Pedido</h2>
+                <form id="form-checkout">
+                    <div class="form-grupo"><label for="modal-nome">Seu Nome Completo:</label><input type="text" id="modal-nome" placeholder="Nome para o prêmio" required></div>
+                    <div class="form-grupo"><label for="modal-telefone">Telefone (c/ DDD):</label><input type="tel" id="modal-telefone" placeholder="Ex: 69912345678 (para o Pix)" required></div>
+                    <div class="form-grupo"><label for="modal-quantidade">Quantidade de Cartelas (<span id="modal-label-preco">R$ ...</span> cada):</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
+                </form>
+                <div id="resumo-preco"><p>Valor total: <strong id="modal-preco" class="text-pix">R$ ...</strong></p></div>
+                <p class="modal-info">Um QR Code Pix será gerado para pagamento.</p>
+                <button id="btn-gerar-pix" class="btn-comprar btn-destaque">Gerar PIX</button>
+            </div>
+
+            <div id="etapa-pix" style="display: none;">
+                <h2 class="title-gradient">Pague com PIX</h2>
+                <p>Escaneie o QR Code ou use o "Copia e Cola".</p>
+                <div id="pix-qrcode-container">
+                    <img id="pix-qrcode-img" src="" alt="QR Code PIX" style="max-width: 250px; width: 100%; border: 2px solid #ddd; border-radius: 8px;">
+                </div>
+                <div class="form-grupo" style="margin-top: 15px;">
+                    <label>PIX Copia e Cola:</label>
+                    <input type="text" id="pix-copia-cola" readonly style="font-size: 0.9em; padding: 8px; text-align: center;">
+                    <button id="btn-copiar-pix" class="btn-comprar btn-comprar-azul" style="font-size: 0.9em; padding: 8px; margin-top: 5px;">Copiar Código</button>
+                </div>
+                <div id="aguardando-pagamento">
+                    <div class="loader-pix"></div>
+                    <strong>Aguardando Pagamento...</strong>
+                    <p class="modal-info">Não feche esta janela. Você será redirecionado automaticamente após a confirmação.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+        // 1. Registrar o Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registrado:', reg.scope))
+                    .catch(err => console.log('Falha ao registrar SW:', err));
+            });
+        }
+
+        // 2. Lógica do Botão de Instalação
+        let deferredPrompt;
+        const installBtn = document.getElementById('btn-instalar');
+
+        // Ouve o evento que diz "este site pode ser instalado"
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); // Impede o banner padrão do Chrome (que é feio)
+            deferredPrompt = e; // Salva o evento para usar depois
+            
+            // Mostra o nosso botão bonito
+            if(installBtn) installBtn.style.display = 'block';
+        });
+
+        // Quando clicar no botão
+        if(installBtn) {
+            installBtn.addEventListener('click', () => {
+                if(deferredPrompt) {
+                    deferredPrompt.prompt(); // Mostra a pergunta nativa do celular "Deseja instalar?"
+                    
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('Usuário aceitou instalar');
+                            installBtn.style.display = 'none'; // Esconde o botão após aceitar
+                        }
+                        deferredPrompt = null;
+                    });
+                }
+            });
+        }
+    </script>
+    
+    </body>
+</html>
