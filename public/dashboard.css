@@ -13,7 +13,7 @@
 
 body.dashboard-body {
     height: 100vh; width: 100vw;
-    overflow: hidden; /* Trava rolagem geral */
+    overflow: hidden; /* Trava rolagem na TV */
     background: radial-gradient(circle at center, #101820 0%, #000000 100%);
     font-family: 'Montserrat', sans-serif;
     color: white;
@@ -32,21 +32,21 @@ body.dashboard-body {
 .header-controls { display: flex; align-items: center; gap: 2vw; }
 #btn-toggle-som { background: transparent; border: none; color: white; font-size: 3vh; cursor: pointer; }
 
-.estado-texto { font-size: 2.5vh; padding: 0.5vh 2vw; border-radius: 5px; font-weight: bold; text-transform: uppercase; }
+.estado-texto { font-size: 2.5vh; padding: 0.5vh 2vw; border-radius: 5px; font-weight: bold; text-transform: uppercase; white-space: nowrap; }
 .estado-esperando { background: #333; color: #999; }
 .estado-jogando-linha { background: #007bff; color: white; box-shadow: 0 0 15px #007bff; }
 .estado-jogando-cheia { background: #ff0000; color: white; box-shadow: 0 0 20px #ff0000; animation: pulse 1s infinite; }
 
-/* --- GRID PRINCIPAL --- */
+/* --- GRID PRINCIPAL (LAYOUT TV) --- */
 .dashboard-main-fullscreen {
     display: grid;
-    grid-template-columns: 70% 28%; /* Ajuste para caber bem na TV */
+    grid-template-columns: 70% 28%; /* Layout Lado a Lado */
     gap: 2%;
     height: calc(100vh - var(--header-height));
     padding: var(--main-padding);
 }
 
-/* --- ÁREA ESQUERDA --- */
+/* --- ÁREA ESQUERDA (BOLA + TABULEIRO) --- */
 .area-principal {
     background: var(--bg-glass);
     border-radius: 20px;
@@ -55,11 +55,12 @@ body.dashboard-body {
     padding: 2vh;
     box-shadow: 0 0 50px rgba(0,0,0,0.5);
     height: 100%;
+    overflow: hidden;
 }
 
 #dash-ultimo-numero-wrapper {
     flex: 0 0 auto;
-    height: 35%;
+    height: 35%; /* Altura fixa na TV */
     display: flex; justify-content: center; align-items: center;
     margin-bottom: 1vh;
 }
@@ -127,12 +128,11 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
 .text-pix-sidebar { color: var(--neon-green); font-weight: bold; font-size: 2.2vh; }
 
 #quase-la { flex: 0 0 auto; min-height: 15vh; display: flex; flex-direction: column; }
-#lista-quase-la { flex: 1; overflow-y: auto; } /* Rolagem se precisar */
+#lista-quase-la { flex: 1; overflow-y: auto; }
 
 #ultimos-ganhadores { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 #lista-ganhadores { flex: 1; overflow-y: auto; padding-right: 5px; }
 
-/* Item da lista de ganhadores */
 #lista-ganhadores div {
     background: rgba(0, 255, 191, 0.1);
     border-left: 0.5vh solid var(--neon-green);
@@ -142,16 +142,11 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
 
 /* --- ÁREA DE ANÚNCIOS (SLIDER) --- */
 .anuncio-area-espera {
-    width: 100%;
-    max-width: 800px;
-    aspect-ratio: 16/9;
-    background-color: #000;
-    border-radius: 15px;
+    width: 100%; max-width: 800px; aspect-ratio: 16/9;
+    background-color: #000; border-radius: 15px;
     border: 2px solid rgba(255,255,255,0.1);
-    overflow: hidden;
-    position: relative;
-    margin: 0 auto 20px auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    overflow: hidden; position: relative;
+    margin: 0 auto 20px auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 .slide {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -162,28 +157,13 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
 .slide img, .slide video { width: 100%; height: 100%; object-fit: contain; }
 
 /* --- OVERLAYS --- */
-#anuncio-vencedor-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.9); z-index: 6000;
-    display: flex; justify-content: center; align-items: center;
-    opacity: 0; visibility: hidden; transition: opacity 0.3s;
-}
+#anuncio-vencedor-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 6000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
 #anuncio-vencedor-overlay.ativo { opacity: 1 !important; visibility: visible !important; }
-.anuncio-vencedor-box {
-    background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
-    padding: 5vh; border-radius: 30px; border: 5px solid white;
-    text-align: center; color: black; transform: scale(0.8);
-    animation: popIn 0.5s forwards;
-}
+.anuncio-vencedor-box { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); padding: 5vh; border-radius: 30px; border: 5px solid white; text-align: center; color: black; transform: scale(0.8); animation: popIn 0.5s forwards; }
 #anuncio-vencedor-premio { font-size: 6vh; font-weight: 900; margin: 0; }
 #anuncio-vencedor-nome { font-size: 8vh; font-weight: 900; margin: 10px 0; }
 
-.anuncio-espera-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.95); z-index: 5000;
-    display: flex; justify-content: center; align-items: center; flex-direction: column;
-    opacity: 1; visibility: visible; transition: opacity 0.5s;
-}
+.anuncio-espera-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 5000; display: flex; justify-content: center; align-items: center; flex-direction: column; opacity: 1; visibility: visible; transition: opacity 0.5s; }
 .anuncio-espera-overlay.oculto { opacity: 0; visibility: hidden; pointer-events: none; }
 .anuncio-espera-container { width: 90%; max-width: 1000px; text-align: center; }
 .anuncio-espera-container h1 { font-size: 5vh; color: var(--neon-blue); margin-bottom: 2vh; }
@@ -192,3 +172,82 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
 @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes slideLeft { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes pulse { 0% { box-shadow: 0 0 20px red; } 50% { box-shadow: 0 0 50px red; } 100% { box-shadow: 0 0 20px red; } }
+
+/* ========================================================================== */
+/* === RESPONSIVIDADE (CELULAR E TABLET) - ADICIONADO AQUI === */
+/* ========================================================================== */
+
+/* Tablets (Retrato) e Celulares */
+@media (max-width: 1024px) {
+    body.dashboard-body {
+        overflow-y: auto; /* Permite rolagem na vertical */
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .dashboard-header {
+        height: auto;
+        min-height: 80px;
+        padding: 15px;
+        flex-direction: column; /* Empilha logo e status */
+        gap: 10px;
+    }
+
+    #dash-sorteio-id-header { font-size: 1.5rem; }
+    
+    .dashboard-main-fullscreen {
+        display: flex;
+        flex-direction: column; /* Empilha os blocos */
+        height: auto;
+        gap: 20px;
+    }
+
+    /* Área da Bola e Tabuleiro */
+    .area-principal {
+        height: auto;
+        overflow: visible;
+    }
+
+    #dash-ultimo-numero-wrapper {
+        height: auto;
+        margin-bottom: 20px;
+    }
+
+    #dash-ultimo-numero {
+        height: 150px; /* Tamanho fixo para celular */
+        font-size: 80px;
+        border-width: 5px;
+    }
+
+    /* Tabuleiro ajustado para telas pequenas */
+    #dash-globo-numeros {
+        gap: 4px;
+        padding: 10px;
+    }
+    .dash-globo-numero {
+        font-size: 14px; /* Fonte legível */
+        border-width: 1px;
+    }
+
+    /* Barra Lateral (Prêmios e Ganhadores) */
+    .barra-lateral {
+        height: auto;
+        overflow: visible;
+    }
+    
+    .barra-lateral section {
+        margin-bottom: 10px;
+    }
+    
+    /* Ajuste de fontes para mobile */
+    .barra-lateral h2 { font-size: 1.2rem; }
+    .info-item { font-size: 1rem; }
+    .text-pix-sidebar { font-size: 1.2rem; }
+    #anuncio-vencedor-nome { font-size: 2rem; }
+    #anuncio-vencedor-premio { font-size: 3rem; }
+    
+    /* Overlay de Espera Mobile */
+    .anuncio-espera-container h1 { font-size: 1.5rem; }
+    #espera-cronometro-display { font-size: 4rem; }
+    .anuncio-area-espera { width: 95%; margin-bottom: 10px; }
+}
