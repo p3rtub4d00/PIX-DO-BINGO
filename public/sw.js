@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bingo-pix-v3'; // Mudei para v3 para forçar atualização imediata
+const CACHE_NAME = 'bingo-pix-v4'; // Mudei para v4 para forçar limpeza
 const urlsToCache = [
   '/',
   '/index.html',
@@ -29,6 +29,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('Limpando cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -39,13 +40,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // CORREÇÃO DO ERRO: 
-  // 1. Ignora requisições que não sejam GET (POST, PUT, etc travam o cache)
-  // 2. Ignora requisições do Socket.io (comunicação em tempo real)
-  if (event.request.method !== 'GET' || event.request.url.includes('/socket.io/')) {
+  // *** AQUI ESTÁ A CORREÇÃO DO ERRO DO CONSOLE ***
+  
+  // 1. Ignora qualquer requisição que NÃO seja GET (como POST do login/socket)
+  if (event.request.method !== 'GET') {
     return; 
   }
 
+  // 2. Ignora explicitamente o Socket.io e APIs (não devem ser cacheados)
+  const url = event.request.url;
+  if (url.includes('/socket.io/') || url.includes('transport=polling')) {
+    return;
+  }
+
+  // Lógica normal de cache para arquivos estáticos
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -54,6 +62,7 @@ self.addEventListener('fetch', (event) => {
         }
         return fetch(event.request).then(
           (response) => {
+            // Verifica se a resposta é válida antes de cachear
             if(!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
