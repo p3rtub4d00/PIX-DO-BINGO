@@ -2,119 +2,86 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sala de Jogo - Bingo do Pix</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bingo Ao Vivo</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1e293b">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="jogo.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    </head>
-<body>
-    <header>
-        <h1 class="title-gradient">BINGO DO PIX</h1>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body class="game-body">
+
+    <header class="game-header">
+        <div class="header-left">
+            <div class="game-logo">BINGO<span class="highlight">PIX</span></div>
+            <div id="sorteio-id-display" class="badge-id">#ID</div>
+        </div>
+        
+        <div class="header-right">
+             <button id="btn-toggle-som" class="btn-som">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+            <div class="status-live">AO VIVO</div>
+        </div>
     </header>
 
-    <main class="jogo-main">
-        
-        <section id="painel-sorteio" class="card">
+    <main class="game-main">
+
+        <section class="destaque-container">
+            <p class="label-sorteio">BOLA DA VEZ</p>
             
-            <div class="painel-header-flex">
-                <h2 id="sorteio-id-display" class="text-pix">Sorteio #...</h2>
-                <button id="btn-toggle-som" title="Ativar/Desativar Som">
-                    <i class="fas fa-volume-xmark"></i>
-                </button>
+            <div class="bola-gigante-wrapper">
+                <div id="ultimo-numero-sorteado" class="bola-gigante">--</div>
             </div>
-            <h2>Último Sorteado</h2>
-            <div id="ultimo-numero-wrapper">
-                <span id="ultimo-numero-sorteado" class="text-pix">--</span>
-            </div>
-            <h2>Todos os Números Sorteados</h2>
-            <div id="globo-numeros"></div>
         </section>
 
-        <section id="area-jogador" class="card">
-            
-            <div id="cartela-switcher">
-                <button id="btn-cartela-anterior" class="btn-switch" disabled>&lt;</button>
-                <div class="cartela-titulo-wrapper">
-                    <h2 id="cartela-titulo-atual">Minhas Cartelas</h2>
-                    <span id="cartela-id-display">ID: ...</span>
+        <section class="historico-wrapper">
+            <div class="label-hist">Últimas Chamadas:</div>
+            <div id="globo-numeros" class="globo-scroll">
                 </div>
-                <button id="btn-cartela-proxima" class="btn-switch" disabled>&gt;</button>
+        </section>
+
+        <section class="cartelas-wrapper">
+            <div class="cartelas-header-ctrl">
+                <button id="btn-cartela-anterior" class="btn-nav"><i class="fa-solid fa-chevron-left"></i></button>
+                
+                <span id="cartela-titulo-atual" class="paginacao-txt">Carregando...</span>
+                
+                <button id="btn-cartela-proxima" class="btn-nav"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
 
-            <div id="cartelas-container">
+            <div id="cartelas-container" class="container-cartelas-visual">
                 </div>
-            <button id="btn-bingo" class="btn-comprar btn-destaque">BINGO!</button>
+            
+            <div id="cartela-id-display" class="cartela-hash"></div>
         </section>
+
+        <button id="btn-bingo" style="display:none;">BINGO</button>
 
     </main>
 
-    <footer>
-        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
-    </footer>
-
-    <div id="modal-resultado" class="modal-overlay">
-        <div class="modal-content" id="modal-vencedor-conteudo">
+    <div id="modal-resultado" class="modal-overlay-game">
+        <div class="modal-content-game animate-pop">
+            <div class="trofeu-icon"><i class="fa-solid fa-trophy"></i></div>
             
-            <div id="area-comprovante">
-
-                <div class="comprovante-header">
-                    <h3 class="title-gradient">BINGO DO PIX</h3>
-                    <span>Comprovante de Premiação</span>
-                </div>
-
-                <h2 id="resultado-titulo" class="title-gradient"><i class="fas fa-trophy"></i> PARABÉNS!</h2>
-                
-                <p id="resultado-mensagem">O vencedor foi...</p>
-
-                <div class="comprovante-dados-grid">
-                    <div class="dado-item">
-                        <span>Nome:</span>
-                        <strong id="comprovante-nome">...</strong>
-                    </div>
-                    <div class="dado-item">
-                        <span>Prêmio:</span>
-                        <strong id="comprovante-premio" class="text-pix">...</strong>
-                    </div>
-                    <div class="dado-item">
-                        <span>Sorteio:</span>
-                        <strong id="comprovante-sorteio-id">...</strong>
-                    </div>
-                    <div class="dado-item">
-                        <span>Cartela:</span>
-                        <strong id="comprovante-cartela-id">...</strong>
-                    </div>
-                </div>
-                
-                <p class="comprovante-aviso">
-                    Atenção: Você tem 48 horas para entrar em contato com a administração pelo número <strong>69 99908-3361</strong> e receber seu prêmio.
-                </p>
-                <div id="resultado-prova-cartela" style="display: none;">
-                    <h4>Sua Cartela Vencedora:</h4>
-                    <div id="cartela-vencedora-display" class="cartela-jogador">
-                        </div>
-                </div>
-
-                <div class="comprovante-footer">
-                    <span id="comprovante-data">Data: ...</span>
-                </div>
-            </div>
-            <div class="modal-botoes">
-                <button id="btn-baixar-comprovante" class="btn-comprar btn-comprar-azul" style="display: none;">
-                    Baixar Comprovante (PDF)
-                </button>
-                <button id="btn-resultado-fechar" class="btn-comprar btn-destaque">
-                    OK
-                </button>
-            </div>
+            <h1 id="resultado-titulo">TEMOS UM VENCEDOR!</h1>
+            
+            <p id="resultado-mensagem" class="msg-win"></p>
+            
+            <div id="lista-ganhadores" class="lista-win"></div>
+            
+            <button id="btn-fechar-resultado" class="btn-fechar-win">Continuar / Fechar</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
     <script src="jogo.js"></script>
 </body>
 </html>
