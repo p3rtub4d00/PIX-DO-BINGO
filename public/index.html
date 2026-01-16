@@ -2,200 +2,209 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bingo do Pix - Jogue e Ganhe!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bingo do Pix - Oficial</title>
+    <meta name="theme-color" content="#00C853">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#00ff88"> <link rel="apple-touch-icon" href="imagens/icon-192.png">
-
-    <style>
-        .btn-instalar-app {
-            background: linear-gradient(45deg, #25D366, #128C7E);
-            color: #fff;
-            border: none;
-            padding: 15px 20px;
-            border-radius: 50px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 900;
-            font-size: 16px;
-            text-transform: uppercase;
-            width: 90%;
-            max-width: 400px;
-            margin: 10px auto 20px auto; /* Margem para separar do topo e do resto */
-            display: block; /* Garante que fique em linha própria */
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
-            animation: pulse 2s infinite;
-            text-align: center;
-            text-decoration: none;
-            display: none; /* Começa oculto, o script mostra se for celular */
-        }
-        
-        .btn-instalar-app i {
-            margin-right: 10px;
-            font-size: 1.2em;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
-            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(37, 211, 102, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
-        }
-    </style>
 </head>
 <body>
-    <header>
-        <a href="revendedor.html" class="btn-revendedor">
-            Seja um Revendedor
-        </a>
 
-        <h1 class="title-gradient">BINGO DO PIX</h1>
-        <p class="slogan">Sua sorte em um clique!</p>
+    <header class="hero-header">
+        <div class="top-bar">
+            <div class="logo-area">
+                <i class="fa-solid fa-gem logo-icon"></i>
+                <span>BINGO<span class="highlight">PIX</span></span>
+            </div>
+            <a href="revendedor.html" class="btn-revendedor-outline">
+                <i class="fa-solid fa-briefcase"></i> Revender
+            </a>
+        </div>
+        
+        <div class="hero-content">
+            <h1 class="main-title">SUA SORTE<br>ESTÁ AQUI</h1>
+            <p class="subtitle">Prêmios instantâneos direto na sua conta Pix.</p>
+        </div>
+        
+        <svg class="hero-waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="#f4f7f6" fill-opacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>
     </header>
 
-    <main>
+    <main class="container">
 
-        <button id="btn-instalar" class="btn-instalar-app">
-            <i class="fas fa-download"></i> Baixar Aplicativo
-        </button>
-
-        <section id="status-sorteio-box" class="card status-esperando"> 
-            <h3 id="status-titulo">CARREGANDO STATUS...</h3>
-            <div id="status-cronometro">--:--</div>
-            <p id="status-subtexto">Garanta já sua cartela!</p>
-            <a href="/dashboard" id="btn-assistir-vivo" class="btn-comprar btn-comprar-azul" style="display: none;">Assistir ao Vivo!</a>
+        <section id="status-sorteio-box" class="card-glass status-esperando animate-up"> 
+            <div class="status-icon"><i class="fa-regular fa-clock"></i></div>
+            <h3 id="status-titulo">PRÓXIMO SORTEIO</h3>
+            <div id="status-cronometro" class="timer-display">--:--</div>
+            <p id="status-subtexto">Prepare-se para ganhar!</p>
+            <a href="/dashboard" id="btn-assistir-vivo" class="btn-live pulse-red" style="display: none;">
+                <i class="fa-solid fa-video"></i> ASSISTIR AO VIVO
+            </a>
         </section>
 
-        <section id="premio-especial" class="card destaque-especial" style="display: none;">
-             <h2>✨ SORTEIO ESPECIAL AGENDADO ✨</h2>
-            <div class="premio-destaque-especial">
-                <span class="premio-valor premio-valor-especial text-pix" id="especial-valor">R$ ...</span>
-                <p class="premio-sub">Cartela Cheia no Pix!</p>
+        <section id="premio-especial" class="card-glass card-especial animate-up" style="display: none;">
+            <div class="badge-especial">🌟 SUPER PRÊMIO</div>
+            <h2>SORTEIO ESPECIAL</h2>
+            
+            <div class="premio-destaque-box">
+                <span class="moeda">R$</span>
+                <span id="especial-valor" class="valor-zao">...</span>
             </div>
-            <p class="data-sorteio data-especial" id="especial-data">🗓️ ... 🕖</p>
+            <p class="desc-premio">Prêmio Cartela Cheia</p>
             
-            <button id="btn-jogue-especial" class="btn-comprar btn-destaque btn-jogue" style="background-color: #fff; color: var(--color-pix-green); margin-top: 25px;">
-                Comprar p/ Especial (<span id="especial-preco-cartela">R$ ...</span>)
+            <div class="data-box">
+                <i class="fa-regular fa-calendar-days"></i>
+                <span id="especial-data">...</span>
+            </div>
+            
+            <button id="btn-jogue-especial" class="btn-action btn-gold pulse">
+                QUERO PARTICIPAR <br>
+                <small>(<span id="especial-preco-cartela">R$ ...</span>)</small>
             </button>
-            
-            <p class="info-especial" style="margin-top: 15px;">A compra é antecipada. O sorteio será automático na data marcada</p>
+            <p class="nota-rodape">Compra antecipada. Sorteio automático.</p>
         </section>
         
-        <section id="premio-info" class="card">
-            <h2>Próximo Sorteio Regular:</h2>
-            <div class="premios-container">
-                <div class="premio-item premio-principal">
-                    <span class="premio-label">Cartela Cheia</span>
-                    <span class="premio-valor premio-valor-cheia text-pix" id="index-premio-cheia">R$ ...</span>
-                    <span class="premio-sub">no Pix!</span>
+        <section id="premio-info" class="card-glass animate-up delay-1">
+            <div class="header-section">
+                <h2>RODADA ATUAL</h2>
+                <div class="line"></div>
+            </div>
+
+            <div class="premios-grid">
+                <div class="premio-card principal">
+                    <div class="icon-trophy"><i class="fa-solid fa-trophy"></i></div>
+                    <span class="label">Cartela Cheia</span>
+                    <span class="valor text-gradient" id="index-premio-cheia">R$ ...</span>
                 </div>
-                <div class="premio-divisor"></div>
-                <div class="premio-item premio-secundario">
-                     <span class="premio-label">Linha</span>
-                     <span class="premio-valor premio-valor-linha text-pix" id="index-premio-linha">R$ ...</span>
-                    <span class="premio-sub">no Pix!</span>
+                
+                <div class="premio-card secundario">
+                    <div class="icon-medal"><i class="fa-solid fa-medal"></i></div>
+                    <span class="label">Linha</span>
+                    <span class="valor" id="index-premio-linha">R$ ...</span>
                 </div>
             </div>
-            <button id="btn-jogue-agora" class="btn-comprar btn-destaque btn-jogue">
-                Comprar Cartela <span id="index-preco-cartela">R$ ...</span>
+
+            <button id="btn-jogue-agora" class="btn-action btn-green pulse">
+                COMPRAR CARTELA <br>
+                <small>APENAS <span id="index-preco-cartela">R$ ...</span></small>
             </button>
-            <p class="aviso-preco">*Preço por cartela individual.</p>
         </section>
 
-        <section id="minhas-cartelas" class="card">
-            <h2>Já jogou? Consulte seu número!</h2>
-            <p>Digite o número de telefone (com DDD) que você usou no PIX.</p>
-            <form id="form-recuperar-cartelas" style="max-width: 450px; margin: 0 auto;">
-                <div class="form-grupo">
-                    <label for="modal-telefone-recuperar" style="font-weight: 700;">Seu Telefone (com DDD):</label>
-                    <input type="tel" id="modal-telefone-recuperar" placeholder="Ex: 69912345678" required>
+        <section id="minhas-cartelas" class="card-simple animate-up delay-2">
+            <div class="card-header-icon">
+                <i class="fa-solid fa-ticket"></i>
+            </div>
+            <h2>Minhas Cartelas</h2>
+            <p>Já comprou? Digite seu número para conferir.</p>
+            
+            <form id="form-recuperar-cartelas" class="search-form">
+                <div class="input-wrapper">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    <input type="tel" id="modal-telefone-recuperar" placeholder="DDD + Número (Ex: 699...)" required>
                 </div>
 
-                <div class="botoes-consulta-container" style="display: flex; gap: 10px; margin-top: 15px;">
-                    
-                    <button type="submit" id="btn-recuperar-cartelas" class="btn-comprar btn-comprar-azul" style="flex: 1;">
-                        Ver Minhas Compras
+                <div class="action-buttons">
+                    <button type="submit" id="btn-recuperar-cartelas" class="btn-outline">
+                        <i class="fa-solid fa-search"></i> Ver Cartelas
                     </button>
-                    
-                    <button type="button" id="btn-checar-premios" class="btn-comprar btn-destaque" style="flex: 1;">
-                        Verificar Prêmios
+                    <button type="button" id="btn-checar-premios" class="btn-outline secondary">
+                        <i class="fa-solid fa-gift"></i> Ver Prêmios
                     </button>
-
                 </div>
             </form>
         </section>
         
-        <section class="card card-regras">
-            <details>
+        <section class="card-simple accordion-card animate-up delay-3">
+            <details class="custom-details">
                 <summary>
-                    <h2>Termos de Uso e Regras do Sorteio</h2>
-                    <span>(Clique para expandir)</span>
+                    <div class="summary-content">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Regras e Termos de Uso</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down arrow"></i>
                 </summary>
                 
                 <div class="regras-conteudo">
-                    <p>Ao adquirir uma ou mais cartelas, você declara que leu e concorda com os seguintes termos:</p>
-                    
-                    <ol>
-                        <li><strong>Elegibilidade:</strong> A participação é estritamente proibida para menores de 18 anos.</li>
-                        <li><strong>Aquisição:</strong> As cartelas são vendidas exclusivamente via PIX. O comprovante da compra é o seu registro no sistema.</li>
-                        <li><strong>Sorteio:</strong> Os sorteios ocorrem em datas e horários pré-determinados (para sorteios especiais) ou em contagem regressiva (para sorteios regulares), conforme indicado no painel "Status do Sorteio".</li>
-                        <li><strong>Premiação (Linha):</strong> O primeiro jogador (ou jogadores) a completar uma linha horizontal, vertical ou diagonal ganha o prêmio "Linha".</li>
-                        <li><strong>Premiação (Cartela Cheia):</strong> O primeiro jogador (ou jogadores) a completar todos os números da sua cartela ganha o prêmio "Cartela Cheia". O sorteio se encerra neste momento.</li>
-                        <li><strong>Resgate do Prêmio:</strong> O vencedor (seja de Linha ou Cheia) deve entrar em contato com a administração através do <strong>WhatsApp 69 99908-3361</strong> para validar a cartela e receber o prêmio.</li>
-                        <li><strong>Prazo de Pagamento:</strong> O prazo para o pagamento do prêmio pela administração é de até <strong>48 horas</strong> após a validação do comprovante.</li>
-                        <li><strong>Responsabilidade:</strong> É responsabilidade do jogador fornecer o nome e telefone (PIX) corretos no momento da compra. Pagamentos serão enviados para o PIX (telefone) cadastrado.</li>
-                        <li><strong>Reembolso:</strong> Não haverá reembolso de cartelas após o início do sorteio correspondente.</li>
-                    </ol>
+                    <p>Ao adquirir cartelas, você concorda:</p>
+                    <ul class="lista-regras">
+                        <li>🔞 <strong>Proibido para menores de 18 anos.</strong></li>
+                        <li>💳 Vendas exclusivas via PIX Automático.</li>
+                        <li>🕒 Prazo de pagamento de prêmios: Até 48h úteis.</li>
+                        <li>📞 Suporte: WhatsApp (69) 99908-3361.</li>
+                        <li>🏆 Ganhadores de Linha ou Cheia devem contatar o suporte.</li>
+                    </ul>
                 </div>
-
             </details>
         </section>
-        </main>
+
+    </main>
 
     <footer>
-        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
-        
-        <div class="legal-links">
-            <p class="legal-warning">Jogue com responsabilidade. Atividade de aposta proibida para menores de 18 anos.</p>
-            <p class="legal-warning">Bingo do Pix é um site operado sob a autorização nº 345.987.221/MFA, em conformidade com as diretrizes do Ministério da Fazenda.</p>
+        <div class="footer-content">
+            <p>&copy; 2024 Bingo do Pix.</p>
+            <div class="trust-badges">
+                <i class="fa-brands fa-pix"></i>
+                <i class="fa-solid fa-shield-halved"></i>
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <p class="legal">Jogue com responsabilidade. Sistema verificado.</p>
         </div>
     </footer>
 
     <div id="modal-checkout" class="modal-overlay">
-        <div class="modal-content">
-             <span class="modal-close">&times;</span>
+        <div class="modal-content-glass">
+             <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
             
             <div id="etapa-dados">
-                <h2 class="title-gradient" id="modal-titulo">Complete seu Pedido</h2>
+                <div class="modal-header">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <h2 id="modal-titulo">Checkout</h2>
+                </div>
+                
                 <form id="form-checkout">
-                    <div class="form-grupo"><label for="modal-nome">Seu Nome Completo:</label><input type="text" id="modal-nome" placeholder="Nome para o prêmio" required></div>
-                    <div class="form-grupo"><label for="modal-telefone">Telefone (c/ DDD):</label><input type="tel" id="modal-telefone" placeholder="Ex: 69912345678 (para o Pix)" required></div>
-                    <div class="form-grupo"><label for="modal-quantidade">Quantidade de Cartelas (<span id="modal-label-preco">R$ ...</span> cada):</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
+                    <div class="input-group">
+                        <label>Nome Completo</label>
+                        <input type="text" id="modal-nome" placeholder="Seu nome" required>
+                    </div>
+                    <div class="input-group">
+                        <label>WhatsApp (Pix)</label>
+                        <input type="tel" id="modal-telefone" placeholder="(DD) 99999-9999" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Quantidade (<span id="modal-label-preco">R$ ...</span>)</label>
+                        <input type="number" id="modal-quantidade" min="1" value="1" required>
+                    </div>
                 </form>
-                <div id="resumo-preco"><p>Valor total: <strong id="modal-preco" class="text-pix">R$ ...</strong></p></div>
-                <p class="modal-info">Um QR Code Pix será gerado para pagamento.</p>
-                <button id="btn-gerar-pix" class="btn-comprar btn-destaque">Gerar PIX</button>
+
+                <div class="total-box">
+                    <span>Total a pagar:</span>
+                    <strong id="modal-preco" class="text-green">R$ ...</strong>
+                </div>
+                
+                <button id="btn-gerar-pix" class="btn-modal-action">
+                    GERAR PIX <i class="fa-solid fa-qrcode"></i>
+                </button>
             </div>
 
             <div id="etapa-pix" style="display: none;">
-                <h2 class="title-gradient">Pague com PIX</h2>
-                <p>Escaneie o QR Code ou use o "Copia e Cola".</p>
-                <div id="pix-qrcode-container">
-                    <img id="pix-qrcode-img" src="" alt="QR Code PIX" style="max-width: 250px; width: 100%; border: 2px solid #ddd; border-radius: 8px;">
+                <h2 class="pix-title">Pagamento via Pix</h2>
+                <p class="pix-instruction">Escaneie ou copie o código abaixo:</p>
+                
+                <div id="pix-qrcode-container" class="qr-wrapper">
+                    <img id="pix-qrcode-img" src="" alt="QR Code PIX">
                 </div>
-                <div class="form-grupo" style="margin-top: 15px;">
-                    <label>PIX Copia e Cola:</label>
-                    <input type="text" id="pix-copia-cola" readonly style="font-size: 0.9em; padding: 8px; text-align: center;">
-                    <button id="btn-copiar-pix" class="btn-comprar btn-comprar-azul" style="font-size: 0.9em; padding: 8px; margin-top: 5px;">Copiar Código</button>
+                
+                <div class="copia-cola-wrapper">
+                    <input type="text" id="pix-copia-cola" readonly>
+                    <button id="btn-copiar-pix"><i class="fa-regular fa-copy"></i> Copiar</button>
                 </div>
-                <div id="aguardando-pagamento">
-                    <div class="loader-pix"></div>
-                    <strong>Aguardando Pagamento...</strong>
-                    <p class="modal-info">Não feche esta janela. Você será redirecionado automaticamente após a confirmação.</p>
+                
+                <div id="aguardando-pagamento" class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Confirmando pagamento...</p>
+                    <small>Não feche esta tela.</small>
                 </div>
             </div>
 
@@ -204,47 +213,5 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
-
-    <script>
-        // 1. Registrar o Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker registrado:', reg.scope))
-                    .catch(err => console.log('Falha ao registrar SW:', err));
-            });
-        }
-
-        // 2. Lógica do Botão de Instalação
-        let deferredPrompt;
-        const installBtn = document.getElementById('btn-instalar');
-
-        // Ouve o evento que diz "este site pode ser instalado"
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); // Impede o banner padrão do Chrome (que é feio)
-            deferredPrompt = e; // Salva o evento para usar depois
-            
-            // Mostra o nosso botão bonito
-            if(installBtn) installBtn.style.display = 'block';
-        });
-
-        // Quando clicar no botão
-        if(installBtn) {
-            installBtn.addEventListener('click', () => {
-                if(deferredPrompt) {
-                    deferredPrompt.prompt(); // Mostra a pergunta nativa do celular "Deseja instalar?"
-                    
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            console.log('Usuário aceitou instalar');
-                            installBtn.style.display = 'none'; // Esconde o botão após aceitar
-                        }
-                        deferredPrompt = null;
-                    });
-                }
-            });
-        }
-    </script>
-    
-    </body>
+</body>
 </html>
