@@ -1,5 +1,7 @@
-/* --- SALA DE ESPERA PREMIUM --- */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;700&display=swap');
+
+/* Reset Básico */
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -11,81 +13,129 @@ body {
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
-    text-align: center;
 }
 
-/* Container Central */
+/* Container Principal */
 .espera-container {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 40px 20px;
-    border-radius: 20px;
-    max-width: 500px;
+    background: white; /* Fundo branco para contraste das informações */
+    color: #1e293b;    /* Texto escuro para leitura */
     width: 100%;
-    margin-top: 40px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    max-width: 600px;
+    border-radius: 20px;
+    padding: 30px 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    text-align: center;
+    margin-top: 20px;
 }
 
-/* Título */
-h1 {
-    font-size: 2rem;
+/* Header */
+.espera-header {
+    font-size: 1.5rem;
     font-weight: 900;
-    margin-bottom: 10px;
-    color: #00C853; /* Verde Pix */
-    text-transform: uppercase;
+    margin-bottom: 20px;
+    color: #1e293b;
     letter-spacing: 1px;
 }
+.highlight { color: #00C853; }
+.logo-icon { color: #00C853; }
 
-/* Subtítulo */
-p.subtitulo {
-    font-size: 1rem;
-    color: #cbd5e1;
+h1 {
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin-bottom: 5px;
+    color: #00C853;
+}
+.subtitulo { color: #64748b; font-size: 0.9rem; margin-bottom: 25px; }
+
+/* Status e Cronômetro */
+.status-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 15px;
+    padding: 20px;
     margin-bottom: 30px;
 }
 
-/* Animação (Loading) */
 .loader-espera {
-    width: 60px;
-    height: 60px;
-    border: 5px solid rgba(255, 255, 255, 0.1);
-    border-top: 5px solid #00C853;
+    width: 40px; height: 40px;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #00C853;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto 30px auto;
+    margin: 0 auto 15px auto;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+#status-titulo { font-size: 1rem; color: #64748b; text-transform: uppercase; margin-bottom: 5px; }
+.timer-display { 
+    font-family: 'Roboto', sans-serif; 
+    font-size: 3rem; 
+    font-weight: 900; 
+    color: #1e293b; 
+    line-height: 1; 
 }
 
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* ÁREA DAS CARTELAS (IMPORTANTE) */
+#area-cartelas { margin-top: 20px; text-align: center; }
+#area-cartelas h3 { font-size: 1rem; color: #64748b; margin-bottom: 15px; text-transform: uppercase; }
 
-/* Mensagem de Status */
-.status-message {
-    font-family: 'Roboto', sans-serif;
-    font-size: 1.2rem;
-    font-weight: 700;
-    background: rgba(0, 200, 83, 0.1);
-    color: #00E676;
-    padding: 15px;
+.grid-cartelas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+
+/* ESTILIZAÇÃO GENÉRICA PARA CARTELAS (Caso o JS crie divs com classe 'cartela') */
+.cartela {
+    background: #f1f5f9;
+    border: 2px solid #cbd5e1;
     border-radius: 10px;
-    border: 1px solid rgba(0, 200, 83, 0.3);
-    display: inline-block;
-    width: 100%;
+    padding: 10px;
+    width: 140px; /* Tamanho fixo para ficar bonito */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.cartela-header {
+    background: #00C853;
+    color: white;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 5px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+.linha { display: flex; justify-content: space-between; margin-bottom: 2px; }
+.coluna { width: 20%; text-align: center; font-weight: bold; font-size: 0.8rem; }
+.numero {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 2px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #333;
+}
+.marcado {
+    background-color: #ef4444 !important; /* Vermelho para marcado */
+    color: white !important;
+    border-color: #ef4444 !important;
 }
 
-/* Botão Voltar (Opcional) */
+/* Botão Voltar */
 .btn-voltar {
-    margin-top: 30px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.7);
-    padding: 10px 20px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: 700;
-    text-decoration: none;
     display: inline-block;
+    margin-top: 30px;
+    color: #64748b;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border: 1px solid #cbd5e1;
+    padding: 10px 25px;
+    border-radius: 50px;
     transition: 0.3s;
 }
-.btn-voltar:hover {
-    background: white;
-    color: #0f172a;
-}
+.btn-voltar:hover { background: #1e293b; color: white; border-color: #1e293b; }
+
+/* Animação de Entrada */
+.animate-up { animation: fadeUp 0.6s ease forwards; opacity: 0; transform: translateY(20px); }
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
