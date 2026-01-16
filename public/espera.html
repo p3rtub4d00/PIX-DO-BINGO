@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aguardando Sorteio - Bingo Pix</title>
+    <title>Aguardando Sorteio</title>
     
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#00C853">
@@ -12,63 +12,45 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="jogo.css">
-    
-    <style>
-        /* Ajuste para centralizar o card na tela */
-        body.espera-body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            margin: 0;
-        }
-        .espera-card {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            width: 100%;
-            max-width: 450px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            text-align: center;
-        }
-        .aviso { color: #64748b; margin-top: 20px; }
-    </style>
 </head>
 <body class="espera-body">
 
     <div class="espera-card animate-up">
         
-        <div class="game-header-logo" style="margin-bottom: 20px; color: #1e293b; font-size: 1.5rem; font-weight: 900;">
+        <div class="game-logo" style="margin-bottom: 20px; color: #1e293b; font-size: 1.8rem; text-align: center;">
             <i class="fa-solid fa-gem" style="color:#00C853"></i> BINGO<span style="color:#00C853">PIX</span>
         </div>
 
         <h1 style="font-size: 1rem; color: #64748b; margin-bottom: 5px; text-transform: uppercase; font-weight: 700;">PRÓXIMO SORTEIO:</h1>
         
-        <div id="sorteio-id-display" class="badge-id" style="background: #334155; color: white; padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 15px;">#CARREGANDO</div>
+        <div id="sorteio-id-display" class="badge-id" style="display: inline-block; font-size: 0.9rem; padding: 5px 10px; margin-bottom: 15px;">#CARREGANDO</div>
 
-        <div id="cronometro" class="timer-display" style="color: #1e293b; font-size: 3.5rem; margin: 10px 0; font-weight: 900; font-family: 'Roboto', sans-serif;">--:--</div>
+        <div id="cronometro" class="timer-display" style="color: #1e293b; font-size: 4rem; margin: 10px 0; font-weight: 900; font-family: 'Roboto', sans-serif;">--:--</div>
         
-        <div class="loader-espera" style="border: 4px solid #f3f3f3; border-top: 4px solid #00C853; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px auto;"></div>
+        <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 20px;">
+            <div style="width: 10px; height: 10px; background: #00C853; border-radius: 50%; animation: pulse 1s infinite;"></div>
+            <div style="width: 10px; height: 10px; background: #00C853; border-radius: 50%; animation: pulse 1s infinite 0.2s;"></div>
+            <div style="width: 10px; height: 10px; background: #00C853; border-radius: 50%; animation: pulse 1s infinite 0.4s;"></div>
+        </div>
+        
         <p style="color: #64748b; margin-bottom: 20px; font-size: 0.9rem;">Aguarde o início da transmissão...</p>
 
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin-bottom: 20px;">
 
-        <div id="cartela-switcher" class="cartela-controls" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px;">
+        <div id="cartela-switcher" class="cartela-controls">
             <button id="btn-cartela-anterior" class="btn-nav"><i class="fa-solid fa-chevron-left"></i></button>
             
-            <span id="cartela-titulo-atual" class="paginacao-txt" style="font-weight: 700; color: #00C853;">Carregando...</span>
+            <span id="cartela-titulo-atual" class="cartela-paginacao" style="color: #00C853; font-weight: 700;">Carregando...</span>
             
             <button id="btn-cartela-proxima" class="btn-nav"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
 
-        <div id="cartelas-container" class="container-cartelas-visual" style="display: flex; justify-content: center; min-height: 320px;">
+        <div id="cartelas-container" style="display: flex; justify-content: center; margin-top: 10px;">
             </div>
 
         <div id="cartela-id-display" style="margin-top: 15px; font-size: 0.8rem; color: #94a3b8; font-family: monospace;"></div>
 
-        <a href="/" class="btn-outline" style="margin-top: 25px; display: inline-block; text-decoration: none; color: #1e293b; border: 1px solid #e2e8f0; padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 0.9rem;">
+        <a href="/" class="btn-fechar-win" style="margin-top: 25px; display: inline-block; text-decoration: none; background: white; color: #1e293b; border: 1px solid #e2e8f0; font-size: 0.9rem;">
             <i class="fa-solid fa-house"></i> Voltar ao Início
         </a>
 
@@ -76,6 +58,5 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="espera.js"></script>
-    <style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
 </body>
 </html>
