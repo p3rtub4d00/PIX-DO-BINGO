@@ -44,8 +44,8 @@
             </div>
             <div id="status-cronometro" class="timer-display">--:--</div>
             <p id="status-subtexto">Prepare-se para o próximo sorteio!</p>
-            <a href="/dashboard" id="btn-assistir-vivo" class="btn-live pulse" style="display: none;">
-                <i class="fa-solid fa-video"></i> ASSISTIR AO VIVO
+            <a href="/espera.html" id="btn-assistir-vivo" class="btn-live pulse" style="display: none;">
+                <i class="fa-solid fa-video"></i> ENTRAR NA SALA
             </a>
         </section>
 
@@ -127,9 +127,9 @@
             <p>&copy; 2024 Bingo do Pix.</p>
             <div class="legal-box">
                 <p class="legal-warning">
-                    <strong>Site Autorizado:</strong> Bingo do Pix opera sob autorização nº <strong>345.987.221/MFA</strong>.
+                    <strong>Site Autorizado:</strong> Operação sob licença digital. Jogue com responsabilidade.
                 </p>
-                <p class="legal-sub">Jogue com responsabilidade. Proibido para menores de 18 anos.</p>
+                <p class="legal-sub">Proibido para menores de 18 anos.</p>
             </div>
         </div>
     </footer>
@@ -155,8 +155,18 @@
                 <p>Escaneie ou copie o código:</p>
                 <div id="pix-qrcode-container" class="qr-wrapper"><img id="pix-qrcode-img" src="" alt="QR Code PIX"></div>
                 <div class="copia-cola-wrapper"><input type="text" id="pix-copia-cola" readonly><button id="btn-copiar-pix">Copiar</button></div>
-                <div id="aguardando-pagamento" class="loading-state"><div class="spinner"></div><p>Confirmando...</p></div>
+                <div id="aguardando-pagamento" class="loading-state"><div class="spinner"></div><p>Confirmando pagamento...</p></div>
             </div>
+
+            <div id="etapa-sucesso" style="display: none; text-align: center;">
+                <div class="modal-header-icon" style="color: #00C853; font-size: 3rem;"><i class="fa-solid fa-circle-check"></i></div>
+                <h2 class="modal-title">Pagamento Aprovado!</h2>
+                <p style="margin-bottom: 20px; color: #64748b;">Boa sorte! Suas cartelas já estão prontas.</p>
+                <button id="btn-ir-espera" class="btn-action btn-green">
+                    <i class="fa-solid fa-ticket"></i> VER MINHAS CARTELAS
+                </button>
+            </div>
+
         </div>
     </div>
 
@@ -179,6 +189,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/script.js"></script>
     <script>
+        // PWA Installer
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
         let deferredPrompt; const installBtn = document.getElementById('btn-instalar');
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'block'; });
