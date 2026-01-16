@@ -4,56 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seja um Revendedor - Bingo do Pix</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00C853">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css"> 
 </head>
 <body>
-    <header>
-        <h1 class="title-gradient">BINGO DO PIX</h1>
-        <p class="slogan">Sua sorte em um clique!</p>
+
+    <header class="hero-header">
+        <div class="top-bar">
+            <div class="logo-area">
+                <i class="fa-solid fa-gem logo-icon"></i> BINGO<span class="highlight">PIX</span>
+            </div>
+            <a href="/" class="btn-revendedor-outline">
+                <i class="fa-solid fa-house"></i> Voltar ao Início
+            </a>
+        </div>
+        
+        <div class="hero-content">
+            <h1 class="main-title">PARCEIRO <br>REVENDEDOR</h1>
+            <p class="subtitle">Lucre alto vendendo cartelas na sua região.</p>
+        </div>
     </header>
 
-    <main>
-        <section class="card card-revendedor">
-            <h2>Seja um Revendedor (Cambista)</h2>
-            <p>Aumente sua renda com o Bingo do Pix! Oferecemos duas modalidades de revenda para você escolher a que melhor se adapta ao seu negócio.</p>
+    <main class="container">
 
-            <h3>Modo 1: Venda Online (Afiliado) - Ganhe 30%</h3>
-            <p>Perfeito para quem trabalha com redes sociais ou tem uma grande rede de contatos online.</p>
-            <ul>
-                <li>Você recebe um **link de afiliado exclusivo**.</li>
-                <li>Compartilhe seu link no WhatsApp, Instagram, Facebook, etc.</li>
-                <li>Toda compra realizada através do seu link gera automaticamente **30% de comissão** para você.</li>
-                <li>Você acompanha todas as suas comissões em tempo real através do seu Painel de Cambista.</li>
-                <li>Sem investimento inicial. Você só ganha!</li>
-            </ul>
-
-            <h3>Modo 2: Venda Presencial (Ponto Comercial)</h3>
-            <p>Ideal para quem possui um bar, lanchonete, mercearia ou qualquer ponto comercial com movimento de pessoas.</p>
-            <ul>
-                <li>Você acessa um painel exclusivo para revendedores.</li>
-                <li>Você compra créditos (saldo) antecipadamente com a administração.</li>
-                <li>Quando um cliente pede uma cartela, você registra a venda no seu painel.</li>
-                <li>O sistema gera a cartela na hora e você pode **imprimi-la** em uma impressora térmica.</li>
-                <li>O valor da cartela é debitado do seu saldo de créditos.</li>
-                <li>Você fica com 100% do dinheiro do cliente (pois já comprou o crédito).</li>
-            </ul>
-
-            <div class="cta-final">
-                <p>Gostou? Fale com a administração agora mesmo para criar seu cadastro!</p>
-                <a href="https://wa.me/5569999083361" target="_blank" class="btn-comprar btn-destaque" style="max-width: 400px; margin-top: 15px; font-size: 1.3em;">
-                    Falar no WhatsApp
-                </a>
-            </div>
-
+        <section class="card animate-up">
+            <h2 class="section-title" style="text-align: center; border: none; margin-bottom: 5px;">Já é parceiro?</h2>
+            <p style="color: #64748b; margin-bottom: 20px;">Acesse seu painel para vender e imprimir cartelas.</p>
+            
+            <a href="/cambista/login.html" class="btn-action btn-green pulse" style="display: block; text-decoration: none; line-height: 1.5;">
+                <i class="fa-solid fa-right-to-bracket"></i> ACESSAR PAINEL DO CAMBISTA
+            </a>
         </section>
+
+        <section class="card animate-up delay-1">
+            <h2 class="section-title">Por que revender?</h2>
+            
+            <div class="premios-grid">
+                <div class="premio-card">
+                    <div class="icon-trophy" style="color: #00C853; font-size: 2rem; margin-bottom: 10px;"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                    <span class="label">Alta Lucratividade</span>
+                    <p class="sub" style="margin-top: 5px;">Ganhe comissão por cada cartela vendida.</p>
+                </div>
+                
+                <div class="premio-card">
+                    <div class="icon-medal" style="color: #2962FF; font-size: 2rem; margin-bottom: 10px;"><i class="fa-solid fa-print"></i></div>
+                    <span class="label">Sistema Fácil</span>
+                    <p class="sub" style="margin-top: 5px;">Imprima cartelas na hora ou envie pelo Zap.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="card animate-up delay-2">
+            <h2 class="section-title">Como Funciona?</h2>
+            <div class="regras-conteudo" style="padding: 0;">
+                <p><strong>1. Cadastro:</strong> Entre em contato com a administração para criar seu cadastro.</p>
+                <p><strong>2. Créditos:</strong> Adquira créditos pré-pagos com desconto.</p>
+                <p><strong>3. Venda:</strong> Venda as cartelas pelo preço cheio e fique com o lucro na hora!</p>
+                <p><strong>4. Impressão:</strong> Use o painel para imprimir cartelas em impressoras térmicas ou A4.</p>
+            </div>
+            
+            <a href="https://wa.me/5569999083361" target="_blank" class="btn-outline" style="display: block; text-decoration: none; margin-top: 20px; text-align: center;">
+                <i class="fa-brands fa-whatsapp"></i> Falar com Admin
+            </a>
+        </section>
+
     </main>
 
     <footer>
-        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
-        <div class="legal-links">
-            <p class="legal-warning">Jogue com responsabilidade. Atividade de aposta proibida para menores de 18 anos.</p>
+        <div class="footer-content">
+            <p>&copy; 2024 Bingo do Pix.</p>
+            <div class="legal-box">
+                <p class="legal-sub">Área restrita para parceiros comerciais.</p>
+            </div>
         </div>
     </footer>
+
 </body>
 </html>
