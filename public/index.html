@@ -51,17 +51,14 @@
 
         <section id="premio-especial" class="card card-especial animate-up" style="display: none;">
             <div class="badge-especial"><i class="fa-solid fa-star"></i> SUPER PRÊMIO</div>
-            
             <div class="premio-destaque-box">
                 <span class="moeda">R$</span>
                 <span id="especial-valor" class="valor-zao text-white">...</span>
             </div>
             <p class="desc-premio">Prêmio Cartela Cheia</p>
-            
             <div class="data-box">
                 <i class="fa-regular fa-calendar-days"></i> <span id="especial-data">...</span>
             </div>
-            
             <button id="btn-jogue-especial" class="btn-action btn-white pulse">
                 COMPRAR P/ ESPECIAL <br><small>(<span id="especial-preco-cartela">R$ ...</span>)</small>
             </button>
@@ -70,7 +67,6 @@
         
         <section id="premio-info" class="card animate-up delay-1">
             <h2 class="section-title">Rodada Atual</h2>
-            
             <div class="premios-grid">
                 <div class="premio-card principal">
                     <div class="icon-trophy"><i class="fa-solid fa-trophy"></i></div>
@@ -78,7 +74,6 @@
                     <span class="valor text-gradient" id="index-premio-cheia">R$ ...</span>
                     <span class="sub">no Pix</span>
                 </div>
-                
                 <div class="premio-card secundario">
                     <div class="icon-medal"><i class="fa-solid fa-medal"></i></div>
                     <span class="label">Linha</span>
@@ -86,7 +81,6 @@
                     <span class="sub">no Pix</span>
                 </div>
             </div>
-
             <button id="btn-jogue-agora" class="btn-action btn-green pulse">
                 COMPRAR CARTELA <br><small>(<span id="index-preco-cartela">R$ ...</span>)</small>
             </button>
@@ -95,7 +89,6 @@
         <section id="minhas-cartelas" class="card animate-up delay-2">
             <h2 class="section-title"><i class="fa-solid fa-ticket"></i> Meus Jogos</h2>
             <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Consulte suas cartelas ou prêmios:</p>
-            
             <form id="form-recuperar-cartelas">
                 <div class="input-wrapper">
                     <i class="fa-brands fa-whatsapp"></i>
@@ -118,8 +111,7 @@
                     <p>1. Proibido para menores de 18 anos.</p>
                     <p>2. Vendas exclusivas via PIX.</p>
                     <p>3. Ganhadores devem entrar em contato via WhatsApp.</p>
-                    <p>4. Pagamento dos prêmios em até 48h úteis.</p>
-                    <p>5. O sistema confere as cartelas automaticamente.</p>
+                    <p>4. O sistema confere as cartelas automaticamente.</p>
                 </div>
             </details>
         </section>
@@ -132,13 +124,10 @@
                 <i class="fa-brands fa-pix"></i>
                 <i class="fa-solid fa-shield-halved"></i>
             </div>
-            
             <p>&copy; 2024 Bingo do Pix.</p>
-            
             <div class="legal-box">
                 <p class="legal-warning">
-                    <strong>Site Autorizado:</strong> Bingo do Pix opera sob a autorização nº <strong>345.987.221/MFA</strong>, 
-                    em conformidade com as diretrizes de sorteios filantrópicos e comerciais.
+                    <strong>Site Autorizado:</strong> Bingo do Pix opera sob autorização nº <strong>345.987.221/MFA</strong>.
                 </p>
                 <p class="legal-sub">Jogue com responsabilidade. Proibido para menores de 18 anos.</p>
             </div>
@@ -152,71 +141,50 @@
             <div id="etapa-dados">
                 <div class="modal-header-icon"><i class="fa-solid fa-cart-shopping"></i></div>
                 <h2 class="modal-title" id="modal-titulo">Finalizar Compra</h2>
-                
                 <form id="form-checkout">
-                    <div class="form-grupo">
-                        <label>Nome Completo</label>
-                        <input type="text" id="modal-nome" placeholder="Seu nome" required>
-                    </div>
-                    <div class="form-grupo">
-                        <label>WhatsApp (Chave Pix)</label>
-                        <input type="tel" id="modal-telefone" placeholder="(DD) 99999-9999" required>
-                    </div>
-                    <div class="form-grupo">
-                        <label>Quantidade de Cartelas</label>
-                        <div class="qtd-wrapper">
-                            <input type="number" id="modal-quantidade" min="1" value="1" required>
-                        </div>
-                    </div>
+                    <div class="form-grupo"><label>Nome Completo</label><input type="text" id="modal-nome" placeholder="Seu nome" required></div>
+                    <div class="form-grupo"><label>WhatsApp (Pix)</label><input type="tel" id="modal-telefone" placeholder="(DD) 99999-9999" required></div>
+                    <div class="form-grupo"><label>Quantidade</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
                 </form>
-                
-                <div class="total-box">
-                    <span>Total a pagar:</span>
-                    <strong id="modal-preco" class="text-pix">R$ ...</strong>
-                    <span style="display:none" id="modal-label-preco"></span> </div>
-                
+                <div class="total-box"><span>Total:</span><strong id="modal-preco" class="text-pix">R$ ...</strong><span style="display:none" id="modal-label-preco"></span></div>
                 <button id="btn-gerar-pix" class="btn-action btn-green">PAGAR COM PIX <i class="fa-solid fa-qrcode"></i></button>
             </div>
 
             <div id="etapa-pix" style="display: none;">
                 <h2 class="modal-title">Pagamento Pix</h2>
-                <p style="margin-bottom: 10px;">Escaneie ou copie o código:</p>
-                
-                <div id="pix-qrcode-container" class="qr-wrapper">
-                    <img id="pix-qrcode-img" src="" alt="QR Code PIX">
-                </div>
-                
-                <div class="copia-cola-wrapper">
-                    <input type="text" id="pix-copia-cola" readonly>
-                    <button id="btn-copiar-pix"><i class="fa-regular fa-copy"></i> Copiar</button>
-                </div>
-                
-                <div id="aguardando-pagamento" class="loading-state">
-                    <div class="spinner"></div>
-                    <p>Confirmando pagamento...</p>
-                    <small>Não feche esta tela.</small>
-                </div>
+                <p>Escaneie ou copie o código:</p>
+                <div id="pix-qrcode-container" class="qr-wrapper"><img id="pix-qrcode-img" src="" alt="QR Code PIX"></div>
+                <div class="copia-cola-wrapper"><input type="text" id="pix-copia-cola" readonly><button id="btn-copiar-pix">Copiar</button></div>
+                <div id="aguardando-pagamento" class="loading-state"><div class="spinner"></div><p>Confirmando...</p></div>
             </div>
+        </div>
+    </div>
+
+    <div id="modal-minhas-cartelas" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
+            <h2 class="modal-title">Minhas Cartelas</h2>
+            <div id="modal-minhas-cartelas-lista">
+                </div>
+        </div>
+    </div>
+
+    <div id="modal-meus-premios" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
+            <h2 class="modal-title">Meus Prêmios</h2>
+            <div id="modal-meus-premios-lista">
+                </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
     <script>
-        // Script PWA (Botão Instalar)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
-        }
-        let deferredPrompt;
-        const installBtn = document.getElementById('btn-instalar');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'block';
-        });
-        if(installBtn) {
-            installBtn.addEventListener('click', () => {
-                if(deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; installBtn.style.display = 'none'; }
-            });
-        }
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
+        let deferredPrompt; const installBtn = document.getElementById('btn-instalar');
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'block'; });
+        if(installBtn) { installBtn.addEventListener('click', () => { if(deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; installBtn.style.display = 'none'; } }); }
     </script>
 </body>
 </html>
