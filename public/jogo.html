@@ -23,7 +23,7 @@
             <div class="game-logo">BINGO<span class="highlight">PIX</span></div>
         </div>
         <div class="header-right">
-            <div id="sorteio-id-display" class="badge-id">#CARREGANDO</div>
+            <div id="sorteio-id-display" class="badge-id">#ID</div>
             <button id="btn-toggle-som" class="btn-som"><i class="fa-solid fa-volume-high"></i></button>
             <div class="status-live">AO VIVO</div>
         </div>
@@ -31,18 +31,22 @@
 
     <main>
         <section class="destaque-container">
-            <p class="label-sorteio">BOLA DA VEZ</p>
+            <span class="label-sorteio">Sorteio #...</span>
+            <span class="sub-label">Último Sorteado</span>
+            
             <div class="bola-gigante-wrapper">
                 <div id="ultimo-numero-sorteado" class="bola-gigante">--</div>
             </div>
         </section>
 
         <section class="historico-wrapper">
-            <div class="label-hist">Últimas Chamadas:</div>
+            <div class="label-hist">Todos os Números Sorteados</div>
             <div id="globo-numeros"></div>
         </section>
 
         <section class="cartelas-wrapper">
+            <h2 class="titulo-secao">Minhas Cartelas</h2>
+
             <div class="cartela-controls">
                 <button id="btn-cartela-anterior" class="btn-nav"><i class="fa-solid fa-chevron-left"></i></button>
                 <span id="cartela-titulo-atual" class="paginacao-txt">Carregando...</span>
@@ -65,19 +69,19 @@
             <p id="resultado-mensagem" class="msg-win"></p>
             
             <div id="resultado-prova-cartela" style="display:none;">
-                <div id="area-comprovante" style="text-align:left; background:#f8fafc; padding:10px; border:1px solid #ddd; margin-bottom:10px;">
-                    <h3>Comprovante</h3>
+                <div id="area-comprovante" class="comprovante-box">
+                    <h3>Comprovante de Vitória</h3>
                     <p id="comprovante-sorteio-id"></p>
                     <p id="comprovante-cartela-id"></p>
-                    <p id="comprovante-nome" style="font-weight:bold;"></p>
-                    <p id="comprovante-premio" style="color:green; font-weight:bold;"></p>
-                    <p id="comprovante-data"></p>
-                    <div id="cartela-vencedora-display" style="transform:scale(0.9);"></div>
+                    <p id="comprovante-nome" class="destaque-txt"></p>
+                    <p id="comprovante-premio" class="premio-txt"></p>
+                    <p id="comprovante-data" style="font-size:0.8rem; color:#666; margin-top:5px;"></p>
+                    <div id="cartela-vencedora-display" style="transform:scale(0.9); margin-top:10px;"></div>
                 </div>
             </div>
 
-            <button id="btn-baixar-comprovante" class="btn-acao-primaria" style="display:none; background:#999;">Baixar PDF</button>
-            <button id="btn-resultado-fechar" class="btn-acao-primaria">FECHAR</button>
+            <button id="btn-baixar-comprovante" class="btn-acao-secundaria" style="display:none;">Baixar Comprovante (PDF)</button>
+            <button id="btn-resultado-fechar" class="btn-acao-primaria">Continuar</button>
         </div>
     </div>
 
