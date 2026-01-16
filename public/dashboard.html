@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel TV - Bingo do Pix</title>
-    <link rel="stylesheet" href="dashboard.css?v=tv1">
+    <link rel="stylesheet" href="dashboard.css?v=tvFixed">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
 </head>
@@ -13,25 +13,21 @@
     <div id="anuncio-espera-overlay" class="anuncio-espera-overlay">
         <div class="anuncio-espera-container">
             <h1>PRÓXIMO SORTEIO</h1>
-            
-            <div class="anuncio-area-espera">
-                </div>
-            
-            <p style="font-size: 2vh; color: #aaa;">O show vai começar em:</p>
+            <p style="font-size: 3vh; color: #aaa;">O show vai começar em:</p>
             <div id="espera-cronometro-display">--:--</div>
         </div>
     </div>
 
     <div id="anuncio-vencedor-overlay">
         <div class="anuncio-vencedor-box">
-            <div style="font-size: 8vh;">🏆</div>
+            <div style="font-size: 10vh;">🏆</div>
             <h2 id="anuncio-vencedor-premio">BINGO!</h2>
             <p id="anuncio-vencedor-nome">Nome do Jogador</p>
         </div>
     </div>
 
     <header class="dashboard-header">
-        <div style="display:flex; align-items:center; gap:15px;">
+        <div style="display:flex; align-items:center; gap:1vw;">
             <i class="fa-solid fa-gem" style="color:#00ffbf; font-size:4vh;"></i>
             <h1 id="dash-sorteio-id-header">SORTEIO #...</h1>
         </div>
@@ -50,7 +46,7 @@
             <div id="dash-ultimo-numero-wrapper">
                 <div id="dash-ultimo-numero">--</div>
             </div>
-            <h3 id="titulo-numeros-sorteados" style="text-align:left; color:#666; margin-bottom:5px;">TABULEIRO</h3>
+            <h3 id="titulo-numeros-sorteados" style="text-align:left; padding-left:10px;">TABULEIRO</h3>
             <div id="dash-globo-numeros">
                 </div>
         </div>
@@ -86,6 +82,6 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="dashboard.js?v=tv1"></script>
+    <script src="dashboard.js?v=tvFixed"></script>
 </body>
 </html>
