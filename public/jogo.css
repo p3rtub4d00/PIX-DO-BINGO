@@ -91,10 +91,10 @@ body {
     gap: 8px;
     overflow-x: auto;
     padding-bottom: 5px;
-    scrollbar-width: thin;
 }
-/* Estilo das bolas pequenas geradas pelo JS */
-.bola-pequena, .bola-hist {
+
+/* Bolas do globo (geradas pelo JS) */
+.globo-numero {
     min-width: 35px; height: 35px;
     background: white;
     color: #1e293b;
@@ -104,18 +104,15 @@ body {
     font-size: 0.9rem;
     font-family: 'Roboto', sans-serif;
 }
-.bola-pequena.active { background: #FFD600; } /* Se o JS colocar classe active */
+.globo-numero.sorteado { 
+    background: #00C853; 
+    color: white; 
+    box-shadow: 0 0 10px #00C853;
+}
 
-/* --- CARTELAS (Estilos para as classes do JS) --- */
+/* --- CONTROLES DE NAVEGAÇÃO --- */
 .cartelas-wrapper { padding: 20px; text-align: center; }
 
-.cartela-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
-}
 .cartelas-header-ctrl {
     display: flex; 
     justify-content: center; 
@@ -132,109 +129,96 @@ body {
     border-radius: 10px;
     cursor: pointer;
     font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
 }
-.btn-nav:active { transform: scale(0.95); background: #00C853; }
+.btn-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-nav:not(:disabled):active { transform: scale(0.95); background: #00C853; }
 .paginacao-txt { font-weight: 700; color: #00C853; font-size: 1rem; }
 
-/* *** CRÍTICO: ESTILO DA CARTELA GERADA PELO JS *** */
+
+/* ==========================================================================
+   *** CRÍTICO: ESTILOS DAS CLASSES GERADAS PELO SEU JS (.cartela-jogador) ***
+   ========================================================================== */
+
 .container-cartelas-visual {
     display: flex;
     justify-content: center;
+    min-height: 320px; /* Evita pulo de tela */
 }
 
-/* Classe .cartela que o JS cria */
-.cartela {
+/* O JS cria div class="cartela-jogador" */
+.cartela-jogador {
+    display: none; /* ESCONDE POR PADRÃO (Lógica do Carrossel) */
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
     background: white;
-    color: #1e293b;
     padding: 10px;
-    border-radius: 15px;
+    border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     width: 100%;
-    max-width: 320px; /* Tamanho bom para celular */
+    max-width: 320px;
 }
 
-/* Classe .cabecalho-cartela que o JS cria */
-.cabecalho-cartela {
+/* O JS adiciona a classe .ativa na cartela atual */
+.cartela-jogador.ativa {
+    display: grid !important; /* MOSTRA A CARTELA ATIVA */
+    animation: slideIn 0.3s ease;
+}
+
+/* Cabeçalhos B-I-N-G-O (JS cria .cartela-numero.cartela-header) */
+.cartela-header {
     background: #1e293b;
     color: white;
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-    font-size: 0.9rem;
-    display: flex; justify-content: space-between;
-}
-
-/* Classe .linha que o JS cria */
-.linha {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-}
-
-/* Classe .celula (ou .numero) que o JS cria */
-.celula, .numero {
-    width: 18%; /* 5 colunas */
-    aspect-ratio: 1; /* Quadrado perfeito */
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-weight: 900;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1; /* Quadrado */
+}
+
+/* Números (JS cria .cartela-numero) */
+.cartela-numero {
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 800;
     font-size: 1.1rem;
     font-family: 'Roboto', sans-serif;
-    color: #334155;
+    border-radius: 5px;
+    border: 1px solid #cbd5e1;
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1; /* Quadrado */
 }
 
-/* Classe .marcado que o JS adiciona quando sai o número */
+/* Número FREE */
+.cartela-numero.free {
+    background: #cbd5e1;
+    font-size: 0.7rem;
+    color: #475569;
+}
+
+/* Número Marcado (JS adiciona .marcado) */
 .marcado {
-    background-color: #ef4444 !important; /* Vermelho Bingo */
+    background-color: #ef4444 !important;
     color: white !important;
     border-color: #ef4444 !important;
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.cartela-hash { font-size: 0.7rem; color: #64748b; margin-top: 10px; font-family: monospace; }
-
-/* --- MODAL RESULTADO --- */
-.modal-overlay-game {
-    display: none; /* JS controla com style.display */
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.9);
-    z-index: 200;
-    align-items: center; justify-content: center;
-    backdrop-filter: blur(5px);
-}
-.modal-content-game {
-    background: linear-gradient(135deg, #FFD600 0%, #FFAB00 100%);
-    padding: 30px;
-    border-radius: 20px;
-    text-align: center;
-    color: black;
-    width: 90%; max-width: 400px;
-    box-shadow: 0 0 50px rgba(255, 214, 0, 0.6);
-    animation: popIn 0.5s;
-}
-.trofeu-icon { font-size: 3rem; margin-bottom: 10px; color: #000; }
-.modal-content-game h1 { font-weight: 900; font-size: 1.8rem; margin-bottom: 10px; text-transform: uppercase; }
-.msg-win { font-weight: 700; font-size: 1.1rem; margin-bottom: 15px; }
-.lista-win { background: rgba(255,255,255,0.3); padding: 10px; border-radius: 10px; font-weight: 600; margin-bottom: 20px; }
-.btn-fechar-win {
-    background: black;
-    color: #FFD600;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 50px;
-    font-weight: 800;
-    cursor: pointer;
-    text-transform: uppercase;
+    animation: popIn 0.3s;
 }
 
 /* Animações */
-@keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 .animate-up { animation: fadeUp 0.6s ease forwards; opacity: 0; transform: translateY(20px); }
 @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+/* --- MODAL RESULTADO (Mantido do anterior) --- */
+.modal-overlay-game {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center;
+}
+.modal-content-game {
+    background: linear-gradient(135deg, #FFD600 0%, #FFAB00 100%);
+    padding: 30px; border-radius: 20px; text-align: center; color: black;
+    width: 90%; max-width: 400px;
+}
+.btn-fechar-win { background: black; color: #FFD600; border: none; padding: 12px 30px; border-radius: 50px; font-weight: 800; cursor: pointer; }
