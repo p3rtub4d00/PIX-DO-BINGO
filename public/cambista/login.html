@@ -3,29 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login do Cambista - Bingo do Pix</title>
+    <title>Login Cambista - Bingo do Pix</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="../style.css"> 
-    <link rel="stylesheet" href="../admin/admin.css"> 
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Ajustes específicos para a tela de login ficar centralizada */
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .login-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #1e293b;
+            margin-bottom: 30px;
+            display: block;
+        }
+        .login-logo i { color: #00C853; }
+        .btn-voltar-home {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
-<body class="admin-body">
+<body>
 
-    <div class="login-container card">
-        <h1 class="title-gradient">Portal do Cambista</h1>
-        <p>Acesso Restrito</p>
+    <a href="/" class="btn-voltar-home"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
 
-        <form id="login-form">
-            <div class="form-grupo">
-                <label for="usuario">Usuário:</label>
-                <input type="text" id="usuario" name="usuario" required>
+    <div class="login-card animate-up">
+        <div class="login-logo">
+            <i class="fa-solid fa-briefcase"></i> ÁREA DO <br> <span class="highlight">CAMBISTA</span>
+        </div>
+
+        <form id="form-login">
+            <div class="input-wrapper">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" id="usuario" placeholder="Usuário" required>
             </div>
-            <div class="form-grupo">
-                <label for="senha">Senha:</label>
-                <input type="password" id="senha" name="senha" required>
+
+            <div class="input-wrapper">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" id="senha" placeholder="Senha" required>
             </div>
-            <button type="submit" class="btn-comprar btn-comprar-azul">Entrar</button>
+
+            <button type="submit" class="btn-action btn-green pulse" style="margin-top: 10px;">
+                ENTRAR NO SISTEMA
+            </button>
         </form>
-        <p id="login-error" class="error-message" style="display: none;">Usuário ou senha inválidos.</p>
+
+        <p style="margin-top: 20px; font-size: 0.8rem; color: #64748b;">
+            Esqueceu a senha? Contate o Admin.
+        </p>
     </div>
 
     <script src="login.js"></script>
