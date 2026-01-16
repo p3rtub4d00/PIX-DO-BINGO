@@ -3,89 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bingo Ao Vivo</title>
+    <title>Painel TV - Bingo do Pix</title>
     
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#ffffff">
+    <link rel="stylesheet" href="dashboard.css?v=MasterFinal">
     
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <link rel="stylesheet" href="jogo.css">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
 </head>
-<body class="game-body">
+<body class="dashboard-body">
 
-    <header class="game-header">
-        <div class="header-left">
-            <div class="game-logo">BINGO<span class="highlight">PIX</span></div>
-        </div>
-        <div class="header-right">
-            <div id="sorteio-id-display" class="badge-id">#ID</div>
-            <button id="btn-toggle-som" class="btn-som"><i class="fa-solid fa-volume-high"></i></button>
-            <div class="status-live">AO VIVO</div>
-        </div>
-    </header>
-
-    <main>
-        <section class="destaque-container">
-            <span class="label-sorteio">Sorteio #...</span>
-            <span class="sub-label">Último Sorteado</span>
+    <div id="anuncio-espera-overlay" class="anuncio-espera-overlay">
+        <div class="anuncio-espera-container">
+            <h1>PRÓXIMO SORTEIO</h1>
             
-            <div class="bola-gigante-wrapper">
-                <div id="ultimo-numero-sorteado" class="bola-gigante">--</div>
-            </div>
-        </section>
-
-        <section class="historico-wrapper">
-            <div class="label-hist">Todos os Números Sorteados</div>
-            <div id="globo-numeros"></div>
-        </section>
-
-        <section class="cartelas-wrapper">
-            <h2 class="titulo-secao">Minhas Cartelas</h2>
-
-            <div class="cartela-controls">
-                <button id="btn-cartela-anterior" class="btn-nav"><i class="fa-solid fa-chevron-left"></i></button>
-                <span id="cartela-titulo-atual" class="paginacao-txt">Carregando...</span>
-                <button id="btn-cartela-proxima" class="btn-nav"><i class="fa-solid fa-chevron-right"></i></button>
-            </div>
-
-            <div id="cartelas-container"></div>
-            
-            <div id="cartela-id-display" class="cartela-hash"></div>
-        </section>
-
-        <button id="btn-bingo" style="display:none;">BINGO</button>
-    </main>
-
-    <div id="modal-resultado" class="modal-overlay-game">
-        <div class="modal-content-game">
-            <div class="trofeu-icon"><i class="fa-solid fa-trophy"></i></div>
-            
-            <h1 id="resultado-titulo">VENCEDOR!</h1>
-            <p id="resultado-mensagem" class="msg-win"></p>
-            
-            <div id="resultado-prova-cartela" style="display:none;">
-                <div id="area-comprovante" class="comprovante-box">
-                    <h3>Comprovante de Vitória</h3>
-                    <p id="comprovante-sorteio-id"></p>
-                    <p id="comprovante-cartela-id"></p>
-                    <p id="comprovante-nome" class="destaque-txt"></p>
-                    <p id="comprovante-premio" class="premio-txt"></p>
-                    <p id="comprovante-data" style="font-size:0.8rem; color:#666; margin-top:5px;"></p>
-                    <div id="cartela-vencedora-display" style="transform:scale(0.9); margin-top:10px;"></div>
+            <div class="anuncio-area-espera">
+                <div class="anuncio-slider">
+                    <div class="slide ativo">
+                        <img src="/imagens/seu-anuncio-espera.gif" alt="Aguarde o Sorteio">
+                    </div>
+                    <div class="slide">
+                        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#000; color:white;">
+                            <h2 style="font-size:3vh; text-transform:uppercase;">Prepare sua cartela!</h2>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <button id="btn-baixar-comprovante" class="btn-acao-secundaria" style="display:none;">Baixar Comprovante (PDF)</button>
-            <button id="btn-resultado-fechar" class="btn-acao-primaria">Continuar</button>
+            <p style="font-size: 2.5vh; color: #aaa; margin-top: 10px;">O show vai começar em:</p>
+            <div id="espera-cronometro-display">--:--</div>
         </div>
     </div>
 
+    <div id="anuncio-vencedor-overlay">
+        <div class="anuncio-vencedor-box">
+            <div style="font-size: 8vh;">🏆</div>
+            <h2 id="anuncio-vencedor-premio">BINGO!</h2>
+            <p id="anuncio-vencedor-nome">Nome do Jogador</p>
+        </div>
+    </div>
+
+    <header class="dashboard-header">
+        <div style="display:flex; align-items:center; gap:1vw;">
+            <i class="fa-solid fa-gem" style="color:#00ffbf; font-size:3.5vh;"></i>
+            <h1 id="dash-sorteio-id-header">SORTEIO #...</h1>
+        </div>
+        
+        <div class="header-controls">
+             <div id="dash-estado-header" class="estado-texto estado-esperando">AGUARDANDO</div>
+             <button id="btn-toggle-som" title="Voz">
+                 <i class="fas fa-volume-xmark"></i>
+             </button>
+        </div>
+    </header>
+
+    <main class="dashboard-main-fullscreen">
+        
+        <div class="area-principal">
+            <div id="dash-ultimo-numero-wrapper">
+                <div id="dash-ultimo-numero">--</div>
+            </div>
+            <h3 id="titulo-numeros-sorteados">TABULEIRO</h3>
+            <div id="dash-globo-numeros"></div>
+        </div>
+
+        <aside class="barra-lateral">
+            <section id="info-rodada">
+                <h2><i class="fa-solid fa-sack-dollar"></i> Prêmios</h2>
+                <div class="info-item">
+                    <span>Jogadores:</span> <strong id="dash-jogadores-total">--</strong>
+                </div>
+                <div class="info-item">
+                    <span>Linha:</span> <strong class="text-pix-sidebar" id="dash-premio-linha">R$ ...</strong>
+                </div>
+                <div class="info-item">
+                    <span>Cartela Cheia:</span> <strong class="text-pix-sidebar" id="dash-premio-cheia">R$ ...</strong>
+                </div>
+            </section>
+
+            <section id="quase-la">
+                <h2><i class="fa-solid fa-fire"></i> Quase Lá!</h2>
+                <div id="lista-quase-la">
+                    <p>Aguardando...</p>
+                </div>
+            </section>
+
+            <section id="ultimos-ganhadores">
+                <h2><i class="fa-solid fa-trophy"></i> Vencedores</h2>
+                <div id="lista-ganhadores">
+                    <p>Nenhum ainda.</p>
+                </div>
+            </section>
+        </aside>
+    </main>
+
     <script src="/socket.io/socket.io.js"></script>
-    <script src="jogo.js"></script>
+    <script src="dashboard.js?v=MasterFinal"></script>
 </body>
 </html>
