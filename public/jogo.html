@@ -49,7 +49,7 @@
         </section>
 
         <section class="cartelas-wrapper">
-            <div class="cartelas-header-ctrl">
+            <div class="cartela-controls">
                 <button id="btn-cartela-anterior" class="btn-nav"><i class="fa-solid fa-chevron-left"></i></button>
                 
                 <span id="cartela-titulo-atual" class="paginacao-txt">Carregando...</span>
@@ -60,7 +60,7 @@
             <div id="cartelas-container" class="container-cartelas-visual">
                 </div>
             
-            <div id="cartela-id-display" class="cartela-hash"></div>
+            <div id="cartela-id-display" class="badge-id" style="margin-top: 10px; background: transparent; color: #64748b;"></div>
         </section>
 
         <button id="btn-bingo" style="display:none;">BINGO</button>
@@ -69,15 +69,28 @@
 
     <div id="modal-resultado" class="modal-overlay-game">
         <div class="modal-content-game animate-pop">
-            <div class="trofeu-icon"><i class="fa-solid fa-trophy"></i></div>
+            <div class="trofeu-icon" style="font-size: 3rem; margin-bottom: 10px;"><i class="fa-solid fa-trophy"></i></div>
             
-            <h1 id="resultado-titulo">TEMOS UM VENCEDOR!</h1>
+            <h1 id="resultado-titulo">VENCEDOR!</h1>
             
             <p id="resultado-mensagem" class="msg-win"></p>
             
-            <div id="lista-ganhadores" class="lista-win"></div>
+            <div id="resultado-prova-cartela" style="display:none;">
+                <div id="area-comprovante" style="background: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; color: black;">
+                    <h3 style="margin-bottom: 5px;">Comprovante de Vitória</h3>
+                    <p id="comprovante-sorteio-id" style="font-size: 0.8rem;"></p>
+                    <p id="comprovante-cartela-id" style="font-size: 0.8rem;"></p>
+                    <p id="comprovante-nome" style="font-weight: bold;"></p>
+                    <p id="comprovante-premio" style="color: green; font-weight: bold;"></p>
+                    <p id="comprovante-data" style="font-size: 0.7rem; color: #666;"></p>
+                    
+                    <div id="cartela-vencedora-display" style="transform: scale(0.8); transform-origin: top center; margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <button id="btn-baixar-comprovante" class="btn-fechar-win" style="background: white; color: black; font-size: 0.8rem; margin-bottom: 10px; display: none;">Baixar Comprovante (PDF)</button>
             
-            <button id="btn-fechar-resultado" class="btn-fechar-win">Continuar / Fechar</button>
+            <button id="btn-resultado-fechar" class="btn-fechar-win">Continuar</button>
         </div>
     </div>
 
