@@ -4,51 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sala de Espera - Bingo do Pix</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="espera.css"> 
-    <link rel="stylesheet" href="jogo.css"> 
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00C853">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="espera.css">
 </head>
 <body>
-    <header>
-        <h1 class="title-gradient">BINGO DO PIX</h1>
-    </header>
 
-    <main>
-        <div id="espera-container" class="card">
-            <h2 id="sorteio-id-display" class="text-pix">Sorteio #...</h2>
+    <div class="espera-container animate-up">
+        
+        <div class="espera-header">
+            <i class="fa-solid fa-gem logo-icon"></i> BINGO<span class="highlight">PIX</span>
+        </div>
+
+        <h1>AGUARDANDO SORTEIO</h1>
+        <p class="subtitulo">Boa sorte! Suas cartelas estão abaixo.</p>
+
+        <div class="status-box">
+            <div class="loader-espera"></div>
             
-            <p>Seu lugar está garantido. Você será redirecionado automaticamente quando o jogo começar.</p>
+            <h2 id="status-titulo">CARREGANDO STATUS...</h2>
+            <div id="cronometro" class="timer-display">--:--</div>
+        </div>
+
+        <div id="area-cartelas">
+            <h3><i class="fa-solid fa-ticket"></i> SUAS CARTELAS:</h3>
             
-            <div class="loader"></div>
-            
-            <div id="cronometro-container">
-                <h3>Próximo Sorteio em:</h3>
-                <div id="cronometro">--:--</div>
-            </div>
-            
-            <div class="cartelas-compradas">
-                <div id="cartela-switcher">
-                    <button id="btn-cartela-anterior" class="btn-switch" disabled>&lt;</button>
-                    <div class="cartela-titulo-wrapper">
-                        <h2 id="cartela-titulo-atual">Suas Cartelas</h2>
-                        <span id="cartela-id-display">ID: ...</span>
-                    </div>
-                    <button id="btn-cartela-proxima" class="btn-switch" disabled>&gt;</button>
+            <div id="meus-jogos" class="grid-cartelas">
                 </div>
-    
-                <div id="cartelas-container">
-                    </div>
-            </div>
-            </div>
-    </main>
+            
+            <div id="lista-cartelas" class="grid-cartelas"></div>
+        </div>
 
-    <footer>
-        <p>&copy; 2023 Bingo do Pix. Todos os direitos reservados.</p>
-    </footer>
+        <a href="/" class="btn-voltar">
+            <i class="fa-solid fa-house"></i> Voltar ao Início
+        </a>
 
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    </div>
 
-    <script src="espera.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="espera.js"></script> <script>
+        // PWA
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+    </script>
 </body>
 </html>
