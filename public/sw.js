@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bingo-pix-v4'; // Mudei para v4 para forçar limpeza
+const CACHE_NAME = 'bingo-pix-v5-final'; // Mudei a versão para forçar atualização
 const urlsToCache = [
   '/',
   '/index.html',
@@ -13,6 +13,7 @@ const urlsToCache = [
   '/manifest.json'
 ];
 
+// Instalação
 self.addEventListener('install', (event) => {
   self.skipWaiting(); 
   event.waitUntil(
@@ -23,6 +24,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
+// Ativação e Limpeza
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,21 +41,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim(); 
 });
 
+// Interceptação de Rede (AQUI ESTA A CORREÇÃO)
 self.addEventListener('fetch', (event) => {
-  // *** AQUI ESTÁ A CORREÇÃO DO ERRO DO CONSOLE ***
   
-  // 1. Ignora qualquer requisição que NÃO seja GET (como POST do login/socket)
+  // 1. REGRA DE OURO: Se não for GET, NÃO MEXA!
+  // Isso impede o erro "Request method 'POST' is unsupported"
   if (event.request.method !== 'GET') {
     return; 
   }
 
-  // 2. Ignora explicitamente o Socket.io e APIs (não devem ser cacheados)
+  // 2. Ignora Socket.io (Comunicação em tempo real não pode ser cacheada)
   const url = event.request.url;
   if (url.includes('/socket.io/') || url.includes('transport=polling')) {
     return;
   }
 
-  // Lógica normal de cache para arquivos estáticos
+  // 3. Lógica padrão: Tenta cache, se não tiver, baixa da rede
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -62,7 +65,7 @@ self.addEventListener('fetch', (event) => {
         }
         return fetch(event.request).then(
           (response) => {
-            // Verifica se a resposta é válida antes de cachear
+            // Verifica se a resposta é válida antes de tentar salvar
             if(!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
