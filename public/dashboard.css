@@ -1,105 +1,189 @@
-/* MANTENHA TODO O CSS ANTERIOR, APENAS SUBSTITUA A SEÇÃO DOS ANÚNCIOS POR ISTO: */
-
-/* ========================================= */
-/* === CORREÇÃO: ÁREA DE ANÚNCIOS (SLIDER) === */
-/* ========================================= */
-.anuncio-area-espera {
-    width: 100%;
-    max-width: 800px; /* Largura máxima para não estourar em TVs gigantes */
-    aspect-ratio: 16 / 9; /* Formato Widescreen de TV */
-    background-color: #000;
-    border-radius: 15px;
-    border: 2px solid rgba(255,255,255,0.1);
-    overflow: hidden;
-    position: relative;
-    margin: 0 auto 20px auto; /* Centraliza */
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
-.anuncio-slider {
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-.slide {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    opacity: 0;
-    transition: opacity 1s ease-in-out;
-    visibility: hidden;
-    display: flex; align-items: center; justify-content: center;
-}
-
-.slide.ativo {
-    opacity: 1;
-    visibility: visible;
-    z-index: 10;
-}
-
-/* Imagens e Vídeos ocupam tudo sem distorcer */
-.slide img, 
-.slide video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* Garante que a imagem apareça inteira */
-    background: #000; /* Fundo preto para preencher sobras */
-}
-/* ========================================= */
-
-/* O restante do arquivo dashboard.css continua igual */
-/* ... (Imports, Root, Header, Grid, etc do código anterior) ... */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap');
 
+/* --- VARIÁVEIS E BASE --- */
 :root {
-    --neon-green: #00ffbf; --neon-blue: #00e5ff; --bg-dark: #050505; --bg-glass: rgba(20, 20, 35, 0.90);
-    --text-glow: 0 0 10px rgba(0, 255, 191, 0.5); --header-height: 10vh; --main-padding: 2vh;
+    --neon-green: #00ffbf;
+    --neon-blue: #00e5ff;
+    --bg-glass: rgba(20, 20, 35, 0.95);
+    --header-height: 10vh;
+    --main-padding: 2vh;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body.dashboard-body { height: 100vh; width: 100vw; overflow: hidden; background: radial-gradient(circle at center, #101820 0%, #000000 100%); font-family: 'Montserrat', sans-serif; color: white; }
 
-/* HEADER */
-.dashboard-header { height: var(--header-height); padding: 0 3vw; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); }
-#dash-sorteio-id-header { font-size: 3.5vh; color: var(--neon-green); font-weight: 900; text-shadow: var(--text-glow); margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body.dashboard-body {
+    height: 100vh; width: 100vw;
+    overflow: hidden; /* Trava rolagem geral */
+    background: radial-gradient(circle at center, #101820 0%, #000000 100%);
+    font-family: 'Montserrat', sans-serif;
+    color: white;
+}
+
+/* --- CABEÇALHO --- */
+.dashboard-header {
+    height: var(--header-height);
+    padding: 0 3vw;
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+#dash-sorteio-id-header { font-size: 3.5vh; color: var(--neon-green); font-weight: 900; margin: 0; text-shadow: 0 0 10px rgba(0,255,191,0.3); }
+
 .header-controls { display: flex; align-items: center; gap: 2vw; }
+#btn-toggle-som { background: transparent; border: none; color: white; font-size: 3vh; cursor: pointer; }
+
 .estado-texto { font-size: 2.5vh; padding: 0.5vh 2vw; border-radius: 5px; font-weight: bold; text-transform: uppercase; }
 .estado-esperando { background: #333; color: #999; }
 .estado-jogando-linha { background: #007bff; color: white; box-shadow: 0 0 15px #007bff; }
 .estado-jogando-cheia { background: #ff0000; color: white; box-shadow: 0 0 20px #ff0000; animation: pulse 1s infinite; }
 
-/* GRID */
-.dashboard-main-fullscreen { display: grid; grid-template-columns: 72% 26%; gap: 2%; height: calc(100vh - var(--header-height)); padding: var(--main-padding); }
-.area-principal { background: var(--bg-glass); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; padding: 2vh; box-shadow: 0 0 50px rgba(0,0,0,0.5); height: 100%; }
-#dash-ultimo-numero-wrapper { flex: 0 0 auto; height: 35%; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 2vh; }
-#dash-ultimo-numero { height: 22vh; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, #ddd, #999); color: #111; font-size: 13vh; font-weight: 900; font-family: 'Rajdhani', sans-serif; display: flex; align-items: center; justify-content: center; box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5), 0 0 50px var(--neon-green); border: 0.8vh solid var(--neon-green); }
-h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; }
-#dash-globo-numeros { flex: 1; display: grid !important; grid-template-columns: repeat(15, 1fr) !important; gap: 0.6vh; padding: 1.5vh; background: rgba(0,0,0,0.5); border-radius: 15px; align-content: center; }
-.dash-globo-numero { aspect-ratio: 1; background: #222; color: #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Rajdhani', sans-serif; font-weight: bold; font-size: 2.2vh; border: 1px solid #333; transition: 0.2s; }
-.dash-globo-numero.sorteado { background: var(--neon-green) !important; color: #000 !important; font-weight: 900 !important; box-shadow: 0 0 15px var(--neon-green); border-color: #fff !important; transform: scale(1.15); z-index: 10; }
+/* --- GRID PRINCIPAL --- */
+.dashboard-main-fullscreen {
+    display: grid;
+    grid-template-columns: 70% 28%; /* Ajuste para caber bem na TV */
+    gap: 2%;
+    height: calc(100vh - var(--header-height));
+    padding: var(--main-padding);
+}
 
-/* SIDEBAR */
-.barra-lateral { display: flex; flex-direction: column; gap: 1.5vh; height: 100%; overflow: hidden; }
-.barra-lateral section { background: var(--bg-glass); border-radius: 15px; padding: 1.5vh 2vh; border: 1px solid rgba(255,255,255,0.1); }
-.barra-lateral h2 { font-size: 2.2vh; color: var(--neon-blue); text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 1vh; padding-bottom: 0.5vh; }
-#info-rodada { flex: 0 0 auto; } 
+/* --- ÁREA ESQUERDA --- */
+.area-principal {
+    background: var(--bg-glass);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; flex-direction: column;
+    padding: 2vh;
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    height: 100%;
+}
+
+#dash-ultimo-numero-wrapper {
+    flex: 0 0 auto;
+    height: 35%;
+    display: flex; justify-content: center; align-items: center;
+    margin-bottom: 1vh;
+}
+#dash-ultimo-numero {
+    height: 22vh; aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fff, #ddd, #999);
+    color: #111;
+    font-size: 13vh; font-weight: 900; font-family: 'Rajdhani', sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5), 0 0 50px var(--neon-green);
+    border: 0.8vh solid var(--neon-green);
+}
+
+h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; text-transform: uppercase; padding-left: 10px; }
+
+#dash-globo-numeros {
+    flex: 1;
+    display: grid !important;
+    grid-template-columns: repeat(15, 1fr) !important;
+    gap: 0.6vh;
+    padding: 1.5vh;
+    background: rgba(0,0,0,0.5);
+    border-radius: 15px;
+    align-content: center;
+}
+.dash-globo-numero {
+    aspect-ratio: 1;
+    background: #222; color: #444;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Rajdhani', sans-serif; font-weight: bold; font-size: 2.2vh;
+    border: 1px solid #333;
+    transition: 0.2s;
+}
+.dash-globo-numero.sorteado {
+    background: var(--neon-green) !important;
+    color: #000 !important;
+    font-weight: 900 !important;
+    box-shadow: 0 0 15px var(--neon-green);
+    border-color: #fff !important;
+    transform: scale(1.15);
+    z-index: 10;
+}
+
+/* --- BARRA LATERAL --- */
+.barra-lateral {
+    display: flex; flex-direction: column; gap: 1.5vh;
+    height: 100%; overflow: hidden;
+}
+.barra-lateral section {
+    background: var(--bg-glass);
+    border-radius: 15px;
+    padding: 1.5vh 2vh;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.barra-lateral h2 {
+    font-size: 2.2vh; color: var(--neon-blue); text-transform: uppercase;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    margin-bottom: 1vh; padding-bottom: 0.5vh;
+}
+
+#info-rodada { flex: 0 0 auto; }
 .info-item { display: flex; justify-content: space-between; font-size: 2vh; margin-bottom: 0.8vh; }
 .text-pix-sidebar { color: var(--neon-green); font-weight: bold; font-size: 2.2vh; }
-#quase-la { flex: 0 0 auto; max-height: 20%; display: flex; flex-direction: column; }
-#lista-quase-la { overflow: hidden; }
+
+#quase-la { flex: 0 0 auto; min-height: 15vh; display: flex; flex-direction: column; }
+#lista-quase-la { flex: 1; overflow-y: auto; } /* Rolagem se precisar */
+
 #ultimos-ganhadores { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 #lista-ganhadores { flex: 1; overflow-y: auto; padding-right: 5px; }
-#lista-ganhadores div { background: rgba(0, 255, 191, 0.1); border-left: 0.5vh solid var(--neon-green); padding: 1vh; margin-bottom: 0.8vh; font-size: 1.8vh; animation: slideLeft 0.5s; }
 
-/* OVERLAYS */
-#anuncio-vencedor-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 6000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
+/* Item da lista de ganhadores */
+#lista-ganhadores div {
+    background: rgba(0, 255, 191, 0.1);
+    border-left: 0.5vh solid var(--neon-green);
+    padding: 1vh; margin-bottom: 0.8vh; font-size: 1.8vh;
+    animation: slideLeft 0.5s;
+}
+
+/* --- ÁREA DE ANÚNCIOS (SLIDER) --- */
+.anuncio-area-espera {
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 16/9;
+    background-color: #000;
+    border-radius: 15px;
+    border: 2px solid rgba(255,255,255,0.1);
+    overflow: hidden;
+    position: relative;
+    margin: 0 auto 20px auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.slide {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0; visibility: hidden; transition: opacity 1s ease-in-out;
+    display: flex; align-items: center; justify-content: center;
+}
+.slide.ativo { opacity: 1; visibility: visible; z-index: 10; }
+.slide img, .slide video { width: 100%; height: 100%; object-fit: contain; }
+
+/* --- OVERLAYS --- */
+#anuncio-vencedor-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9); z-index: 6000;
+    display: flex; justify-content: center; align-items: center;
+    opacity: 0; visibility: hidden; transition: opacity 0.3s;
+}
 #anuncio-vencedor-overlay.ativo { opacity: 1 !important; visibility: visible !important; }
-.anuncio-vencedor-box { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); padding: 5vh; border-radius: 30px; border: 5px solid white; text-align: center; color: black; transform: scale(0.8); animation: popIn 0.5s forwards; }
+.anuncio-vencedor-box {
+    background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+    padding: 5vh; border-radius: 30px; border: 5px solid white;
+    text-align: center; color: black; transform: scale(0.8);
+    animation: popIn 0.5s forwards;
+}
 #anuncio-vencedor-premio { font-size: 6vh; font-weight: 900; margin: 0; }
 #anuncio-vencedor-nome { font-size: 8vh; font-weight: 900; margin: 10px 0; }
 
-/* AQUI ESTA O OVERLAY DE ESPERA CORRIGIDO */
-.anuncio-espera-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 5000; display: flex; justify-content: center; align-items: center; flex-direction: column; opacity: 1; visibility: visible; transition: opacity 0.5s; }
+.anuncio-espera-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95); z-index: 5000;
+    display: flex; justify-content: center; align-items: center; flex-direction: column;
+    opacity: 1; visibility: visible; transition: opacity 0.5s;
+}
 .anuncio-espera-overlay.oculto { opacity: 0; visibility: hidden; pointer-events: none; }
 .anuncio-espera-container { width: 90%; max-width: 1000px; text-align: center; }
 .anuncio-espera-container h1 { font-size: 5vh; color: var(--neon-blue); margin-bottom: 2vh; }
