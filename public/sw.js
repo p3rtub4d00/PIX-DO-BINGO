@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bingo-pix-v5-final'; // Mudei a versão para forçar atualização
+const CACHE_NAME = 'bingo-pix-v6-final-oficial'; // Versão nova para limpar tudo
 const urlsToCache = [
   '/',
   '/index.html',
@@ -13,7 +13,6 @@ const urlsToCache = [
   '/manifest.json'
 ];
 
-// Instalação
 self.addEventListener('install', (event) => {
   self.skipWaiting(); 
   event.waitUntil(
@@ -24,7 +23,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Ativação e Limpeza
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -41,42 +39,27 @@ self.addEventListener('activate', (event) => {
   self.clients.claim(); 
 });
 
-// Interceptação de Rede (AQUI ESTA A CORREÇÃO)
 self.addEventListener('fetch', (event) => {
-  
-  // 1. REGRA DE OURO: Se não for GET, NÃO MEXA!
-  // Isso impede o erro "Request method 'POST' is unsupported"
+  // 1. Ignora POST (Erro do console)
   if (event.request.method !== 'GET') {
     return; 
   }
-
-  // 2. Ignora Socket.io (Comunicação em tempo real não pode ser cacheada)
+  // 2. Ignora Socket
   const url = event.request.url;
   if (url.includes('/socket.io/') || url.includes('transport=polling')) {
     return;
   }
-
-  // 3. Lógica padrão: Tenta cache, se não tiver, baixa da rede
+  // 3. Cache padrão
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request).then(
-          (response) => {
-            // Verifica se a resposta é válida antes de tentar salvar
-            if(!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
+        if (response) return response;
+        return fetch(event.request).then((response) => {
+            if(!response || response.status !== 200 || response.type !== 'basic') return response;
             const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
+            caches.open(CACHE_NAME).then((cache) => { cache.put(event.request, responseToCache); });
             return response;
-          }
-        );
+        });
       })
   );
 });
