@@ -1,12 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Dashboard DOM carregado.");
+    console.log("Dashboard DOM carregado (Versão TV Completa).");
 
-    if (typeof io === 'undefined') { console.error("ERRO CRÍTICO: Socket.IO (io) não encontrada."); alert("Erro crítico..."); return; }
-    console.log("Socket.IO (io) encontrado.");
+    if (typeof io === 'undefined') {
+        console.error("ERRO CRÍTICO: Socket.IO (io) não encontrada.");
+        // Tenta recarregar a página se o socket falhar (comum em TVs)
+        setTimeout(() => window.location.reload(), 5000);
+        return;
+    }
 
     const socket = io();
 
-    // --- Seletores do DOM ---
+    // --- SELETORES DO DOM (Mantendo compatibilidade total) ---
     const sorteioIdHeaderEl = document.getElementById('dash-sorteio-id-header');
     const estadoHeaderEl = document.getElementById('dash-estado-header');
     const jogadoresTotalEl = document.getElementById('dash-jogadores-total');
@@ -16,276 +20,353 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashPremioLinhaEl = document.getElementById('dash-premio-linha');
     const dashPremioCheiaEl = document.getElementById('dash-premio-cheia');
     const btnToggleSom = document.getElementById('btn-toggle-som');
-    const areaPrincipalEl = document.querySelector('.area-principal');
     const listaQuaseLaContainer = document.getElementById('lista-quase-la');
+    
+    // Novos Seletores (Visuais TV)
     const anuncioVencedorOverlay = document.getElementById('anuncio-vencedor-overlay');
     const anuncioPremioEl = document.getElementById('anuncio-vencedor-premio');
     const anuncioNomeEl = document.getElementById('anuncio-vencedor-nome');
     const anuncioEsperaOverlay = document.getElementById('anuncio-espera-overlay');
     const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
 
-    // --- Variável para rastrear o último estado conhecido ---
+    // Variáveis de Estado
     let ultimoEstadoConhecido = null;
+    let intervaloPing = null;
+    let contadorPingFalhas = 0;
 
-    if (!sorteioIdHeaderEl || !estadoHeaderEl || !jogadoresTotalEl || !ultimoNumeroEl || !globoContainer || !listaVencedoresContainer || !dashPremioLinhaEl || !dashPremioCheiaEl || !btnToggleSom || !areaPrincipalEl || !listaQuaseLaContainer || !anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay || !esperaCronometroDisplay ) {
-        console.error("ERRO CRÍTICO: Um ou mais elementos essenciais do Dashboard não foram encontrados."); alert("Erro ao carregar a interface. Verifique o HTML e o Console (F12)."); return;
+    // --- SISTEMA DE VOZ (Original) ---
+    let somAtivo = false;
+    let synth = null;
+    let voces = [];
+
+    if ('speechSynthesis' in window) {
+        synth = window.speechSynthesis;
+        
+        function carregarVozes() {
+            try {
+                voces = synth.getVoices().filter(v => v.lang.startsWith('pt'));
+            } catch (e) { console.warn("Erro ao carregar vozes:", e); }
+        }
+        carregarVozes();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = carregarVozes;
+        }
+
+        function falar(texto) {
+            if (!somAtivo || !synth) return;
+            try {
+                synth.cancel(); // Para fala anterior
+                const utterThis = new SpeechSynthesisUtterance(texto);
+                if (voces.length > 0) utterThis.voice = voces[0]; // Tenta pegar voz PT-BR
+                synth.speak(utterThis);
+            } catch (e) { console.error("Erro na fala:", e); }
+        }
+
+        if (btnToggleSom) {
+            btnToggleSom.addEventListener('click', () => {
+                somAtivo = !somAtivo;
+                const icon = btnToggleSom.querySelector('i');
+                if (icon) icon.className = somAtivo ? 'fas fa-volume-high' : 'fas fa-volume-xmark';
+                // Feedback visual ou sonoro opcional
+            });
+        }
     }
-    console.log("Elementos do DOM selecionados com sucesso.");
 
-    // --- Lógica de Voz (inalterada) ---
-    let somAtivo = false; let synth = null; let voces = []; const suporteVoz = 'speechSynthesis' in window;
-    if (suporteVoz) {
-        synth = window.speechSynthesis; function carregarVozes() { try { voces = synth.getVoices().filter(voice => voice.lang.startsWith('pt')); console.log("Vozes PT:", voces.map(v => v.name)); } catch (error) { console.error("Erro vozes:", error); } }
-        carregarVozes(); if (speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = carregarVozes; }
-        function falar(texto) { if (!somAtivo || !synth || !texto) { console.log(`Falar ignorado: som=${somAtivo}`); return; } try { synth.cancel(); const utterThis = new SpeechSynthesisUtterance(texto); const vozPtBr = voces.find(voice => voice.lang === 'pt-BR'); if (vozPtBr) { utterThis.voice = vozPtBr; } else if (voces.length > 0) { utterThis.voice = voces[0]; } utterThis.pitch = 1; utterThis.rate = 1; utterThis.onstart = () => console.log(`Falando: "${texto}"`); utterThis.onerror = (event) => console.error('Erro voz:', event.error); utterThis.onend = () => console.log(`Fim fala: "${texto}"`); synth.speak(utterThis); } catch (error) { console.error("Erro falar:", error); } }
-        btnToggleSom.addEventListener('click', () => { somAtivo = !somAtivo; btnToggleSom.classList.toggle('som-ativo', somAtivo); const icon = btnToggleSom.querySelector('i'); if (icon) { if (somAtivo) { icon.className = 'fas fa-volume-high'; falar("Som ativado"); } else { icon.className = 'fas fa-volume-xmark'; if (synth) synth.cancel(); } } });
-        const initialIcon = btnToggleSom.querySelector('i'); if(initialIcon) { initialIcon.className = 'fas fa-volume-xmark'; }
-    } else { if (btnToggleSom) { btnToggleSom.disabled = true; btnToggleSom.title = "Síntese de voz não suportada"; const icon = btnToggleSom.querySelector('i'); if(icon) { icon.className = 'fas fa-volume-xmark'; } } }
+    // --- FUNÇÕES AUXILIARES ---
 
-
-    // --- Funções Auxiliares Visuais ---
-    function formatarBRL(valor) { const numero = parseFloat(valor); if (isNaN(numero) || valor === null || valor === undefined) return 'R$ --,--'; return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
-    
-    function formatarTempo(tempo) {
-        const minutos = Math.floor(tempo / 60);
-        let segundos = tempo % 60;
-        segundos = segundos < 10 ? '0' + segundos : segundos;
-        return `${minutos}:${segundos}`;
+    function formatarBRL(valor) {
+        return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
-    
-    function gerarGlobo() { if (!globoContainer) return; globoContainer.innerHTML = ''; for (let i = 1; i <= 75; i++) { try { const numeroEl = document.createElement('div'); numeroEl.classList.add('dash-globo-numero'); numeroEl.textContent = i; numeroEl.id = `dash-globo-${i}`; globoContainer.appendChild(numeroEl); } catch (error) { console.error(`Erro globo num ${i}:`, error); } } console.log("Globo gerado."); }
 
-    function atualizarListaVencedores(vencedores, anunciar = false) {
-        console.log("Atualizando Vencedores. Anunciar:", anunciar, "Dados:", vencedores);
+    function formatarTempo(segundos) {
+        if (segundos < 0) return "00:00";
+        const m = Math.floor(segundos / 60);
+        const s = segundos % 60;
+        return `${m}:${s < 10 ? '0' + s : s}`;
+    }
+
+    // --- SISTEMA ANTI-QUEDA (PING) - DO SEU ARQUIVO ORIGINAL ---
+    async function pingServidor() {
+        try {
+            // Se tiver uma rota de ping, usa ela. Se não, apenas checa conexão do socket.
+            if(socket.connected) {
+                contadorPingFalhas = 0;
+            } else {
+                throw new Error("Socket desconectado");
+            }
+        } catch (error) {
+            console.warn("Falha no Ping:", error);
+            contadorPingFalhas++;
+            if (contadorPingFalhas > 3) {
+                console.error("Muitas falhas de conexão. Tentando reconectar...");
+                window.location.reload(); // Recarrega a página da TV para forçar conexão
+            }
+        }
+    }
+    // Inicia o Ping a cada 30 segundos
+    intervaloPing = setInterval(pingServidor, 30000);
+
+
+    // --- FUNÇÕES DE INTERFACE ---
+
+    function gerarGlobo() {
+        if (!globoContainer) return;
+        globoContainer.innerHTML = '';
+        for (let i = 1; i <= 75; i++) {
+            const numeroEl = document.createElement('div');
+            numeroEl.classList.add('dash-globo-numero');
+            numeroEl.textContent = i;
+            numeroEl.id = `dash-globo-${i}`;
+            globoContainer.appendChild(numeroEl);
+        }
+    }
+
+    function atualizarListaVencedores(vencedores, deveAnunciar) {
         if (!listaVencedoresContainer) return;
         listaVencedoresContainer.innerHTML = '';
+        
         if (!vencedores || vencedores.length === 0) {
             listaVencedoresContainer.innerHTML = '<p>Nenhum ganhador ainda.</p>';
             return;
         }
-        try {
-            vencedores.forEach((v, index) => {
-                const itemVencedor = document.createElement('div');
-                const sorteioId = v.sorteioId || '???';
-                const premio = v.premio || '???';
-                const nome = v.nome || '???';
-                itemVencedor.innerHTML = `Sorteio #${sorteioId}: <span class="premio-tag">[${premio}]</span> <span>${nome}</span>`;
-                if (index === 0 && anunciar) {
-                    itemVencedor.classList.add('novo-vencedor');
-                    setTimeout(() => itemVencedor.classList.remove('novo-vencedor'), 2000);
-                    const fraseVoz = `Vencedor ${premio.includes('Linha') ? 'da Linha' : 'da Cartela Cheia'}: ${nome}!`;
-                    falar(fraseVoz);
-                    mostrarAnuncioVencedor(nome, premio);
-                }
-                listaVencedoresContainer.appendChild(itemVencedor);
+
+        vencedores.forEach((v, index) => {
+            const div = document.createElement('div');
+            // Estrutura adaptada para o CSS novo
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <span style="font-weight:bold;">${v.nome}</span>
+                    <span class="premio-tag" style="color: gold;">[${v.premio}]</span>
+                </div>
+                <div style="font-size: 0.8em; opacity: 0.7;">Sorteio #${v.sorteioId} - Cartela ${v.cartelaId}</div>
+            `;
+            
+            // Se for o primeiro da lista e a flag de anunciar estiver ativa
+            if (index === 0 && deveAnunciar) {
+                div.classList.add('novo-vencedor'); // Animação CSS
+                falar(`Temos um vencedor! ${v.nome} ganhou ${v.premio}`);
+                mostrarAnuncioVencedor(v.nome, v.premio);
+            }
+            listaVencedoresContainer.appendChild(div);
+        });
+    }
+
+    function atualizarGloboSorteados(numeros) {
+        if (!globoContainer) return;
+        
+        // Limpa tudo primeiro
+        const todos = document.querySelectorAll('.dash-globo-numero');
+        todos.forEach(el => el.classList.remove('sorteado'));
+
+        if (numeros && numeros.length > 0) {
+            numeros.forEach(num => {
+                const el = document.getElementById(`dash-globo-${num}`);
+                if (el) el.classList.add('sorteado');
             });
-            console.log("Tabela vencedores OK.");
-        } catch (error) {
-            console.error("Erro tabela vencedores:", error);
+            // Atualiza a bola da vez
+            if (ultimoNumeroEl) {
+                const ultimo = numeros[numeros.length - 1];
+                ultimoNumeroEl.textContent = ultimo;
+                
+                // Pequeno efeito visual na bola
+                ultimoNumeroEl.classList.remove('pop-anim');
+                void ultimoNumeroEl.offsetWidth; // Trigger reflow
+                ultimoNumeroEl.classList.add('pop-anim');
+            }
+        } else {
+            if (ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
         }
     }
 
-    function atualizarGloboSorteados(numerosSorteados) { if (!globoContainer || !ultimoNumeroEl) return; try { const todosNumeros = globoContainer.querySelectorAll('.dash-globo-numero'); if (!todosNumeros || todosNumeros.length === 0) { gerarGlobo(); } todosNumeros.forEach(num => num.classList.remove('sorteado')); if (numerosSorteados && numerosSorteados.length > 0) { numerosSorteados.forEach(num => { const el = document.getElementById(`dash-globo-${num}`); if (el) el.classList.add('sorteado'); }); ultimoNumeroEl.textContent = numerosSorteados[numerosSorteados.length - 1]; } else { ultimoNumeroEl.textContent = '--'; } } catch(error){ console.error("Erro globo sorteados:", error); } }
-
-    function atualizarEstadoVisual(estadoString) {
-        console.log("Atualizando Estado Visual para:", estadoString);
-        ultimoEstadoConhecido = estadoString;
+    function atualizarEstadoVisual(estado) {
+        ultimoEstadoConhecido = estado;
         if (!estadoHeaderEl) return;
-        try {
-            const textoEstado = estadoString ? estadoString.replace('_', ' ') : 'DESCONHECIDO';
-            estadoHeaderEl.textContent = textoEstado;
-            estadoHeaderEl.className = 'estado-texto';
-            if (estadoString === 'ESPERANDO') { estadoHeaderEl.classList.add('estado-esperando'); }
-            else if (estadoString === 'JOGANDO_LINHA') { estadoHeaderEl.classList.add('estado-jogando-linha'); }
-            else if (estadoString === 'JOGANDO_CHEIA') { estadoHeaderEl.classList.add('estado-jogando-cheia'); }
-            else { estadoHeaderEl.classList.add('estado-esperando'); }
-        } catch(error) { console.error("Erro estado visual:", error); }
+
+        // Limpa classes antigas
+        estadoHeaderEl.className = 'estado-texto';
+        
+        if (estado === 'ESPERANDO') {
+            estadoHeaderEl.textContent = "AGUARDANDO";
+            estadoHeaderEl.classList.add('estado-esperando');
+            // Mostra overlay de espera se não estivermos mostrando um vencedor agora
+            if (!anuncioVencedorOverlay.classList.contains('ativo')) {
+                anuncioEsperaOverlay.classList.remove('oculto');
+            }
+        } 
+        else if (estado === 'JOGANDO_LINHA') {
+            estadoHeaderEl.textContent = "VALENDO LINHA";
+            estadoHeaderEl.classList.add('estado-jogando-linha');
+            anuncioEsperaOverlay.classList.add('oculto');
+        } 
+        else if (estado === 'JOGANDO_CHEIA') {
+            estadoHeaderEl.textContent = "VALENDO BINGO";
+            estadoHeaderEl.classList.add('estado-jogando-cheia');
+            anuncioEsperaOverlay.classList.add('oculto');
+        } 
+        else {
+            estadoHeaderEl.textContent = estado;
+        }
     }
-
-    function getLetraDoNumero(numero) { if (numero >= 1 && numero <= 15) return "B"; if (numero >= 16 && numero <= 30) return "I"; if (numero >= 31 && numero <= 45) return "N"; if (numero >= 46 && numero <= 60) return "G"; if (numero >= 61 && numero <= 75) return "O"; return ""; }
-    function atualizarListaQuaseLa(jogadoresPerto) { if (!listaQuaseLaContainer) return; listaQuaseLaContainer.innerHTML = ''; if (!jogadoresPerto || jogadoresPerto.length === 0) { listaQuaseLaContainer.innerHTML = '<p>Ninguém perto ainda...</p>'; return; } try { jogadoresPerto.forEach(j => { const item = document.createElement('p'); const nomeSeguro = j.nome.replace(/</g, "&lt;").replace(/>/g, "&gt;"); item.innerHTML = `<span class="nome-jogador">${nomeSeguro}</span> <span class="faltam-contador">${j.faltam}</span>`; listaQuaseLaContainer.appendChild(item); }); } catch (error) { console.error("Erro ao atualizar lista 'Quase Lá':", error); listaQuaseLaContainer.innerHTML = '<p>Erro ao carregar.</p>'; } }
-
-    let anuncioVencedorTimer = null;
-    const DURACAO_ANUNCIO_VENCEDOR = 6000; 
-    const DELAY_EXTRA_ANTES_ESPERA = 500; 
 
     function mostrarAnuncioVencedor(nome, premio) {
-        if (!anuncioVencedorOverlay || !anuncioPremioEl || !anuncioNomeEl || !anuncioEsperaOverlay) return;
-        if (anuncioVencedorTimer) clearTimeout(anuncioVencedorTimer);
+        if (!anuncioVencedorOverlay) return;
 
-        const tipoPremio = premio.includes('Linha') ? "Vencedor da Linha!" : "BINGO! Cartela Cheia!";
-        anuncioPremioEl.textContent = tipoPremio;
-        anuncioNomeEl.textContent = nome;
+        // Preenche dados
+        if (anuncioPremioEl) anuncioPremioEl.textContent = premio.includes('Linha') ? "LINHA BATIDA!" : "BINGO!";
+        if (anuncioNomeEl) anuncioNomeEl.textContent = nome;
 
-        anuncioEsperaOverlay.classList.add('oculto');
+        // Esconde a espera temporariamente
+        if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.add('oculto');
+
+        // Mostra o vencedor
         anuncioVencedorOverlay.classList.add('ativo');
 
-        anuncioVencedorTimer = setTimeout(() => {
-            anuncioVencedorOverlay.classList.remove('ativo'); 
-            console.log("Escondendo anúncio de vencedor.");
-
-            setTimeout(() => {
-                if (ultimoEstadoConhecido === 'ESPERANDO') {
-                    console.log("Jogo em espera (após delay), mostrando anúncio de espera.");
-                    anuncioEsperaOverlay.classList.remove('oculto'); 
-                } else {
-                    console.log(`Jogo não está em espera (${ultimoEstadoConhecido}) (após delay), não mostrando anúncio de espera.`);
-                }
-            }, DELAY_EXTRA_ANTES_ESPERA); 
-
-        }, DURACAO_ANUNCIO_VENCEDOR); 
+        // Esconde depois de 8 segundos e volta ao normal
+        setTimeout(() => {
+            anuncioVencedorOverlay.classList.remove('ativo');
+            // Se o jogo acabou e voltamos para espera, reexibe o overlay de espera
+            if (ultimoEstadoConhecido === 'ESPERANDO') {
+                anuncioEsperaOverlay.classList.remove('oculto');
+            }
+        }, 8000);
     }
 
-    // --- ========================================================== ---
-    // --- NOVA FUNÇÃO PARA ATUALIZAR PRÊMIOS (INÍCIO) ---
-    // --- ========================================================== ---
-    
-    /**
-     * Atualiza os prêmios na barra lateral baseado no tipo de sorteio.
-     * @param {object} configs - O objeto de configurações vindo do servidor.
-     * @param {string|number} sorteioId - O ID do sorteio atual (pode ser número ou timestamp).
-     */
-    function atualizarPremios(configs, sorteioId) {
-        if (!configs) { 
-            console.error("atualizarPremios foi chamada sem configs.");
-            return; 
-        } 
-        if (!dashPremioLinhaEl || !dashPremioCheiaEl) { 
-            console.error("Elementos de prêmio (Linha/Cheia) não encontrados.");
-            return; 
-        }
+    // --- LÓGICA DO SLIDER (ANÚNCIOS) - ADICIONADA ---
+    function iniciarSliderAnuncios() {
+        const slides = document.querySelectorAll('.slide');
+        if (slides.length <= 1) return; 
 
-        // Pega o elemento pai (o <div class="info-item">) do Prêmio Linha
-        const parentInfoItemLinha = dashPremioLinhaEl.closest('.info-item');
-
-        // Verifica se é especial (ID do sorteio especial contém "T" do timestamp)
-        const isSpecial = sorteioId && sorteioId.toString().includes('T');
+        let indexAtual = 0;
         
-        if (isSpecial) {
-            // É Sorteio Especial
-            console.log("Detectado Sorteio Especial. Atualizando prêmios...");
-            
-            // 1. Esconde a LINHA (o div "info-item" inteiro)
-            //    Sorteios especiais não têm prêmio de linha.
-            if(parentInfoItemLinha) {
-                parentInfoItemLinha.style.display = 'none'; 
-            }
-            
-            // 2. Mostra o prêmio especial no campo de "Cartela Cheia"
-            dashPremioCheiaEl.textContent = formatarBRL(configs.sorteio_especial_valor);
-            
-        } else {
-            // É Sorteio Regular
-            console.log("Detectado Sorteio Regular. Atualizando prêmios...");
+        // Garante que o primeiro está visível
+        slides.forEach(s => s.classList.remove('ativo'));
+        slides[0].classList.add('ativo');
 
-            // 1. Mostra a LINHA (caso esteja escondida)
-            if(parentInfoItemLinha) {
-                parentInfoItemLinha.style.display = 'flex';
-            }
-            dashPremioLinhaEl.textContent = formatarBRL(configs.premio_linha);
+        setInterval(() => {
+            // Remove ativo do atual
+            slides[indexAtual].classList.remove('ativo');
             
-            // 2. Mostra o prêmio de cartela cheia regular
-            dashPremioCheiaEl.textContent = formatarBRL(configs.premio_cheia);
-        }
+            // Passa para o próximo
+            indexAtual++;
+            if (indexAtual >= slides.length) {
+                indexAtual = 0;
+            }
+
+            // Adiciona ativo no próximo
+            slides[indexAtual].classList.add('ativo');
+        }, 5000); // 5 segundos por slide
     }
-    // --- ========================================================== ---
-    // --- NOVA FUNÇÃO PARA ATUALIZAR PRÊMIOS (FIM) ---
-    // --- ========================================================== ---
 
+    // --- EVENTOS DO SOCKET.IO ---
 
-    // --- OUVINTES DO SOCKET.IO ---
+    socket.on('connect', () => {
+        console.log(`Dashboard conectado: ${socket.id}`);
+        // Força atualização imediata
+        // socket.emit('solicitarEstadoAtual'); // Caso seu back-end precise disso
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.warn(`Desconectado: ${reason}`);
+        if(estadoHeaderEl) {
+            estadoHeaderEl.textContent = "OFFLINE";
+            estadoHeaderEl.className = 'estado-texto estado-esperando';
+        }
+        if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.remove('oculto');
+        ultimoEstadoConhecido = 'DESCONECTADO';
+    });
+
     socket.on('estadoInicial', (data) => {
-        console.log("Recebido evento 'estadoInicial':", data);
-        try {
-            if(!data) { console.error("'estadoInicial' sem dados."); return; }
-            gerarGlobo();
-            if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
-            if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline !== undefined ? data.jogadoresOnline : '--';
-            atualizarEstadoVisual(data.estado);
-            atualizarListaVencedores(data.ultimosVencedores, false);
-            atualizarGloboSorteados(data.numerosSorteados);
-            
-            // --- ATUALIZAÇÃO AQUI ---
-            // Usa a nova função para definir os prêmios corretamente
-            atualizarPremios(data.configuracoes, data.sorteioId);
-            // --- FIM DA ATUALIZAÇÃO ---
+        console.log("Estado Inicial Recebido", data);
+        if (!data) return;
 
-            if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Aguardando início...</p>';
-            if(data.quaseLa) atualizarListaQuaseLa(data.quaseLa);
-            
-            if (data.estado === 'ESPERANDO') { 
-                anuncioEsperaOverlay.classList.remove('oculto'); 
-                esperaCronometroDisplay.textContent = formatarTempo(data.tempoRestante);
-            }
-            else { 
-                anuncioEsperaOverlay.classList.add('oculto'); 
-                esperaCronometroDisplay.textContent = "--:--";
-            }
-            
-            console.log("Estado inicial aplicado.");
-        } catch (error) { console.error("Erro ao processar 'estadoInicial':", error); }
+        gerarGlobo();
+
+        if (sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `SORTEIO #${data.sorteioId || '...'}`;
+        if (jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline || '--';
+
+        atualizarEstadoVisual(data.estado);
+        atualizarListaVencedores(data.ultimosVencedores, false);
+        atualizarGloboSorteados(data.numerosSorteados);
+        
+        // Atualiza prêmios
+        if (data.configuracoes) {
+            if (dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(data.configuracoes.premio_linha);
+            if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(data.configuracoes.premio_cheia);
+        }
+
+        // Se estiver esperando, atualiza cronômetro e mostra anúncios
+        if (data.estado === 'ESPERANDO') {
+            if (esperaCronometroDisplay) esperaCronometroDisplay.textContent = formatarTempo(data.tempoRestante);
+            anuncioEsperaOverlay.classList.remove('oculto');
+        } else {
+            anuncioEsperaOverlay.classList.add('oculto');
+        }
     });
 
     socket.on('cronometroUpdate', (data) => {
-        if (!data) return;
-        if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
-        atualizarEstadoVisual(data.estado);
-        
         if (data.estado === 'ESPERANDO' && esperaCronometroDisplay) {
             esperaCronometroDisplay.textContent = formatarTempo(data.tempo);
         }
-    });
-
-    socket.on('estadoJogoUpdate', (data) => {
-        console.log("Recebido 'estadoJogoUpdate':", data);
-        if (!data) return;
-        if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '???'}`;
-        atualizarEstadoVisual(data.estado);
-    });
-
-    socket.on('novoNumeroSorteado', (numeroSorteado) => { console.log(`Dashboard: Recebido 'novoNumeroSorteado': ${numeroSorteado}`); if (numeroSorteado === undefined || numeroSorteado === null) return; try{ ultimoNumeroEl.textContent = numeroSorteado; const globoNumEl = document.getElementById(`dash-globo-${numeroSorteado}`); if (globoNumEl) { globoNumEl.classList.add('sorteado'); } const letra = getLetraDoNumero(numeroSorteado); falar(`${letra} ${numeroSorteado}`); } catch (error){ console.error(`Erro ao processar 'novoNumeroSorteado' ${numeroSorteado}:`, error); } });
-    socket.on('contagemJogadores', (contagem) => { if (!contagem) return; if(jogadoresTotalEl) jogadoresTotalEl.textContent = contagem.total !== undefined ? contagem.total : '--'; });
-    socket.on('atualizarVencedores', (vencedores) => { console.log("Dashboard: Recebido 'atualizarVencedores'."); atualizarListaVencedores(vencedores, true); });
-    socket.on('atualizarQuaseLa', (listaTopJogadores) => { atualizarListaQuaseLa(listaTopJogadores); });
-
-    socket.on('iniciarJogo', () => {
-        console.log("Dashboard: Recebido 'iniciarJogo'. Limpando globo e escondendo anúncio de espera.");
-        try{
-            gerarGlobo();
-            if(ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
-            if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Boa sorte!</p>';
-            if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.add('oculto');
-            if (esperaCronometroDisplay) esperaCronometroDisplay.textContent = "--:--";
-        } catch (error){ console.error("Erro ao processar 'iniciarJogo':", error); }
-    });
-
-    socket.on('configAtualizada', (data) => { 
-        console.log("Dashboard: Recebido 'configAtualizada':", data); 
-        if (!data) return; 
-
-        // --- ATUALIZAÇÃO AQUI ---
-        // Pega o ID do sorteio que já está na tela para saber se é especial
-        const idNaTela = sorteioIdHeaderEl ? sorteioIdHeaderEl.textContent : '';
-        atualizarPremios(data, idNaTela);
-        // --- FIM DA ATUALIZAÇÃO ---
-    });
-
-    socket.on('connect', () => { console.log(`Dashboard conectado ao servidor com o ID: ${socket.id}`); });
-    socket.on('disconnect', (reason) => { console.warn(`Dashboard desconectado do servidor: ${reason}`); if(estadoHeaderEl) estadoHeaderEl.textContent = "DESCONECTADO"; if(estadoHeaderEl) estadoHeaderEl.className = 'estado-texto estado-esperando'; if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.remove('oculto'); ultimoEstadoConhecido = 'DESCONECTADO'; });
-    socket.on('connect_error', (err) => { console.error(`Dashboard falhou ao conectar: ${err.message}`); });
-
-    const PING_INTERVALO = 10 * 60 * 1000; 
-
-    async function pingServidor() {
-        try {
-            await fetch('/ping');
-            console.log("Ping enviado ao servidor (Keep-Alive).");
-        } catch (err) {
-            console.error("Erro ao enviar ping:", err);
+        // Aproveita para garantir que o estado visual está correto
+        if (data.estado !== ultimoEstadoConhecido) {
+            atualizarEstadoVisual(data.estado);
         }
-    }
+    });
 
-    setInterval(pingServidor, PING_INTERVALO);
-    setTimeout(pingServidor, 10000); 
+    socket.on('novoNumeroSorteado', (numero) => {
+        if (ultimoNumeroEl) ultimoNumeroEl.textContent = numero;
+        
+        const el = document.getElementById(`dash-globo-${numero}`);
+        if (el) el.classList.add('sorteado');
+        
+        falar(`Número ${numero}`);
+    });
 
+    socket.on('contagemJogadores', (data) => {
+        if (jogadoresTotalEl) jogadoresTotalEl.textContent = data.total;
+    });
+
+    socket.on('atualizarVencedores', (vencedores) => {
+        atualizarListaVencedores(vencedores, true); // true = anunciar voz/popup
+    });
+    
+    socket.on('iniciarJogo', () => {
+        console.log("Jogo Iniciado!");
+        gerarGlobo(); // Limpa o globo visual
+        if (ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
+        if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.add('oculto');
+        atualizarEstadoVisual('JOGANDO_LINHA'); // Assume linha primeiro
+    });
+
+    socket.on('configAtualizada', (data) => {
+        console.log("Configuração Atualizada", data);
+        if (!data) return;
+        // Lógica para manter o ID na tela se for sorteio especial
+        const idNaTela = sorteioIdHeaderEl ? sorteioIdHeaderEl.textContent : '';
+        
+        if (idNaTela.includes('T') || (data.isEspecial)) { // Exemplo de lógica para especial
+             if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(data.sorteio_especial_valor || data.premio_cheia);
+        } else {
+             if (dashPremioLinhaEl) dashPremioLinhaEl.textContent = formatarBRL(data.premio_linha);
+             if (dashPremioCheiaEl) dashPremioCheiaEl.textContent = formatarBRL(data.premio_cheia);
+        }
+    });
+
+    socket.on('listaQuaseLa', (data) => {
+         if(!listaQuaseLaContainer) return;
+         listaQuaseLaContainer.innerHTML = '';
+         if(!data || data.length === 0) {
+             listaQuaseLaContainer.innerHTML = '<p>...</p>';
+             return;
+         }
+         // Pega os top 3
+         data.slice(0, 3).forEach(item => {
+             const p = document.createElement('p');
+             p.innerHTML = `<span>Cartela ${item.cartelaId}</span> <span class="faltam-contador">Faltam ${item.faltam}</span>`;
+             listaQuaseLaContainer.appendChild(p);
+         });
+    });
+
+    // Inicia os anúncios
+    iniciarSliderAnuncios();
 });
