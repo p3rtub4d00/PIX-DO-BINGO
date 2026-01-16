@@ -5,18 +5,16 @@ const { Server } = require("socket.io");
 const session = require('express-session');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+const crypto = require('crypto'); // Módulo nativo para criptografia
+const { randomInt } = require('crypto'); // Importando randomInt especificamente
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 
 // --- CONEXÃO COM MONGODB ---
-// Pega a string de conexão das variáveis de ambiente
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
     console.error("ERRO CRÍTICO: A variável de ambiente MONGO_URI não está configurada.");
-    // Não damos exit aqui para permitir que o servidor tente rodar se for apenas teste local, 
-    // mas no Render é obrigatório.
 } else {
     mongoose.connect(MONGO_URI)
         .then(() => console.log('Conectado ao MongoDB com sucesso!'))
@@ -53,27 +51,26 @@ const Cambista = mongoose.model('Cambista', CambistaSchema);
 
 // Vendas
 const VendaSchema = new mongoose.Schema({
-    sorteio_id: { type: Number, default: 0 }, // ID numérico para sorteio regular
+    sorteio_id: { type: Number, default: 0 }, 
     nome_jogador: { type: String, required: true },
     telefone: String,
     quantidade_cartelas: { type: Number, required: true },
     valor_total: { type: Number, required: true },
-    tipo_venda: { type: String, required: true }, // 'Online', 'Manual', 'Cambista'
-    cartelas_json: String, // Mantemos como string JSON para compatibilidade com o front
+    tipo_venda: { type: String, required: true },
+    cartelas_json: String,
     payment_id: String,
-    tipo_sorteio: { type: String, default: 'regular' }, // 'regular' ou 'especial_agendado'
-    sorteio_id_especial: String, // String data/hora para especial
+    tipo_sorteio: { type: String, default: 'regular' },
+    sorteio_id_especial: String,
     cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
     timestamp: { type: Date, default: Date.now }
 });
-// Adiciona um campo virtual 'id' que retorna o _id como string (para compatibilidade)
 VendaSchema.virtual('id').get(function(){ return this._id.toHexString(); });
 VendaSchema.set('toJSON', { virtuals: true });
 const Venda = mongoose.model('Venda', VendaSchema);
 
 // Vencedores
 const VencedorSchema = new mongoose.Schema({
-    sorteio_id: { type: String, required: true }, // Pode ser numero (regular) ou string (especial)
+    sorteio_id: { type: String, required: true },
     premio: { type: String, required: true },
     nome: { type: String, required: true },
     telefone: String,
@@ -85,7 +82,7 @@ VencedorSchema.virtual('id').get(function(){ return this._id.toHexString(); });
 VencedorSchema.set('toJSON', { virtuals: true });
 const Vencedor = mongoose.model('Vencedor', VencedorSchema);
 
-// Comissões (Afiliados Online)
+// Comissões
 const ComissaoSchema = new mongoose.Schema({
     cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
     venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda', required: true },
@@ -98,18 +95,18 @@ ComissaoSchema.virtual('id').get(function(){ return this._id.toHexString(); });
 ComissaoSchema.set('toJSON', { virtuals: true });
 const Comissao = mongoose.model('Comissao', ComissaoSchema);
 
-// Histórico de Créditos (Cambistas)
+// Histórico de Créditos
 const TransacaoCreditoSchema = new mongoose.Schema({
     cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
     admin_usuario: String,
     valor_alteracao: Number,
-    tipo: String, // 'recarga' ou 'venda'
+    tipo: String,
     venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda' },
     timestamp: { type: Date, default: Date.now }
 });
 const TransacaoCredito = mongoose.model('TransacaoCredito', TransacaoCreditoSchema);
 
-// Pagamentos Pendentes (Webhook)
+// Pagamentos Pendentes
 const PagamentoPendenteSchema = new mongoose.Schema({
     payment_id: { type: String, required: true, unique: true },
     socket_id: String,
@@ -118,6 +115,19 @@ const PagamentoPendenteSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 const PagamentoPendente = mongoose.model('PagamentoPendente', PagamentoPendenteSchema);
+
+// --- NOVO SCHEMA: ESTADO DO JOGO (PERSISTÊNCIA) ---
+const GameStateSchema = new mongoose.Schema({
+    chave: { type: String, default: 'estado_atual', unique: true },
+    estado: String, // 'ESPERANDO', 'JOGANDO_LINHA', 'JOGANDO_CHEIA', etc.
+    numero_sorteio: Number,
+    numeros_sorteados: [Number],
+    numeros_disponiveis: [Number],
+    tempo_restante: Number,
+    sorteio_especial_em_andamento: { type: Boolean, default: false },
+    data_inicio: { type: Date, default: Date.now }
+});
+const GameState = mongoose.model('GameState', GameStateSchema);
 
 
 // --- CONFIGURAÇÃO INICIAL DO SERVIDOR ---
@@ -131,24 +141,20 @@ const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
 const mpClient = new MercadoPagoConfig({ accessToken: MERCADOPAGO_ACCESS_TOKEN, options: { timeout: 5000 } });
 const MERCADOPAGO_WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET;
 
-// Helper de formatação de data (para o frontend)
 function formatarDataBR(date) {
     if (!date) return '--';
-    // Ajuste o fuso horário conforme necessário (ex: America/Porto_Velho ou America/Sao_Paulo)
     return new Date(date).toLocaleString('pt-BR', { timeZone: 'America/Porto_Velho' }); 
 }
 
 // --- INICIALIZAÇÃO DE DADOS PADRÃO ---
 async function inicializarDados() {
     try {
-        // Cria Admin se não existir
         const adminExists = await Admin.findOne({ usuario: 'admin' });
         if (!adminExists) {
             const hash = await bcrypt.hash('admin123', 10);
             await Admin.create({ usuario: 'admin', senha: hash });
             console.log('Admin criado (admin / admin123).');
         } else {
-            // Migração de senha antiga se necessário (segurança)
             if (!adminExists.senha.startsWith('$2')) {
                 const hash = await bcrypt.hash('admin123', 10);
                 adminExists.senha = hash;
@@ -157,7 +163,6 @@ async function inicializarDados() {
             }
         }
 
-        // Configurações Padrão
         const configsDefault = [
             { chave: 'premio_linha', valor: '100.00' },
             { chave: 'premio_cheia', valor: '500.00' },
@@ -185,7 +190,6 @@ async function inicializarDados() {
 }
 
 // --- MIDDLEWARES ---
-// Configuração da Sessão com MongoDB
 app.use(session({
     secret: process.env.SESSION_SECRET || 'segredo_padrao_troque_isso',
     resave: false,
@@ -194,10 +198,10 @@ app.use(session({
         mongoUrl: MONGO_URI,
         collectionName: 'sessions' 
     }),
-    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 } // 1 semana
+    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
 }));
 
-// Webhook (Antes do express.json)
+// Webhook
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), async (req, res) => {
     try {
         let reqBody;
@@ -210,7 +214,6 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
         const signature = req.headers['x-signature'];
         const requestId = req.headers['x-request-id'];
 
-        // Validação da Assinatura
         if (MERCADOPAGO_WEBHOOK_SECRET && signature && requestId && reqBody.data && reqBody.data.id) {
             const parts = signature.split(',').reduce((acc, p) => {
                 const [k, v] = p.split('='); acc[k.trim()] = v.trim(); return acc;
@@ -235,7 +238,6 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
                 const pag = await payment.get({ id: paymentId });
 
                 if (pag.status === 'approved') {
-                    // Busca nos pagamentos pendentes
                     const pendente = await PagamentoPendente.findOne({ payment_id: paymentId });
                     
                     if (pendente) {
@@ -277,7 +279,6 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
                         const novaVenda = await Venda.create(vendaData);
                         console.log(`Venda criada #${novaVenda._id} via Webhook.`);
 
-                        // Comissão (se tiver afiliado)
                         if (cambistaId) {
                             await Comissao.create({
                                 cambista_id: cambistaId,
@@ -286,10 +287,8 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
                                 valor_comissao: valorTotal * 0.30,
                                 status_pagamento: 'pendente'
                             });
-                            console.log('Comissão registrada.');
                         }
 
-                        // Remove dos pendentes
                         await PagamentoPendente.deleteOne({ _id: pendente._id });
                     }
                 }
@@ -313,7 +312,6 @@ let numeroDoSorteio = 500;
 let PRECO_CARTELA_ESPECIAL_ATUAL = '10.00', SORTEIO_ESPECIAL_DATAHORA = '', SORTEIO_ESPECIAL_ATIVO = 'false';
 let sorteioEspecialEmAndamento = false;
 
-// Função para recarregar configs do banco para a memória
 async function carregarConfiguracoes() {
     try {
         const configs = await Config.find({});
@@ -338,12 +336,30 @@ async function carregarConfiguracoes() {
     }
 }
 
+// --- FUNÇÃO DE PERSISTÊNCIA (NOVA) ---
+async function salvarEstadoJogo() {
+    try {
+        await GameState.findOneAndUpdate(
+            { chave: 'estado_atual' },
+            {
+                estado: estadoJogo,
+                numero_sorteio: numeroDoSorteio,
+                numeros_sorteados: numerosSorteados,
+                numeros_disponiveis: numerosDisponiveis,
+                tempo_restante: tempoRestante,
+                sorteio_especial_em_andamento: sorteioEspecialEmAndamento
+            },
+            { upsert: true }
+        );
+    } catch (e) {
+        console.error("Erro ao salvar estado do jogo:", e);
+    }
+}
+
 // --- ROTAS DE ARQUIVOS ---
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'anuncio.html')));
 app.get('/dashboard-real', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
-
-// Rota Ping (Keep-alive)
 app.get('/ping', (req, res) => res.send('pong'));
 
 // --- ROTAS ADMIN ---
@@ -369,7 +385,6 @@ function checkAdmin(req, res, next) {
     else res.redirect('/admin/login.html');
 }
 
-// Configurações (Ler e Salvar)
 app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
     const configs = await Config.find({});
     const map = {};
@@ -385,7 +400,6 @@ app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
         }
         await carregarConfiguracoes();
         
-        // Emite atualização para dashboards
         const novasConfigs = await Config.find({});
         const map = {};
         novasConfigs.forEach(c => map[c.chave] = c.valor);
@@ -397,7 +411,6 @@ app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
     }
 });
 
-// Admin: Gerar Venda Manual
 app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     if (sorteioEspecialEmAndamento) return res.status(400).json({ success: false, message: 'Sorteio Especial em andamento' });
     
@@ -426,13 +439,11 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     res.json(cartelas);
 });
 
-// Relatórios
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
     const vendas = await Venda.find().sort({ timestamp: -1 });
     const formatadas = vendas.map(v => ({
         ...v.toObject(),
         data_formatada: formatarDataBR(v.timestamp),
-        // Se for especial, mostra o ID especial, senão o numérico
         sorteio_id: v.tipo_sorteio === 'especial_agendado' ? v.sorteio_id_especial : v.sorteio_id
     }));
     
@@ -447,7 +458,6 @@ app.post('/admin/api/vendas/limpar', checkAdmin, async (req, res) => {
     res.json({ success: true, changes: r.deletedCount });
 });
 
-// Vencedores
 app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
     const vencedores = await Vencedor.find().sort({ timestamp: -1 });
     const formatados = vencedores.map(v => ({
@@ -468,7 +478,6 @@ app.post('/admin/api/vencedores/limpar', checkAdmin, async (req, res) => {
     res.json({ success: true, changes: r.deletedCount });
 });
 
-// Cambistas (Admin)
 app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
     const lista = await Cambista.find().sort({ usuario: 1 });
     const formatados = lista.map(c => ({...c.toObject(), id: c._id}));
@@ -507,7 +516,6 @@ app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, async (req, res)
     res.json({ success: true, novoSaldo: cambista.saldo_creditos });
 });
 
-// Comissões (Admin)
 app.get('/admin/api/comissoes', checkAdmin, async (req, res) => {
     const comissoes = await Comissao.find()
         .populate('cambista_id', 'usuario')
@@ -543,7 +551,6 @@ function checkCambista(req, res, next) {
     else res.status(403).json({ success: false });
 }
 
-// Servir arquivos estáticos do cambista
 app.get('/cambista/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')));
 app.get('/cambista/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')));
 app.use('/cambista', express.static(path.join(__dirname, 'public', 'cambista')));
@@ -585,7 +592,6 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
     const total = quantidade * preco;
     const cambistaId = req.session.cambistaId;
     
-    // Transação manual simples (MongoDB)
     const cambista = await Cambista.findById(cambistaId);
     if (cambista.saldo_creditos < total) return res.status(400).json({ success: false, message: 'Saldo insuficiente' });
     
@@ -658,11 +664,21 @@ let numerosSorteados = [];
 let jogadores = {};
 
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6); }
+
+// --- RNG SEGURO (Substituindo Math.random) ---
 function gerarNumerosAleatorios(qtd, min, max) { 
     const nums = new Set(); 
-    while(nums.size < qtd) nums.add(Math.floor(Math.random() * (max - min + 1)) + min); 
+    // Garante que não trava se o intervalo for menor que a qtd pedida
+    if (max - min + 1 < qtd) return []; 
+    
+    while(nums.size < qtd) {
+        // randomInt gera um inteiro criptograficamente seguro: [min, max)
+        // Por isso usamos max + 1 no limite superior
+        nums.add(randomInt(min, max + 1)); 
+    }
     return Array.from(nums); 
 }
+
 function gerarDadosCartela(sId) {
     const c = [];
     const cols = [
@@ -682,7 +698,6 @@ function gerarDadosCartela(sId) {
     return { c_id: gerarIdUnico(), s_id: sId, data: c };
 }
 
-// Funções de verificação de vitória (Mantidas do original)
 function checarVencedorLinha(cartelaData, sorteados) { 
     const c = cartelaData.data; const s = new Set(sorteados); s.add("FREE");
     for(let i=0; i<5; i++) if(c[i].every(n => s.has(n))) return true; 
@@ -712,7 +727,6 @@ async function getUltimosVencedores() {
     return v.map(x => ({ sorteioId: x.sorteio_id, premio: x.premio, nome: x.nome }));
 }
 
-// --- FUNÇÃO PARA O PAINEL ADMIN (MONGODB) ---
 async function getAdminStatusData() {
     const idSorteioAtual = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
 
@@ -777,6 +791,8 @@ setInterval(() => {
     verificarSorteioEspecial();
     if (estadoJogo === "ESPERANDO" && !sorteioEspecialEmAndamento) {
         tempoRestante--;
+        if (tempoRestante % 5 === 0) salvarEstadoJogo(); // Salva periodicamente na espera
+        
         if (tempoRestante <= 0) {
             estadoJogo = "JOGANDO_LINHA";
             io.emit('iniciarJogo');
@@ -806,20 +822,21 @@ async function iniciarSorteioEspecial() {
     numerosSorteados = [];
     if(intervaloSorteio) clearInterval(intervaloSorteio);
 
-    // Carregar Jogadores Especiais
     const vendas = await Venda.find({ tipo_sorteio: 'especial_agendado', sorteio_id_especial: SORTEIO_ESPECIAL_DATAHORA });
     vendas.forEach(v => {
         const cartelas = JSON.parse(v.cartelas_json);
         jogadores[`especial_${v._id}`] = { nome: v.nome_jogador, telefone: v.telefone, isManual: true, cartelas };
     });
 
-    // Adicionar Bots
-    const nBots = Math.floor(Math.random()*(MAX_BOTS_ATUAL-MIN_BOTS_ATUAL+1))+MIN_BOTS_ATUAL;
+    const nBots = randomInt(MIN_BOTS_ATUAL, MAX_BOTS_ATUAL + 1); // Crypto Random
     for(let i=0; i<nBots; i++) {
         const bC = [];
         for(let k=0; k<3; k++) bC.push(gerarDadosCartela(SORTEIO_ESPECIAL_DATAHORA));
         jogadores[`bot_${gerarIdUnico()}`] = { nome: nomesBots[i%nomesBots.length], isBot: true, cartelas: bC };
     }
+    
+    // SALVA O ESTADO
+    await salvarEstadoJogo();
 
     io.emit('iniciarJogo');
     io.emit('estadoJogoUpdate', { sorteioId: SORTEIO_ESPECIAL_DATAHORA, estado: estadoJogo });
@@ -835,20 +852,26 @@ function iniciarNovaRodada() {
     numerosSorteados = [];
     if(intervaloSorteio) clearInterval(intervaloSorteio);
     
-    // Filtra manuais do sorteio atual
     const novosJogadores = {};
     for(const id in jogadores) {
         if(jogadores[id].isManual && jogadores[id].cartelas[0].s_id == numeroDoSorteio) novosJogadores[id] = jogadores[id];
     }
     jogadores = novosJogadores;
 
-    // Bots
-    const nBots = Math.floor(Math.random()*(MAX_BOTS_ATUAL-MIN_BOTS_ATUAL+1))+MIN_BOTS_ATUAL;
+    const nBots = randomInt(MIN_BOTS_ATUAL, MAX_BOTS_ATUAL + 1); // Crypto Random
     for(let i=0; i<nBots; i++) {
         const bC = [];
-        for(let k=0; k<Math.floor(Math.random()*3)+1; k++) bC.push(gerarDadosCartela(numeroDoSorteio));
-        jogadores[`bot_${gerarIdUnico()}`] = { nome: nomesBots[Math.floor(Math.random()*nomesBots.length)], isBot: true, cartelas: bC };
+        // RandomInt para qtd de cartelas: 1 a 3
+        const qtdCartelasBot = randomInt(1, 4); 
+        for(let k=0; k<qtdCartelasBot; k++) bC.push(gerarDadosCartela(numeroDoSorteio));
+        
+        // RandomInt para nome
+        const nomeIndex = randomInt(0, nomesBots.length);
+        jogadores[`bot_${gerarIdUnico()}`] = { nome: nomesBots[nomeIndex], isBot: true, cartelas: bC };
     }
+
+    // SALVA O ESTADO
+    salvarEstadoJogo();
 
     io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
     io.emit('contagemJogadores', getContagemJogadores());
@@ -859,14 +882,21 @@ function iniciarNovaRodada() {
 
 async function sortearNumero() {
     if(numerosDisponiveis.length === 0) { terminarRodada(null); return; }
-    const num = numerosDisponiveis.splice(Math.floor(Math.random()*numerosDisponiveis.length), 1)[0];
+    
+    // --- SORTEIO SEGURO COM CRYPTO ---
+    // Escolhe um índice aleatório dentro do array de disponíveis
+    const indiceSorteado = randomInt(0, numerosDisponiveis.length);
+    const num = numerosDisponiveis.splice(indiceSorteado, 1)[0];
+    
     numerosSorteados.push(num);
     io.emit('novoNumeroSorteado', num);
+    
+    // --- PERSISTÊNCIA CRÍTICA: SALVA A CADA PEDRA ---
+    await salvarEstadoJogo();
     
     const sSet = new Set(numerosSorteados);
     const idSorteio = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
     
-    // Lógica simplificada de verificação (Linha e Cheia)
     if(estadoJogo === "JOGANDO_LINHA") {
         for(const sid in jogadores) {
             const jog = jogadores[sid];
@@ -881,8 +911,9 @@ async function sortearNumero() {
                     } else io.emit('alguemGanhouLinha', { nome: jog.nome });
                     
                     estadoJogo = "JOGANDO_CHEIA";
+                    await salvarEstadoJogo(); // Salva a mudança de estado
                     io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });
-                    return; // Sai do loop e espera proximo numero
+                    return; 
                 }
             }
         }
@@ -896,13 +927,14 @@ async function sortearNumero() {
                 if(checarVencedorCartelaCheia(jog.cartelas[i], sSet)) {
                     clearInterval(intervaloSorteio);
                     estadoJogo = "ANUNCIANDO_VENCEDOR";
+                    await salvarEstadoJogo(); // Salva o fim do sorteio
                     io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });
                     
                     await salvarVencedor(idSorteio, 'Cartela Cheia', jog.nome, jog.telefone, jog.cartelas[i].c_id);
                     
                     setTimeout(() => {
                         const premioValor = sorteioEspecialEmAndamento 
-                            ? parseFloat(String(Config.findOne({chave:'sorteio_especial_valor'}).valor || '1000')) // Simplificado para não fazer await aqui dentro
+                            ? parseFloat(String(Config.findOne({chave:'sorteio_especial_valor'}).valor || '1000')) 
                             : PREMIO_CHEIA;
                             
                         const dadosVencedor = { nome: jog.nome, cartelaGanhadora: jog.cartelas[i], indiceCartela: i, premioValor: premioValor };
@@ -915,7 +947,6 @@ async function sortearNumero() {
         }
     }
     
-    // Quase lá
     const perto = [];
     for(const sid in jogadores) {
         if(!jogadores[sid].cartelas) continue;
@@ -956,6 +987,8 @@ async function terminarRodada(vencedor, socketId) {
     
     tempoRestante = DURACAO_ESPERA_ATUAL;
     estadoJogo = "ESPERANDO";
+    await salvarEstadoJogo(); // Salva que voltou para espera
+
     io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
     io.emit('atualizarQuaseLa', []);
 }
@@ -975,7 +1008,7 @@ io.on('connection', async (socket) => {
         jogadoresOnline: cont.total,
         jogadoresReais: cont.reais,
         ultimosVencedores: ultimos,
-        numerosSorteados: numerosSorteados,
+        numerosSorteados: numerosSorteados, // Manda o histórico para quem reconecta
         configuracoes: configMap
     });
 
@@ -1053,13 +1086,11 @@ io.on('connection', async (socket) => {
         } catch(e) { console.error(e); cb({success:false}); }
     });
     
-    // Polling Pagamento
     socket.on('checarMeuPagamento', async (data) => {
         const v = await Venda.findOne({ payment_id: data.paymentId });
         if(v) socket.emit('pagamentoAprovado', { vendaId: v.id, nome: v.nome_jogador, telefone: v.telefone });
     });
 
-    // Buscar Cartelas
     socket.on('buscarCartelasPorTelefone', async (data, cb) => {
         const vendas = await Venda.find({ 
             telefone: data.telefone,
@@ -1109,7 +1140,6 @@ io.on('connection', async (socket) => {
         }
     });
     
-    // --- ATUALIZAÇÃO DO PAINEL ADMIN (SOCKET) ---
     socket.on('getAdminStatus', async () => {
         try {
             const statusData = await getAdminStatusData();
@@ -1128,5 +1158,34 @@ io.on('connection', async (socket) => {
 (async () => {
     await inicializarDados();
     await carregarConfiguracoes();
+
+    // --- LÓGICA DE RECUPERAÇÃO APÓS CRASH/RESTART ---
+    try {
+        const salvo = await GameState.findOne({ chave: 'estado_atual' });
+        // Se existe um estado salvo e não é 'ESPERANDO' (ou seja, caiu no meio do jogo)
+        if (salvo && salvo.estado && salvo.estado !== 'ESPERANDO') {
+            console.log("⚠️ RECUPERANDO JOGO APÓS REINICIALIZAÇÃO DO SERVIDOR...");
+            
+            estadoJogo = salvo.estado;
+            numeroDoSorteio = salvo.numero_sorteio;
+            numerosSorteados = salvo.numeros_sorteados || [];
+            numerosDisponiveis = salvo.numeros_disponiveis || [];
+            tempoRestante = salvo.tempo_restante;
+            sorteioEspecialEmAndamento = salvo.sorteio_especial_em_andamento || false;
+
+            // Se estava jogando, retoma o loop de sorteio
+            if (estadoJogo.includes('JOGANDO')) {
+                if(intervaloSorteio) clearInterval(intervaloSorteio);
+                intervaloSorteio = setInterval(sortearNumero, TEMPO_ENTRE_NUMEROS);
+                console.log(`✅ Jogo recuperado! ${numerosSorteados.length} números já sorteados.`);
+            }
+        } else {
+            // Se estava esperando ou não tinha jogo, limpa o estado para garantir
+            await GameState.deleteOne({ chave: 'estado_atual' });
+        }
+    } catch(e) {
+        console.error("Erro ao tentar recuperar estado do jogo:", e);
+    }
+
     server.listen(PORTA, () => console.log(`Servidor Mongo rodando na porta ${PORTA}`));
 })();
