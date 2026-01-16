@@ -3,51 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sala de Espera - Bingo do Pix</title>
+    <title>Aguardando Sorteio - Bingo Pix</title>
     
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#00C853">
     
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="espera.css">
+    <link rel="stylesheet" href="jogo.css">
+    
+    <style>
+        /* Ajuste específico para centralizar a sala de espera */
+        body.espera-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+        .espera-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+    </style>
 </head>
-<body>
+<body class="espera-body">
 
-    <div class="espera-container animate-up">
+    <div class="espera-card animate-up">
         
-        <div class="espera-header">
-            <i class="fa-solid fa-gem logo-icon"></i> BINGO<span class="highlight">PIX</span>
+        <div class="game-header-logo" style="margin-bottom: 20px; color: #1e293b; font-size: 1.5rem;">
+            <i class="fa-solid fa-gem" style="color:#00C853"></i> BINGO<span style="color:#00C853">PIX</span>
         </div>
 
-        <h1>AGUARDANDO SORTEIO</h1>
-        <p class="subtitulo">Boa sorte! Suas cartelas estão abaixo.</p>
+        <h1 style="font-size: 1.2rem; color: #64748b; margin-bottom: 10px;">PRÓXIMO SORTEIO:</h1>
+        
+        <div id="sorteio-id-display" class="badge-id">#CARREGANDO</div>
 
-        <div class="status-box">
-            <div class="loader-espera"></div>
+        <div id="cronometro" class="timer-display" style="color: #1e293b; font-size: 3.5rem; margin: 20px 0;">--:--</div>
+        
+        <div class="loader-espera"></div>
+        <p style="color: #64748b; margin-bottom: 30px;">Aguarde o início da transmissão...</p>
+
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin-bottom: 20px;">
+
+        <div id="cartela-switcher" class="cartela-controls">
+            <button id="btn-cartela-anterior" class="btn-nav"><i class="fa-solid fa-chevron-left"></i></button>
             
-            <h2 id="status-titulo">CARREGANDO STATUS...</h2>
-            <div id="cronometro" class="timer-display">--:--</div>
+            <span id="cartela-titulo-atual" class="cartela-paginacao">Carregando...</span>
+            
+            <button id="btn-cartela-proxima" class="btn-nav"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
 
-        <div id="area-cartelas">
-            <h3><i class="fa-solid fa-ticket"></i> SUAS CARTELAS:</h3>
-            
-            <div id="meus-jogos" class="grid-cartelas">
-                </div>
-            
-            <div id="lista-cartelas" class="grid-cartelas"></div>
-        </div>
+        <div id="cartelas-container" class="area-cartela-unica">
+            </div>
 
-        <a href="/" class="btn-voltar">
+        <div id="cartela-id-display" style="margin-top: 10px; font-size: 0.8rem; color: #94a3b8; font-family: monospace;"></div>
+
+        <a href="/" class="btn-outline" style="margin-top: 30px; display: inline-block; text-decoration: none;">
             <i class="fa-solid fa-house"></i> Voltar ao Início
         </a>
 
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="espera.js"></script> <script>
+    <script src="espera.js"></script>
+    <script>
         // PWA
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
     </script>
