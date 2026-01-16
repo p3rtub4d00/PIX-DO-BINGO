@@ -4,46 +4,50 @@
     --primary-dark: #009624;
     --secondary-color: #2962FF;     
     --accent-gold: #FFD600;        
-    --bg-color: #f4f7f6;
+    --bg-color: #f0f2f5;
     --text-dark: #1e293b;
     --white: #ffffff;
     --radius: 16px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
-body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-color); color: var(--text-dark); padding-bottom: 20px; }
+body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-color); color: var(--text-dark); padding-bottom: 30px; }
 
-/* --- HEADER --- */
+/* --- HEADER HERO --- */
 .hero-header {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: linear-gradient(135deg, #1e293b 0%, #111827 100%);
     color: white;
-    padding: 20px 20px 60px 20px;
+    padding: 20px 20px 70px 20px;
     text-align: center;
     border-bottom-left-radius: 30px;
     border-bottom-right-radius: 30px;
-    margin-bottom: -40px; /* Sobreposição */
+    margin-bottom: -50px; /* Efeito sobreposto */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
-.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; max-width: 800px; margin-left: auto; margin-right: auto; }
-.logo-area { font-weight: 900; font-size: 1.2rem; letter-spacing: 1px; }
+.top-bar { display: flex; justify-content: space-between; align-items: center; max-width: 800px; margin: 0 auto 20px auto; }
+.logo-area { font-weight: 900; font-size: 1.1rem; letter-spacing: 1px; }
 .highlight { color: var(--primary-color); }
-.btn-revendedor-outline { border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 15px; border-radius: 20px; text-decoration: none; font-size: 0.8rem; }
+.btn-revendedor-outline { border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 12px; border-radius: 20px; text-decoration: none; font-size: 0.75rem; text-transform: uppercase; transition: 0.3s; }
+.btn-revendedor-outline:hover { background: rgba(255,255,255,0.1); }
 
-.main-title { font-size: 2.2rem; margin-bottom: 5px; font-weight: 900; }
-.subtitle { font-size: 0.9rem; color: #cbd5e1; font-family: 'Roboto', sans-serif; }
+.main-title { font-size: 2.5rem; margin-bottom: 5px; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+.subtitle { font-size: 0.9rem; color: #94a3b8; font-family: 'Roboto', sans-serif; font-weight: 400; }
 
 /* Botão PWA */
 .btn-instalar-app {
     background: linear-gradient(45deg, #00C853, #00E676);
-    color: #003300;
+    color: #064e24;
     border: none;
-    padding: 10px 20px;
+    padding: 10px 25px;
     border-radius: 50px;
-    font-weight: 700;
+    font-weight: 800;
     margin: 20px auto 0 auto;
     display: block;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
     animation: pulse 2s infinite;
+    text-transform: uppercase;
+    font-size: 0.85rem;
 }
 
 /* --- CONTAINER --- */
@@ -54,68 +58,156 @@ body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-color);
     background: var(--white);
     border-radius: var(--radius);
     padding: 20px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
     text-align: center;
-    border-top: 5px solid transparent; /* Para status */
+    border-top: 4px solid transparent; 
 }
 
-/* STATUS (IMPORTANTE PARA O JS) */
+/* STATUS */
 .status-esperando { border-color: var(--primary-color); }
 .status-jogando { border-color: var(--secondary-color); }
-.status-header { color: #666; font-size: 0.9rem; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; }
-.timer-display { font-size: 3rem; font-weight: 900; color: var(--text-dark); line-height: 1; font-family: 'Roboto', sans-serif; }
+.status-header { color: #64748b; font-size: 0.85rem; font-weight: 700; margin-bottom: 5px; }
+.timer-display { font-size: 3.5rem; font-weight: 900; color: var(--text-dark); line-height: 1; font-family: 'Roboto', sans-serif; }
+#status-subtexto { font-size: 0.9rem; color: #64748b; margin-top: 5px; }
 
 /* PRÊMIOS */
-.section-title { font-size: 1.1rem; text-transform: uppercase; margin-bottom: 20px; color: #64748b; }
+.section-title { font-size: 1rem; text-transform: uppercase; margin-bottom: 15px; color: #64748b; letter-spacing: 1px; font-weight: 800; }
 .premios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
 .premio-card { background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; }
 .premio-card.principal { grid-column: span 2; background: #f0fdf4; border-color: var(--primary-color); }
 
-.label { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #64748b; }
-.valor { font-size: 1.8rem; font-weight: 900; color: var(--text-dark); }
+.label { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #64748b; margin-top: 5px; }
+.valor { font-size: 1.8rem; font-weight: 900; color: var(--text-dark); line-height: 1.1; }
 .text-gradient { background: linear-gradient(to right, var(--primary-dark), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .sub { font-size: 0.7rem; color: #94a3b8; }
+.icon-trophy { color: var(--accent-gold); font-size: 1.5rem; }
+.icon-medal { color: var(--secondary-color); font-size: 1.2rem; }
 
-/* MINHAS CARTELAS */
+/* SORTEIO ESPECIAL */
+.card-especial { background: linear-gradient(135deg, #2962FF 0%, #1565C0 100%); border: none; color: white; }
+.badge-especial { background: rgba(0,0,0,0.3); color: #FFD600; display: inline-block; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; margin-bottom: 10px; }
+.valor-zao { font-size: 3rem; font-weight: 900; color: white !important; }
+.desc-premio { opacity: 0.9; margin-bottom: 15px; font-weight: 600; }
+.data-box { background: rgba(255,255,255,0.2); display: inline-flex; align-items: center; gap: 8px; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 15px; }
+.btn-white { background: white; color: var(--secondary-color); }
+.text-white { color: white !important; }
+
+/* FORMULARIOS */
 .input-wrapper { position: relative; margin-bottom: 10px; }
-.input-wrapper i { position: absolute; left: 15px; top: 15px; color: #94a3b8; }
-.input-wrapper input { width: 100%; padding: 12px 12px 12px 40px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; }
-.action-buttons { display: flex; gap: 10px; }
-.btn-outline { flex: 1; padding: 10px; border: 1px solid var(--secondary-color); background: transparent; color: var(--secondary-color); border-radius: 8px; font-weight: 700; cursor: pointer; }
-.btn-outline.secondary { border-color: #94a3b8; color: #64748b; }
+.input-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+.input-wrapper input { width: 100%; padding: 12px 12px 12px 40px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; transition: 0.3s; }
+.input-wrapper input:focus { border-color: var(--primary-color); }
 
-/* BOTÕES DE AÇÃO */
-.btn-action { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.action-buttons { display: flex; gap: 10px; }
+.btn-outline { flex: 1; padding: 12px; border: 2px solid var(--secondary-color); background: transparent; color: var(--secondary-color); border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+.btn-outline:hover { background: var(--secondary-color); color: white; }
+.btn-outline.secondary { border-color: #cbd5e1; color: #64748b; }
+
+/* BOTÕES GERAIS */
+.btn-action { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s; }
+.btn-action:active { transform: scale(0.98); }
+.btn-action small { display: block; font-size: 0.7rem; opacity: 0.8; font-weight: 400; margin-top: 3px; }
 .btn-green { background: var(--primary-color); color: white; }
-.btn-gold { background: var(--accent-gold); color: #000; }
 .btn-live { display: inline-block; background: #ff1744; color: white; text-decoration: none; padding: 8px 20px; border-radius: 50px; font-weight: 700; margin-top: 10px; font-size: 0.8rem; }
 
 /* REGRAS */
-.custom-details summary { cursor: pointer; list-style: none; font-weight: 700; display: flex; justify-content: space-between; }
-.regras-conteudo { text-align: left; margin-top: 15px; font-size: 0.85rem; color: #64748b; line-height: 1.6; }
+.custom-details summary { cursor: pointer; list-style: none; font-weight: 700; display: flex; justify-content: space-between; align-items: center; padding: 20px; }
+.regras-conteudo { padding: 0 20px 20px 20px; text-align: left; font-size: 0.9rem; color: #64748b; line-height: 1.6; border-top: 1px solid #f1f5f9; }
+.regras-conteudo p { margin-bottom: 8px; }
 
-/* RODAPÉ (LEGAL) */
-footer { text-align: center; margin-top: 40px; padding: 20px; border-top: 1px solid #e2e8f0; }
-.legal-box { background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 15px; display: inline-block; max-width: 500px; }
-.legal-warning { font-size: 0.8rem; color: #334155; line-height: 1.5; margin-bottom: 5px; }
-.legal-sub { font-size: 0.7rem; color: #94a3b8; }
-.legal-box i { font-size: 1.5rem; color: #cbd5e1; margin-bottom: 10px; display: block; }
+/* RODAPÉ */
+footer { text-align: center; margin-top: 40px; padding: 20px; background: white; border-top: 1px solid #e2e8f0; }
+.trust-icons { font-size: 1.5rem; color: #cbd5e1; margin-bottom: 15px; display: flex; justify-content: center; gap: 15px; }
+.legal-box { background: #f8fafc; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 0.8rem; color: #64748b; border: 1px solid #e2e8f0; max-width: 500px; margin-left: auto; margin-right: auto; }
+.legal-warning { margin-bottom: 5px; line-height: 1.4; }
+.legal-sub { font-size: 0.7rem; opacity: 0.7; }
 
-/* MODAL */
-.modal-overlay { background: rgba(0,0,0,0.8); z-index: 999; display: none; /* JS controla isso */ }
-.modal-content { background: white; width: 90%; max-width: 400px; padding: 25px; border-radius: 20px; position: relative; margin: 15% auto; }
-.modal-close { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; }
-.modal-title { margin-bottom: 20px; font-size: 1.3rem; }
+/* --- MODAL DE CHECKOUT E RESULTADOS (CORREÇÃO DE POSIÇÃO) --- */
+.modal-overlay { 
+    display: none; /* JS controla isso */
+    position: fixed !important; /* FORÇA FIXAR NA TELA */
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); 
+    z-index: 9999; 
+    justify-content: center;
+    align-items: center; /* Centraliza Verticalmente */
+    backdrop-filter: blur(5px);
+    overflow-y: auto; /* Permite rolar se a tela for pequena */
+}
+
+.modal-content { 
+    background: white; 
+    width: 90%; 
+    max-width: 420px; 
+    padding: 30px; 
+    border-radius: 20px; 
+    position: relative; 
+    margin: auto; /* Importante para centralizar */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalPop 0.3s ease-out;
+}
+@keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.modal-close { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #94a3b8; padding: 5px; }
+.modal-title { font-size: 1.3rem; margin-bottom: 20px; text-align: center; font-weight: 800; color: var(--text-dark); }
+.modal-header-icon { text-align: center; font-size: 2rem; color: var(--primary-color); margin-bottom: 10px; }
+
 .form-grupo { text-align: left; margin-bottom: 15px; }
 .form-grupo label { font-size: 0.8rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 5px; }
-.form-grupo input { width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; }
-.total-box { background: #f0fdf4; padding: 15px; border-radius: 8px; margin-bottom: 15px; color: var(--primary-dark); }
-.qr-wrapper img { max-width: 100%; }
+.form-grupo input { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-weight: 600; font-size: 1rem; }
+.form-grupo input:focus { border-color: var(--primary-color); }
+
+.total-box { background: #f0fdf4; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--primary-color); display: flex; justify-content: space-between; align-items: center; }
+.text-pix { color: var(--primary-dark); font-weight: 900; font-size: 1.5rem; }
+
+/* PIX */
+.qr-wrapper { text-align: center; margin: 15px 0; border: 2px dashed #cbd5e1; padding: 10px; border-radius: 10px; }
+.qr-wrapper img { max-width: 200px; width: 100%; }
 .copia-cola-wrapper { display: flex; gap: 5px; margin-top: 10px; }
-.copia-cola-wrapper input { flex: 1; border: 1px solid #ddd; padding: 5px; }
-.copia-cola-wrapper button { background: var(--secondary-color); color: white; border: none; padding: 5px 10px; cursor: pointer; }
-.loading-state { margin-top: 15px; font-size: 0.9rem; color: #64748b; }
-.spinner { width: 20px; height: 20px; border: 3px solid #eee; border-top: 3px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+.copia-cola-wrapper input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; }
+.copia-cola-wrapper button { background: var(--secondary-color); color: white; border: none; padding: 0 15px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.loading-state { margin-top: 20px; text-align: center; color: #64748b; font-size: 0.9rem; }
+.spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px auto; }
+
+/* --- CSS PARA OS MODAIS DINÂMICOS (MINHAS CARTELAS) --- */
+/* O Javascript cria divs com classe 'cartela-encontrada-item', precisamos estilizar aqui */
+#modal-minhas-cartelas-lista, #modal-meus-premios-lista {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    text-align: left;
+    border-top: 1px solid #f1f5f9;
+}
+.cartela-encontrada-item {
+    background: #f8fafc;
+    padding: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.cartela-encontrada-item:last-child { border-bottom: none; }
+
+.cartela-info-wrapper { display: flex; flex-direction: column; }
+.sorteio-id { font-weight: 800; color: var(--text-dark); font-size: 0.9rem; }
+.sorteio-qtd { font-size: 0.8rem; color: #64748b; }
+.sorteio-data { font-size: 0.7rem; color: #94a3b8; }
+
+.btn-entrar-jogo { 
+    background: var(--primary-color); 
+    color: white; 
+    border: none; 
+    padding: 8px 12px; 
+    border-radius: 8px; 
+    font-weight: 700; 
+    font-size: 0.75rem; 
+    cursor: pointer; 
+}
+.status-pagamento { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: white; }
+.status-pago { background: var(--primary-color); }
+.status-pendente { background: #f59e0b; }
 
 /* ANIMAÇÕES */
 @keyframes spin { 100% { transform: rotate(360deg); } }
