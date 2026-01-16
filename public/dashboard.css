@@ -5,103 +5,51 @@
     --neon-green: #00ffbf;
     --neon-blue: #00e5ff;
     --bg-dark: #050505;
-    --bg-glass: rgba(20, 20, 35, 0.85);
+    --bg-glass: rgba(20, 20, 35, 0.90); /* Mais escuro para leitura */
     --text-glow: 0 0 10px rgba(0, 255, 191, 0.5);
+    
+    /* Alturas Fixas para Cálculo */
+    --header-height: 10vh;
+    --main-padding: 2vh;
 }
 
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
 body.dashboard-body {
-    margin: 0; padding: 0;
     height: 100vh; width: 100vw;
-    overflow: hidden; /* Sem rolagem na TV */
+    overflow: hidden; /* TRAVA A ROLAGEM GERAL (Importante para TV) */
     background: radial-gradient(circle at center, #101820 0%, #000000 100%);
     font-family: 'Montserrat', sans-serif;
     color: white;
 }
 
-/* --- OVERLAYS (CORREÇÃO DO TRAVAMENTO) --- */
-
-/* 1. Overlay de Espera (Próximo Sorteio) */
-.anuncio-espera-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    z-index: 5000; /* Altíssimo */
-    display: flex; justify-content: center; align-items: center; flex-direction: column;
-    transition: opacity 0.5s ease, visibility 0.5s;
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Classe que o JS adiciona para esconder */
-.anuncio-espera-overlay.oculto {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important; /* Impede cliques fantasmas */
-}
-
-.anuncio-espera-container {
-    text-align: center;
-    width: 90%; max-width: 1200px;
-}
-.anuncio-espera-container h1 {
-    font-size: 4vh; color: var(--neon-blue); text-transform: uppercase; letter-spacing: 2px;
-    margin-bottom: 20px;
-}
-#espera-cronometro-display {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 15vh; font-weight: 700;
-    color: var(--neon-green);
-    text-shadow: 0 0 30px var(--neon-green);
-}
-
-/* 2. Overlay de Vencedor (BINGO!) */
-#anuncio-vencedor-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(10px);
-    z-index: 6000; /* Mais alto que a espera */
-    display: flex; justify-content: center; align-items: center;
-    opacity: 0; visibility: hidden; /* Escondido por padrão */
-    transition: opacity 0.3s;
-}
-#anuncio-vencedor-overlay.ativo {
-    opacity: 1 !important;
-    visibility: visible !important;
-}
-
-.anuncio-vencedor-box {
-    background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
-    padding: 50px; border-radius: 30px;
-    box-shadow: 0 0 100px rgba(255, 215, 0, 0.6);
-    border: 5px solid white;
-    text-align: center;
-    color: black;
-    transform: scale(0.8);
-    animation: popIn 0.5s forwards;
-}
-#anuncio-vencedor-premio { font-size: 5vh; font-weight: 900; margin: 0; text-transform: uppercase; }
-#anuncio-vencedor-nome { font-size: 8vh; font-weight: 900; margin: 10px 0; line-height: 1; }
-
-/* --- HEADER TV --- */
+/* --- HEADER TV (Compacto) --- */
 .dashboard-header {
-    height: 10vh; padding: 0 30px;
+    height: var(--header-height); 
+    padding: 0 3vw; /* Usar VW para margem lateral */
     display: flex; justify-content: space-between; align-items: center;
     background: rgba(255,255,255,0.05);
     border-bottom: 1px solid rgba(255,255,255,0.1);
 }
-#dash-sorteio-id-header { font-size: 3vh; color: var(--neon-green); font-weight: 900; text-shadow: var(--text-glow); margin: 0; }
+#dash-sorteio-id-header { font-size: 3.5vh; color: var(--neon-green); font-weight: 900; text-shadow: var(--text-glow); margin: 0; }
+
+.header-controls { display: flex; align-items: center; gap: 2vw; }
+
 .estado-texto {
-    font-size: 2vh; padding: 5px 15px; border-radius: 5px; font-weight: bold; text-transform: uppercase;
+    font-size: 2.5vh; padding: 0.5vh 2vw; border-radius: 5px; font-weight: bold; text-transform: uppercase;
 }
 .estado-esperando { background: #333; color: #999; }
 .estado-jogando-linha { background: #007bff; color: white; box-shadow: 0 0 15px #007bff; }
 .estado-jogando-cheia { background: #ff0000; color: white; box-shadow: 0 0 20px #ff0000; animation: pulse 1s infinite; }
 
-/* --- GRID PRINCIPAL --- */
+/* --- GRID PRINCIPAL (CÁLCULO EXATO PARA NÃO CORTAR) --- */
 .dashboard-main-fullscreen {
     display: grid;
-    grid-template-columns: 3fr 1fr; /* 75% Esquerda, 25% Direita */
-    height: 90vh;
-    padding: 20px; gap: 20px;
+    grid-template-columns: 72% 26%; /* Ajuste fino para caber lado a lado */
+    gap: 2%;
+    /* Altura = 100% da tela - Header - Paddings */
+    height: calc(100vh - var(--header-height));
+    padding: var(--main-padding);
 }
 
 /* ÁREA ESQUERDA (Bola e Tabuleiro) */
@@ -109,41 +57,52 @@ body.dashboard-body {
     background: var(--bg-glass);
     border-radius: 20px;
     border: 1px solid rgba(255,255,255,0.1);
-    display: flex; flex-direction: column;
-    padding: 20px;
+    display: flex; 
+    flex-direction: column;
+    padding: 2vh; /* Padding interno menor */
     box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    height: 100%; /* Ocupa altura total disponível */
 }
 
-/* Bola Gigante 3D */
+/* Bola Gigante 3D (Ajustada) */
 #dash-ultimo-numero-wrapper {
-    flex: 1; display: flex; justify-content: center; align-items: center; position: relative;
+    flex: 0 0 auto; /* Não estica demais */
+    height: 35%; /* Ocupa 35% da altura esquerda */
+    display: flex; justify-content: center; align-items: center; position: relative;
+    margin-bottom: 2vh;
 }
 #dash-ultimo-numero {
-    width: 25vh; height: 25vh;
+    height: 22vh; /* Tamanho fixo baseado na altura da TV */
+    aspect-ratio: 1; /* Mantém redondo */
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #fff, #ddd, #999);
     color: #111;
-    font-size: 15vh; font-weight: 900; font-family: 'Rajdhani', sans-serif;
+    font-size: 13vh; font-weight: 900; font-family: 'Rajdhani', sans-serif;
     display: flex; align-items: center; justify-content: center;
     box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5), 0 0 50px var(--neon-green);
-    border: 8px solid var(--neon-green);
+    border: 0.8vh solid var(--neon-green);
 }
 
-/* Tabuleiro (Luzes) */
+/* Tabuleiro (Ocupa o resto do espaço) */
+h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; }
+
 #dash-globo-numeros {
+    flex: 1; /* Cresce para ocupar o resto */
     display: grid !important;
     grid-template-columns: repeat(15, 1fr) !important;
-    gap: 0.5vh;
-    padding: 15px;
+    gap: 0.6vh;
+    padding: 1.5vh;
     background: rgba(0,0,0,0.5);
     border-radius: 15px;
+    align-content: center; /* Centraliza verticalmente */
 }
 .dash-globo-numero {
     aspect-ratio: 1;
-    background: #222; color: #444; /* Apagado */
+    background: #222; color: #444; 
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Rajdhani', sans-serif; font-weight: bold; font-size: 2vh;
+    font-family: 'Rajdhani', sans-serif; font-weight: bold; 
+    font-size: 2.2vh; /* Fonte responsiva à altura */
     border: 1px solid #333;
     transition: 0.2s;
 }
@@ -153,36 +112,91 @@ body.dashboard-body {
     font-weight: 900 !important;
     box-shadow: 0 0 15px var(--neon-green);
     border-color: #fff !important;
-    transform: scale(1.1);
+    transform: scale(1.15);
     z-index: 10;
 }
 
-/* BARRA LATERAL */
+/* --- BARRA LATERAL (DIREITA) --- */
 .barra-lateral {
-    display: flex; flex-direction: column; gap: 15px;
-}
-.barra-lateral section {
-    background: var(--bg-glass);
-    border-radius: 15px; padding: 15px;
-    border: 1px solid rgba(255,255,255,0.1);
-    flex: 1; /* Distribui altura */
-}
-.barra-lateral h2 {
-    font-size: 2vh; color: var(--neon-blue); text-transform: uppercase;
-    border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 10px;
+    display: flex; 
+    flex-direction: column; 
+    gap: 1.5vh; /* Espaço entre cards */
+    height: 100%;
+    overflow: hidden; /* Impede que a barra lateral vaze */
 }
 
-.info-item {
-    display: flex; justify-content: space-between; font-size: 2vh; margin-bottom: 10px;
+.barra-lateral section {
+    background: var(--bg-glass);
+    border-radius: 15px; 
+    padding: 1.5vh 2vh;
+    border: 1px solid rgba(255,255,255,0.1);
 }
-.text-pix-sidebar { color: var(--neon-green); font-weight: bold; font-size: 2.5vh; }
+
+.barra-lateral h2 {
+    font-size: 2.2vh; color: var(--neon-blue); text-transform: uppercase;
+    border-bottom: 1px solid rgba(255,255,255,0.2); 
+    margin-bottom: 1vh; padding-bottom: 0.5vh;
+}
+
+/* Seção Prêmios (Fixo) */
+#info-rodada { flex: 0 0 auto; } 
+.info-item {
+    display: flex; justify-content: space-between; font-size: 2vh; margin-bottom: 0.8vh;
+}
+.text-pix-sidebar { color: var(--neon-green); font-weight: bold; font-size: 2.2vh; }
+
+/* Seção Quase Lá (Fixo mas flexível se precisar) */
+#quase-la { 
+    flex: 0 0 auto; 
+    max-height: 20%; /* Limita altura */
+    display: flex; flex-direction: column;
+}
+#lista-quase-la { overflow: hidden; } /* Esconde excesso */
+
+/* Seção Vencedores (Ocupa todo o resto do espaço) */
+#ultimos-ganhadores {
+    flex: 1; /* Ocupa todo o espaço que sobra na tela */
+    display: flex; flex-direction: column;
+    min-height: 0; /* Importante para o scroll funcionar */
+}
+#lista-ganhadores {
+    flex: 1;
+    overflow-y: auto; /* Cria barra de rolagem SÓ AQUI se precisar */
+    padding-right: 5px;
+}
 
 #lista-ganhadores div {
     background: rgba(0, 255, 191, 0.1);
-    border-left: 3px solid var(--neon-green);
-    padding: 8px; margin-bottom: 5px; font-size: 1.8vh;
+    border-left: 0.5vh solid var(--neon-green);
+    padding: 1vh; margin-bottom: 0.8vh; font-size: 1.8vh;
     animation: slideLeft 0.5s;
 }
+
+/* --- OVERLAYS (Mantidos) --- */
+#anuncio-vencedor-overlay { /* ...mesmo código anterior... */ 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9); z-index: 6000;
+    display: flex; justify-content: center; align-items: center;
+    opacity: 0; visibility: hidden; transition: opacity 0.3s;
+}
+#anuncio-vencedor-overlay.ativo { opacity: 1 !important; visibility: visible !important; }
+.anuncio-vencedor-box {
+    background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+    padding: 5vh; border-radius: 30px; border: 5px solid white;
+    text-align: center; color: black; transform: scale(0.8); animation: popIn 0.5s forwards;
+}
+#anuncio-vencedor-premio { font-size: 6vh; font-weight: 900; margin: 0; }
+#anuncio-vencedor-nome { font-size: 8vh; font-weight: 900; margin: 10px 0; }
+
+.anuncio-espera-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95); z-index: 5000;
+    display: flex; justify-content: center; align-items: center; flex-direction: column;
+    opacity: 1; visibility: visible; transition: opacity 0.5s;
+}
+.anuncio-espera-overlay.oculto { opacity: 0; visibility: hidden; pointer-events: none; }
+.anuncio-espera-container h1 { font-size: 5vh; color: var(--neon-blue); margin-bottom: 2vh; }
+#espera-cronometro-display { font-size: 18vh; font-weight: 700; color: var(--neon-green); font-family: 'Rajdhani', sans-serif; }
 
 /* Animações */
 @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
