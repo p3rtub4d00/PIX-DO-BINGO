@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bingo-pix-V9-MASTER-FIX'; // Nova versão para forçar reset
+const CACHE_NAME = 'bingo-pix-V10-MASTER-FIX'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
