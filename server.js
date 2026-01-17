@@ -336,7 +336,7 @@ async function carregarConfiguracoes() {
     }
 }
 
-// --- FUNÇÃO DE PERSISTÊNCIA (NOVA) ---
+// --- FUNÇÃO DE PERSISTÊNCIA ---
 async function salvarEstadoJogo() {
     try {
         await GameState.findOneAndUpdate(
@@ -545,7 +545,7 @@ app.post('/admin/api/comissao/pagar', checkAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// --- ROTAS CAMBISTA ---
+// --- ROTAS CAMBISTA (CORRIGIDO PARA LER O BODY) ---
 function checkCambista(req, res, next) {
     if (req.session.isCambista) next();
     else res.status(403).json({ success: false });
@@ -565,10 +565,10 @@ app.post('/cambista/login', async (req, res) => {
             req.session.cambistaUsuario = usuario;
             res.json({ success: true });
         } else {
-            res.status(401).json({ success: false });
+            res.status(401).json({ success: false, message: 'Credenciais inválidas' });
         }
     } catch(e) {
-        res.status(500).json({ success: false });
+        res.status(500).json({ success: false, message: 'Erro interno' });
     }
 });
 
@@ -622,9 +622,9 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
         venda_id: novaVenda._id
     });
     
-    const manualPlayerId = `manual_${gerarIdUnico()}`;
-    jogadores[manualPlayerId] = { nome, telefone, isManual: true, cartelas };
-    io.emit('contagemJogadores', getContagemJogadores());
+    // ATENÇÃO: NÃO ADICIONAMOS A "jogadores" MANUALMENTE AQUI PARA EVITAR DUPLICIDADE.
+    // O SOCKET DO CAMBISTA NÃO É UM JOGADOR.
+    // A FUNÇÃO iniciarNovaRodada VAI LER ESTA VENDA DO BANCO E INSERIR NO JOGO AUTOMATICAMENTE.
     
     res.json({ success: true, novoSaldo: cambista.saldo_creditos, cartelas });
 });
@@ -673,7 +673,6 @@ function gerarNumerosAleatorios(qtd, min, max) {
     
     while(nums.size < qtd) {
         // randomInt gera um inteiro criptograficamente seguro: [min, max)
-        // Por isso usamos max + 1 no limite superior
         nums.add(randomInt(min, max + 1)); 
     }
     return Array.from(nums); 
@@ -828,7 +827,7 @@ async function iniciarSorteioEspecial() {
         jogadores[`especial_${v._id}`] = { nome: v.nome_jogador, telefone: v.telefone, isManual: true, cartelas };
     });
 
-    const nBots = randomInt(MIN_BOTS_ATUAL, MAX_BOTS_ATUAL + 1); // Crypto Random
+    const nBots = gerarNumerosAleatorios(1, MIN_BOTS_ATUAL, MAX_BOTS_ATUAL)[0] || MIN_BOTS_ATUAL; 
     for(let i=0; i<nBots; i++) {
         const bC = [];
         for(let k=0; k<3; k++) bC.push(gerarDadosCartela(SORTEIO_ESPECIAL_DATAHORA));
@@ -846,32 +845,66 @@ async function iniciarSorteioEspecial() {
     setTimeout(() => { intervaloSorteio = setInterval(sortearNumero, TEMPO_ENTRE_NUMEROS); }, 5000);
 }
 
-function iniciarNovaRodada() {
+// --- FUNÇÃO CORRIGIDA: LÊ DO BANCO PARA INCLUIR CAMBISTAS/ONLINE ---
+async function iniciarNovaRodada() {
     if (sorteioEspecialEmAndamento) return;
+    
     numerosDisponiveis = Array.from({length:75}, (_,i)=>i+1);
     numerosSorteados = [];
     if(intervaloSorteio) clearInterval(intervaloSorteio);
     
-    const novosJogadores = {};
+    // 1. Limpa jogadores antigos, mas tenta manter conexões socket ativas se estiverem no sorteio certo
+    const jogadoresConectados = {};
     for(const id in jogadores) {
-        if(jogadores[id].isManual && jogadores[id].cartelas[0].s_id == numeroDoSorteio) novosJogadores[id] = jogadores[id];
+        if(!jogadores[id].isBot && !jogadores[id].isManual) {
+             if(jogadores[id].cartelas && jogadores[id].cartelas[0] && jogadores[id].cartelas[0].s_id == numeroDoSorteio) {
+                 jogadoresConectados[id] = jogadores[id];
+             }
+        }
     }
-    jogadores = novosJogadores;
+    jogadores = jogadoresConectados;
 
-    const nBots = randomInt(MIN_BOTS_ATUAL, MAX_BOTS_ATUAL + 1); // Crypto Random
+    console.log(`Iniciando Rodada #${numeroDoSorteio}. Carregando cartelas do banco...`);
+
+    // 2. RECUPERAÇÃO DO BANCO DE DADOS
+    try {
+        const vendasDoSorteio = await Venda.find({ 
+            sorteio_id: numeroDoSorteio 
+        });
+
+        vendasDoSorteio.forEach(venda => {
+            const jaConectado = Object.values(jogadores).some(j => j.telefone === venda.telefone);
+
+            if (!jaConectado) {
+                const cartelas = JSON.parse(venda.cartelas_json);
+                const playerKey = `db_${venda._id}`;
+                
+                jogadores[playerKey] = {
+                    nome: venda.nome_jogador,
+                    telefone: venda.telefone,
+                    isManual: true, // Gerenciado pelo servidor (inclui cambistas)
+                    cartelas: cartelas
+                };
+            }
+        });
+        console.log(`${vendasDoSorteio.length} vendas carregadas do banco para o jogo.`);
+    } catch (error) {
+        console.error("Erro crítico ao carregar vendas do banco:", error);
+    }
+
+    // 3. Adiciona Bots
+    const nBots = gerarNumerosAleatorios(1, MIN_BOTS_ATUAL, MAX_BOTS_ATUAL)[0] || MIN_BOTS_ATUAL; 
     for(let i=0; i<nBots; i++) {
         const bC = [];
-        // RandomInt para qtd de cartelas: 1 a 3
-        const qtdCartelasBot = randomInt(1, 4); 
+        const qtdCartelasBot = gerarNumerosAleatorios(1, 1, 4)[0] || 1;
         for(let k=0; k<qtdCartelasBot; k++) bC.push(gerarDadosCartela(numeroDoSorteio));
         
-        // RandomInt para nome
-        const nomeIndex = randomInt(0, nomesBots.length);
+        const nomeIndex = gerarNumerosAleatorios(1, 0, nomesBots.length - 1)[0] || 0;
         jogadores[`bot_${gerarIdUnico()}`] = { nome: nomesBots[nomeIndex], isBot: true, cartelas: bC };
     }
 
     // SALVA O ESTADO
-    salvarEstadoJogo();
+    await salvarEstadoJogo();
 
     io.emit('estadoJogoUpdate', { sorteioId: numeroDoSorteio, estado: estadoJogo });
     io.emit('contagemJogadores', getContagemJogadores());
@@ -884,7 +917,6 @@ async function sortearNumero() {
     if(numerosDisponiveis.length === 0) { terminarRodada(null); return; }
     
     // --- SORTEIO SEGURO COM CRYPTO ---
-    // Escolhe um índice aleatório dentro do array de disponíveis
     const indiceSorteado = randomInt(0, numerosDisponiveis.length);
     const num = numerosDisponiveis.splice(indiceSorteado, 1)[0];
     
