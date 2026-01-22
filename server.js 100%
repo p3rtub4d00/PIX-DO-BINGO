@@ -1221,3 +1221,4 @@ io.on('connection', async (socket) => {
 
     server.listen(PORTA, () => console.log(`Servidor Mongo rodando na porta ${PORTA}`));
 })();
+
