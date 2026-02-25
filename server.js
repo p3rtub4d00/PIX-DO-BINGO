@@ -174,7 +174,8 @@ async function inicializarDados() {
             { chave: 'duracao_espera', valor: '20' },
             { chave: 'min_bots', valor: '80' },
             { chave: 'max_bots', valor: '150' },
-            { chave: 'numero_sorteio_atual', valor: '500' }
+            { chave: 'numero_sorteio_atual', valor: '500' },
+            { chave: 'proximo_alvo_linha_global', valor: '250' }
         ];
 
         for (const conf of configsDefault) {
@@ -311,6 +312,7 @@ let DURACAO_ESPERA_ATUAL = 20, MIN_BOTS_ATUAL = 80, MAX_BOTS_ATUAL = 150;
 let numeroDoSorteio = 500;
 let PRECO_CARTELA_ESPECIAL_ATUAL = '10.00', SORTEIO_ESPECIAL_DATAHORA = '', SORTEIO_ESPECIAL_ATIVO = 'false';
 let sorteioEspecialEmAndamento = false;
+let PROXIMO_ALVO_LINHA_GLOBAL = 250;
 
 async function carregarConfiguracoes() {
     try {
@@ -329,6 +331,7 @@ async function carregarConfiguracoes() {
         SORTEIO_ESPECIAL_ATIVO = map.sorteio_especial_ativo || 'false';
         SORTEIO_ESPECIAL_DATAHORA = map.sorteio_especial_datahora || '';
         PRECO_CARTELA_ESPECIAL_ATUAL = map.sorteio_especial_preco_cartela || '10.00';
+        PROXIMO_ALVO_LINHA_GLOBAL = parseFloat(map.proximo_alvo_linha_global || '250') || 250;
         
         console.log(`Configs carregadas. Sorteio Atual: #${numeroDoSorteio}`);
     } catch (err) {
@@ -659,7 +662,6 @@ const primeirosNomes = [
     "Karina", "Leandro", "Monica", "Natalia", "Otavio", "Patricia", "Renan", "Sandra", "Tatiana", "Ulisses",
     "Vitor", "Wesley", "Yasmin", "Zeca", "Luana", "Marcos", "Diego", "Larissa", "Claudio", "Renata"
 ];
-
 const sobrenomes = [
     "Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes",
     "Costa", "Ribeiro", "Martins", "Carvalho", "Almeida", "Lopes", "Soares", "Fernandes", "Vieira", "Barbosa",
@@ -725,7 +727,7 @@ let numerosDisponiveis = [];
 let numerosSorteados = [];
 let jogadores = {};
 let sorteioComPremioLinhaAutomatico = null;
-const LUCRO_ALVO_PREMIO_LINHA = 250;
+const INTERVALO_ALVO_PREMIO_LINHA_GLOBAL = 250;
 
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6); }
 
@@ -791,15 +793,13 @@ async function getUltimosVencedores() {
 }
 
 
-async function calcularLucroAtualSorteioRegular(sorteioId) {
+async function calcularArrecadacaoGlobalRegular() {
     const resultado = await Venda.aggregate([
-        { $match: { tipo_sorteio: 'regular', sorteio_id: sorteioId } },
+        { $match: { tipo_sorteio: 'regular' } },
         { $group: { _id: null, total: { $sum: "$valor_total" } } }
     ]);
 
-    const arrecadacao = resultado[0]?.total || 0;
-    const custoPremios = parseFloat(PREMIO_LINHA) + parseFloat(PREMIO_CHEIA);
-    return arrecadacao - custoPremios;
+    return resultado[0]?.total || 0;
 }
 
 function escolherJogadorRealParaPremioLinha(sorteioId) {
@@ -837,16 +837,23 @@ async function liberarPremioLinhaAutomaticoPorLucro(idSorteio) {
     if (estadoJogo !== 'JOGANDO_LINHA' || sorteioEspecialEmAndamento) return false;
     if (sorteioComPremioLinhaAutomatico === idSorteio) return false;
 
-    const lucroAtual = await calcularLucroAtualSorteioRegular(idSorteio);
-    if (lucroAtual < LUCRO_ALVO_PREMIO_LINHA) return false;
+    const arrecadacaoGlobal = await calcularArrecadacaoGlobalRegular();
+    if (arrecadacaoGlobal < PROXIMO_ALVO_LINHA_GLOBAL) return false;
 
     const vencedorReal = escolherJogadorRealParaPremioLinha(idSorteio);
     if (!vencedorReal) {
-        console.log(`Lucro alvo atingido no sorteio #${idSorteio}, mas ainda não há jogador real elegível para liberar prêmio de linha.`);
+        console.log(`Arrecadação global atingiu o alvo, mas ainda não há jogador elegível no sorteio #${idSorteio} para liberar prêmio de linha.`);
         return false;
     }
 
     sorteioComPremioLinhaAutomatico = idSorteio;
+    PROXIMO_ALVO_LINHA_GLOBAL += INTERVALO_ALVO_PREMIO_LINHA_GLOBAL;
+    await Config.findOneAndUpdate(
+        { chave: 'proximo_alvo_linha_global' },
+        { valor: String(PROXIMO_ALVO_LINHA_GLOBAL.toFixed(2)) },
+        { upsert: true }
+    );
+
     await salvarVencedor(idSorteio, 'Linha', vencedorReal.nome, vencedorReal.telefone, vencedorReal.cartela.c_id);
 
     const sock = io.sockets.sockets.get(vencedorReal.sid);
@@ -865,7 +872,7 @@ async function liberarPremioLinhaAutomaticoPorLucro(idSorteio) {
     await salvarEstadoJogo();
     io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });
 
-    console.log(`Prêmio de linha liberado automaticamente no sorteio #${idSorteio} ao atingir lucro de R$ ${LUCRO_ALVO_PREMIO_LINHA.toFixed(2)}.`);
+    console.log(`Prêmio de linha liberado automaticamente no sorteio #${idSorteio} ao atingir arrecadação global alvo. Próximo alvo: R$ ${PROXIMO_ALVO_LINHA_GLOBAL.toFixed(2)}.`);
     return true;
 }
 
