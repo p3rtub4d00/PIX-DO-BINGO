@@ -230,6 +230,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
                 }
             }
         }
+
         if (reqBody.type === 'payment') {
             const paymentId = reqBody.data.id;
             const payment = new Payment(mpClient);
@@ -440,6 +441,7 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     
     res.json(cartelas);
 });
+
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
     const vendas = await Venda.find().sort({ timestamp: -1 });
     const formatadas = vendas.map(v => ({
@@ -595,7 +597,6 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
     
     const cambista = await Cambista.findById(cambistaId);
     if (cambista.saldo_creditos < total) return res.status(400).json({ success: false, message: 'Saldo insuficiente' });
-    
     cambista.saldo_creditos -= total;
     await cambista.save();
     
@@ -660,6 +661,7 @@ const primeirosNomes = [
     "Karina", "Leandro", "Monica", "Natalia", "Otavio", "Patricia", "Renan", "Sandra", "Tatiana", "Ulisses",
     "Vitor", "Wesley", "Yasmin", "Zeca", "Luana", "Marcos", "Diego", "Larissa", "Claudio", "Renata"
 ];
+
 const sobrenomes = [
     "Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes",
     "Costa", "Ribeiro", "Martins", "Carvalho", "Almeida", "Lopes", "Soares", "Fernandes", "Vieira", "Barbosa",
@@ -725,6 +727,7 @@ let numerosDisponiveis = [];
 let numerosSorteados = [];
 let jogadores = {};
 let sorteioComPremioLinhaAutomatico = null;
+let premioLinhaForcado = null;
 const INTERVALO_ALVO_PREMIO_LINHA_GLOBAL = 250;
 
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6); }
@@ -831,6 +834,107 @@ function escolherJogadorRealParaPremioLinha(sorteioId, sorteadosAtuais) {
     };
 }
 
+function obterLinhasDaCartela(cartelaData) {
+    const c = cartelaData.data;
+    const linhas = [];
+
+    for (let i = 0; i < 5; i++) {
+        linhas.push(c[i].filter(n => n !== 'FREE'));
+    }
+
+    for (let i = 0; i < 5; i++) {
+        const coluna = [];
+        for (let j = 0; j < 5; j++) {
+            if (c[j][i] !== 'FREE') coluna.push(c[j][i]);
+        }
+        linhas.push(coluna);
+    }
+
+    const diagonalPrincipal = [];
+    const diagonalSecundaria = [];
+    for (let i = 0; i < 5; i++) {
+        if (c[i][i] !== 'FREE') diagonalPrincipal.push(c[i][i]);
+        if (c[i][4 - i] !== 'FREE') diagonalSecundaria.push(c[i][4 - i]);
+    }
+
+    linhas.push(diagonalPrincipal, diagonalSecundaria);
+    return linhas;
+}
+
+function escolherJogadorRealParaForcarLinha(sorteioId, sorteadosAtuais) {
+    const sorteadosSet = new Set(sorteadosAtuais);
+    const candidatos = [];
+
+    for (const sid in jogadores) {
+        const jog = jogadores[sid];
+        if (jog.isBot || !jog.cartelas) continue;
+
+        jog.cartelas.forEach((cartela, indiceCartela) => {
+            if (cartela.s_id != sorteioId) return;
+
+            const linhas = obterLinhasDaCartela(cartela);
+            let melhorLinha = null;
+            let menorQtdFaltantes = Infinity;
+
+            linhas.forEach(linha => {
+                const faltantes = linha.filter(numero => !sorteadosSet.has(numero));
+                if (faltantes.length < menorQtdFaltantes) {
+                    menorQtdFaltantes = faltantes.length;
+                    melhorLinha = { linha, faltantes };
+                }
+            });
+
+            if (melhorLinha) {
+                candidatos.push({
+                    sid,
+                    nome: jog.nome,
+                    telefone: jog.telefone,
+                    isManual: jog.isManual,
+                    cartela,
+                    indiceCartela,
+                    numerosLinhaAlvo: melhorLinha.linha
+                });
+            }
+        });
+    }
+
+    if (candidatos.length === 0) return null;
+    return candidatos[randomInt(0, candidatos.length)];
+}
+
+async function prepararForcamentoPremioLinhaSeNecessario(idSorteio) {
+    if (estadoJogo !== 'JOGANDO_LINHA' || sorteioEspecialEmAndamento) return false;
+    if (sorteioComPremioLinhaAutomatico === idSorteio) return false;
+    if (premioLinhaForcado && premioLinhaForcado.sorteioId === idSorteio) return true;
+
+    const arrecadacaoGlobal = await calcularArrecadacaoGlobalRegular();
+    if (arrecadacaoGlobal < PROXIMO_ALVO_LINHA_GLOBAL) return false;
+
+    const jogadorSelecionado = escolherJogadorRealParaForcarLinha(idSorteio, numerosSorteados);
+    if (!jogadorSelecionado) {
+        console.log(`Arrecadação global atingiu o alvo no sorteio #${idSorteio}, mas não há jogador real para forçar prêmio de linha.`);
+        return false;
+    }
+
+    premioLinhaForcado = {
+        ...jogadorSelecionado,
+        sorteioId: idSorteio
+    };
+
+    console.log(`Arrecadação global atingiu alvo no sorteio #${idSorteio}. Forçando prêmio de linha para jogador real ${jogadorSelecionado.nome}.`);
+    return true;
+}
+
+function obterNumeroForcadoParaLinha(idSorteio) {
+    if (!premioLinhaForcado || premioLinhaForcado.sorteioId !== idSorteio) return null;
+
+    const faltantes = premioLinhaForcado.numerosLinhaAlvo.filter(numero => !numerosSorteados.includes(numero));
+    const proximosDisponiveis = faltantes.filter(numero => numerosDisponiveis.includes(numero));
+    if (proximosDisponiveis.length === 0) return null;
+
+    return proximosDisponiveis[randomInt(0, proximosDisponiveis.length)];
+}
+
 async function liberarPremioLinhaAutomaticoPorLucro(idSorteio) {
     if (estadoJogo !== 'JOGANDO_LINHA' || sorteioEspecialEmAndamento) return false;
     if (sorteioComPremioLinhaAutomatico === idSorteio) return false;
@@ -838,9 +942,14 @@ async function liberarPremioLinhaAutomaticoPorLucro(idSorteio) {
     const arrecadacaoGlobal = await calcularArrecadacaoGlobalRegular();
     if (arrecadacaoGlobal < PROXIMO_ALVO_LINHA_GLOBAL) return false;
 
-    const vencedorReal = escolherJogadorRealParaPremioLinha(idSorteio, numerosSorteados);
+    let vencedorReal = null;
+    if (premioLinhaForcado && premioLinhaForcado.sorteioId === idSorteio && checarVencedorLinha(premioLinhaForcado.cartela, numerosSorteados)) {
+        vencedorReal = premioLinhaForcado;
+    } else {
+        vencedorReal = escolherJogadorRealParaPremioLinha(idSorteio, numerosSorteados);
+    }
+
     if (!vencedorReal) {
-        console.log(`Arrecadação global atingiu o alvo, mas ainda não há jogador elegível com linha formada no sorteio #${idSorteio}.`);
         return false;
     }
 
@@ -867,6 +976,7 @@ async function liberarPremioLinhaAutomaticoPorLucro(idSorteio) {
     }
 
     estadoJogo = 'JOGANDO_CHEIA';
+    premioLinhaForcado = null;
     await salvarEstadoJogo();
     io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });
 
@@ -964,6 +1074,7 @@ async function verificarSorteioEspecial() {
 async function iniciarSorteioEspecial() {
     sorteioEspecialEmAndamento = true;
     sorteioComPremioLinhaAutomatico = null;
+    premioLinhaForcado = null;
     estadoJogo = "JOGANDO_CHEIA";
     jogadores = {};
     numerosDisponiveis = Array.from({length:75}, (_,i)=>i+1);
@@ -999,6 +1110,7 @@ async function iniciarNovaRodada() {
     if (sorteioEspecialEmAndamento) return;
 
     sorteioComPremioLinhaAutomatico = null;
+    premioLinhaForcado = null;
     
     numerosDisponiveis = Array.from({length:75}, (_,i)=>i+1);
     numerosSorteados = [];
@@ -1066,10 +1178,20 @@ async function iniciarNovaRodada() {
 
 async function sortearNumero() {
     if(numerosDisponiveis.length === 0) { terminarRodada(null); return; }
+
+    const idSorteio = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
+    await prepararForcamentoPremioLinhaSeNecessario(idSorteio);
     
-    // --- SORTEIO SEGURO COM CRYPTO ---
-    const indiceSorteado = randomInt(0, numerosDisponiveis.length);
-    const num = numerosDisponiveis.splice(indiceSorteado, 1)[0];
+    const numeroForcado = obterNumeroForcadoParaLinha(idSorteio);
+    let num;
+    if (numeroForcado !== null) {
+        const indiceForcado = numerosDisponiveis.indexOf(numeroForcado);
+        num = numerosDisponiveis.splice(indiceForcado, 1)[0];
+    } else {
+        // --- SORTEIO SEGURO COM CRYPTO ---
+        const indiceSorteado = randomInt(0, numerosDisponiveis.length);
+        num = numerosDisponiveis.splice(indiceSorteado, 1)[0];
+    }
     
     numerosSorteados.push(num);
     io.emit('novoNumeroSorteado', num);
@@ -1078,11 +1200,12 @@ async function sortearNumero() {
     await salvarEstadoJogo();
     
     const sSet = new Set(numerosSorteados);
-    const idSorteio = sorteioEspecialEmAndamento ? SORTEIO_ESPECIAL_DATAHORA : numeroDoSorteio;
 
     if (await liberarPremioLinhaAutomaticoPorLucro(idSorteio)) return;
     
     if(estadoJogo === "JOGANDO_LINHA") {
+        if (premioLinhaForcado && premioLinhaForcado.sorteioId === idSorteio) return;
+
         for(const sid in jogadores) {
             const jog = jogadores[sid];
             for(let i=0; i<jog.cartelas.length; i++) {
@@ -1103,6 +1226,7 @@ async function sortearNumero() {
             }
         }
     }
+    
     if(estadoJogo === "JOGANDO_CHEIA") {
         for(const sid in jogadores) {
             const jog = jogadores[sid];
@@ -1222,7 +1346,6 @@ io.on('connection', async (socket) => {
             const pid = response.id.toString();
             
             dados.tipo_compra = 'regular';
-            
             await PagamentoPendente.updateOne(
                 { payment_id: pid },
                 { socket_id: socket.id, dados_compra_json: JSON.stringify(dados), cambista_id: cambistaIdParaSalvar },
