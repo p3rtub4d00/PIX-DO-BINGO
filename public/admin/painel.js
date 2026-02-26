@@ -192,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const premioCheiaInput = document.getElementById('premio-cheia');
     const precoCartelaInput = document.getElementById('preco-cartela');
     const duracaoEsperaInput = document.getElementById('duracao-espera'); 
+    const proximoAlvoLinhaGlobalInput = document.getElementById('proximo-alvo-linha-global');
     const minBotsInput = document.getElementById('min_bots');
     const maxBotsInput = document.getElementById('max_bots');
     const especialAtivoInput = document.getElementById('sorteio-especial-ativo');
@@ -206,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarConfiguracoesAtuais() {
         // --- ATUALIZANDO VERIFICAÇÃO ---
-        if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput ||
+        if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput || !proximoAlvoLinhaGlobalInput ||
             !minBotsInput || !maxBotsInput || 
             !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !configStatus) {
             console.error("Um ou mais elementos de configuração não foram encontrados no DOM.");
@@ -225,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             premioCheiaInput.value = parseFloat(data.premio_cheia || '0').toFixed(2);
             precoCartelaInput.value = parseFloat(data.preco_cartela || '0').toFixed(2);
             duracaoEsperaInput.value = parseInt(data.duracao_espera || '20', 10); 
+            proximoAlvoLinhaGlobalInput.value = parseFloat(data.proximo_alvo_linha_global || '250').toFixed(2);
             minBotsInput.value = parseInt(data.min_bots || '80', 10);
             maxBotsInput.value = parseInt(data.max_bots || '150', 10);
 
@@ -250,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             
             // --- ATUALIZANDO VERIFICAÇÃO ---
-             if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput ||
+             if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput || !proximoAlvoLinhaGlobalInput ||
                  !minBotsInput || !maxBotsInput || 
                  !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !configStatus || !btnSalvarConfig) {
                   console.error("Erro no submit: Elementos de configuração não encontrados.");
@@ -267,6 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 premio_cheia: parseFloat(premioCheiaInput.value),
                 preco_cartela: parseFloat(precoCartelaInput.value),
                 duracao_espera: parseInt(duracaoEsperaInput.value, 10), 
+                proximo_alvo_linha_global: parseFloat(proximoAlvoLinhaGlobalInput.value),
                 min_bots: parseInt(minBotsInput.value, 10), 
                 max_bots: parseInt(maxBotsInput.value, 10), 
                 sorteio_especial_ativo: especialAtivoInput.value,
