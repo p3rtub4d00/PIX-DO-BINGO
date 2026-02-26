@@ -16,6 +16,8 @@
                 <li><a href="/admin/painel.html" class="ativo">Painel & Status</a></li>
                 <li><a href="/admin/vencedores.html">Gestão Vencedores</a></li>
                 <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
+                <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li> </ul>
+            </ul>
                 <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li>
                 <li><a href="/admin/comissoes.html">Comissões Online</a></li>
                 </ul>
@@ -117,10 +119,6 @@
                     <label for="duracao-espera">Tempo Espera (segundos):</label>
                     <input type="number" id="duracao-espera" step="1" min="10" placeholder="Ex: 20" required>
                 </div>
-                <div class="form-grupo form-grupo-inline">
-                    <label for="proximo-alvo-linha-global">Próximo Alvo Arrecadação Linha (R$):</label>
-                    <input type="number" id="proximo-alvo-linha-global" step="0.01" min="0" placeholder="Ex: 250.00" required>
-                </div>
 
                 <hr style="margin: 25px 0;">
                 <h3>Controle de Bots</h3>
@@ -161,9 +159,10 @@
         </section>
 
     </main>
-    
+
     <script src="/socket.io/socket.io.js"></script> 
     <script src="painel.js"></script>
 </body>
 
+</html>
 </html>
