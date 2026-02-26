@@ -230,7 +230,6 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
                 }
             }
         }
-
         if (reqBody.type === 'payment') {
             const paymentId = reqBody.data.id;
             const payment = new Payment(mpClient);
@@ -441,7 +440,6 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     
     res.json(cartelas);
 });
-
 app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
     const vendas = await Venda.find().sort({ timestamp: -1 });
     const formatadas = vendas.map(v => ({
@@ -802,7 +800,7 @@ async function calcularArrecadacaoGlobalRegular() {
     return resultado[0]?.total || 0;
 }
 
-function escolherJogadorRealParaPremioLinha(sorteioId) {
+function escolherJogadorRealParaPremioLinha(sorteioId, sorteadosAtuais) {
     const candidatos = [];
 
     for (const sid in jogadores) {
@@ -811,7 +809,7 @@ function escolherJogadorRealParaPremioLinha(sorteioId) {
 
         const cartelasElegiveis = jog.cartelas
             .map((cartela, indice) => ({ cartela, indice }))
-            .filter(item => item.cartela.s_id == sorteioId);
+            .filter(item => item.cartela.s_id == sorteioId && checarVencedorLinha(item.cartela, sorteadosAtuais));
 
         if (cartelasElegiveis.length > 0) {
             candidatos.push({ sid, jog, cartelasElegiveis });
@@ -840,9 +838,9 @@ async function liberarPremioLinhaAutomaticoPorLucro(idSorteio) {
     const arrecadacaoGlobal = await calcularArrecadacaoGlobalRegular();
     if (arrecadacaoGlobal < PROXIMO_ALVO_LINHA_GLOBAL) return false;
 
-    const vencedorReal = escolherJogadorRealParaPremioLinha(idSorteio);
+    const vencedorReal = escolherJogadorRealParaPremioLinha(idSorteio, numerosSorteados);
     if (!vencedorReal) {
-        console.log(`Arrecadação global atingiu o alvo, mas ainda não há jogador elegível no sorteio #${idSorteio} para liberar prêmio de linha.`);
+        console.log(`Arrecadação global atingiu o alvo, mas ainda não há jogador elegível com linha formada no sorteio #${idSorteio}.`);
         return false;
     }
 
@@ -1105,7 +1103,6 @@ async function sortearNumero() {
             }
         }
     }
-    
     if(estadoJogo === "JOGANDO_CHEIA") {
         for(const sid in jogadores) {
             const jog = jogadores[sid];
