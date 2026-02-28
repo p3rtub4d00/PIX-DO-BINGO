@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const vendaId = urlParams.get('venda');
     const nomeJogador = sessionStorage.getItem('bingo_usuario_nome');
+    const telefoneJogador = sessionStorage.getItem('bingo_usuario_telefone');
     
     if (!vendaId || !nomeJogador) {
         alert("Erro: ID da sua compra ou nome de usuário não encontrado.\n\nRedirecionando para a página inicial.");
@@ -42,6 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Servidor atualizou: Sorteio #${sorteioId} | Tempo: ${minutos}:${segundos}`);
     });
 
+
+    socket.on('estadoInicial', (data) => {
+        if (data && data.sorteioId && totalDeCartelas === 0) {
+            sorteioIdElemento.textContent = `Sorteio #${data.sorteioId}`;
+        }
+    });
+
     // --- INÍCIO DA ATUALIZAÇÃO (Redireciona com Venda ID) ---
     socket.on('iniciarJogo', () => {
         console.log("Servidor mandou iniciar o jogo! Redirecionando...");
@@ -55,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // *** INÍCIO DA ATUALIZAÇÃO (Pede as cartelas) ***
         // Assim que conectar, pede as cartelas ao servidor
         console.log(`Pedindo cartelas para Venda ID: ${vendaId}`);
-        socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador });
+        socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador, telefone: telefoneJogador });
         // *** FIM DA ATUALIZAÇÃO ***
     });
     
