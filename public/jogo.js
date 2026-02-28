@@ -461,14 +461,20 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Conectado ao servidor com o ID: ${socket.id}`);
         // Assim que conectar, pede as cartelas ao servidor
         console.log(`Pedindo cartelas para Venda ID: ${vendaId}`);
-        socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador });
+        socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador, telefone: telefoneJogador });
     });
 
     // *** ATUALIZAÇÃO (CORREÇÃO RECONEXÃO) ***
     // Novo ouvinte para o 'estadoInicial'
     socket.on('estadoInicial', (data) => {
         console.log("Recebido 'estadoInicial' do servidor.");
-        if (data && data.numerosSorteados) {
+        if (!data) return;
+
+        if (data.sorteioId && sorteioIdDisplay && totalDeCartelas === 0) {
+            sorteioIdDisplay.textContent = `Sorteio #${data.sorteioId}`;
+        }
+
+        if (data.numerosSorteados) {
             // 1. Salva a lista de números
             numerosSorteadosDaRodada = data.numerosSorteados;
             console.log(`Histórico de ${numerosSorteadosDaRodada.length} números recebido.`);
