@@ -1461,11 +1461,11 @@ io.on('connection', async (socket) => {
             const nomeConfere = nomeReq && nomeVenda && nomeReq === nomeVenda;
             const telefoneConfere = telReq && telVenda && telReq === telVenda;
 
-            if (nomeConfere || telefoneConfere || (!nomeReq && !telReq)) {
-                socket.emit('cartelasEncontradas', { cartelas: JSON.parse(v.cartelas_json) });
-            } else {
-                socket.emit('cartelasNaoEncontradas');
+            if (!nomeConfere && !telefoneConfere && (nomeReq || telReq)) {
+                console.warn(`Aviso buscarMinhasCartelas: identificadores não conferem para venda ${data.vendaId}. Retornando cartelas por vendaId para evitar travamento de UI.`);
             }
+
+            socket.emit('cartelasEncontradas', { cartelas: JSON.parse(v.cartelas_json) });
         } catch (e) {
             console.error('Erro ao buscarMinhasCartelas:', e.message);
             socket.emit('cartelasNaoEncontradas');
