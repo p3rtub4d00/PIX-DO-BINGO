@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nomeJogador = sessionStorage.getItem('bingo_usuario_nome'); 
     const telefoneJogador = sessionStorage.getItem('bingo_usuario_telefone');
     
-    if (!vendaId || !nomeJogador || !telefoneJogador) {
+    if (!vendaId || !nomeJogador) {
         alert("Seus dados de jogo não foram encontrados! Redirecionando para a página inicial.");
         window.location.href = 'index.html';
         return;
@@ -461,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Conectado ao servidor com o ID: ${socket.id}`);
         // Assim que conectar, pede as cartelas ao servidor
         console.log(`Pedindo cartelas para Venda ID: ${vendaId}`);
-        socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador, telefone: telefoneJogador });
+        socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador, telefone: telefoneJogador || '' });
     });
 
     // *** ATUALIZAÇÃO (CORREÇÃO RECONEXÃO) ***
@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Agora que as cartelas estão prontas, registra o jogador no sorteio
         socket.emit('registerPlayer', {
             nome: nomeJogador,
-            telefone: telefoneJogador,
+            telefone: telefoneJogador || '',
             cartelas: cartelasSalvas 
         });
     });
