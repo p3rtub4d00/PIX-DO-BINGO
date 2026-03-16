@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bingo-pix-V10-MASTER-FIX'; // Nova versão para forçar reset
+const CACHE_NAME = 'bingo-pix-V11-DASHBOARD-PWA'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
@@ -12,7 +12,9 @@ const urlsToCache = [
   '/espera.js',
   '/jogo.js',
   '/dashboard.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/manifest-dashboard.json',
+  '/dashboard-pwa.js'
 ];
 
 self.addEventListener('install', (event) => {
