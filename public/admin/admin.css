@@ -158,13 +158,10 @@ body.admin-panel-body { /* Corpo das páginas do painel */
 #login-form { display: flex; flex-direction: column; gap: 20px; }
 .form-grupo { text-align: left; margin-bottom: 15px; }
 .form-grupo label { display: block; margin-bottom: 5px; font-weight: 700; color: var(--color-text-heading); }
-
-/* Atualizado com textarea */
 .form-grupo input[type="text"],
 .form-grupo input[type="password"],
 .form-grupo input[type="tel"],
 .form-grupo input[type="number"],
-.form-grupo textarea,
 .form-grupo select {
     width: 100%;
     padding: 12px;
@@ -175,16 +172,11 @@ body.admin-panel-body { /* Corpo das páginas do painel */
     box-sizing: border-box;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
-/* Atualizado com textarea:focus */
-.form-grupo input:focus, 
-.form-grupo textarea:focus,
-.form-grupo select:focus {
+.form-grupo input:focus, .form-grupo select:focus {
     outline: none;
     border-color: var(--color-pix-green);
     box-shadow: 0 0 0 2px rgba(0, 182, 170, 0.2);
 }
-
 #login-form button { margin-top: 15px; padding: 15px; font-size: 1.2em; }
 .error-message { color: #dc3545; font-weight: bold; margin-top: 15px; }
 .status-message { font-weight: bold; margin-top: 15px; padding: 10px; border-radius: 5px; font-size: 0.9em;}
