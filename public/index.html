@@ -27,7 +27,7 @@
         </div>
         
         <div class="hero-content">
-            <h1 class="main-title">BINGO DO PIX</h1>
+            <h1 class="main-title" data-branding-nome>BINGO DO PIX</h1>
             <p class="subtitle">Sorteios ao vivo e pagamentos instantâneos.</p>
         </div>
         
@@ -125,10 +125,10 @@
                 <i class="fa-brands fa-pix"></i>
                 <i class="fa-solid fa-shield-halved"></i>
             </div>
-            <p>&copy; 2024 Bingo do Pix.</p>
+            <p>&copy; 2024 <span data-branding-nome>Bingo do Pix</span>.</p>
             <div class="legal-box">
                 <p class="legal-warning">
-                    <strong>Site Autorizado:</strong> Bingo do Pix opera sob autorização nº <strong>345.987.221/MFA</strong>.
+                    <strong>Site Autorizado:</strong> <span data-branding-nome>Bingo do Pix</span> opera sob autorização nº <strong>345.987.221/MFA</strong>.
                 </p>
                 <p class="legal-sub">Jogue com responsabilidade. Proibido para menores de 18 anos.</p>
             </div>
@@ -186,6 +186,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/branding.js"></script>
     <script src="/script.js"></script>
     <script>
         // PWA Installer
