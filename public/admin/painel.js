@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = document.createElement('div');
         footer.classList.add('mini-cartela-footer');
         footer.innerHTML = `
-            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp ${telefoneContatoSuporte}</strong> para resgatar. O pagamento do prêmio pode demorar ate 48h.</p>
+            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp ${getTelefoneContatoParaImpressao()}</strong> para resgatar. O pagamento do prêmio pode demorar ate 48h.</p>
         `;
         divCartela.appendChild(footer);
         // --- Fim da Modificação ---
@@ -207,6 +207,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSalvarConfig = document.getElementById('btn-salvar-config');
     const configStatus = document.getElementById('config-status');
     let telefoneContatoSuporte = '69999083361';
+
+    function normalizarTelefone(valor) {
+        return String(valor || '').replace(/\D/g, '');
+    }
+
+    function getTelefoneContatoParaImpressao() {
+        if (telefoneContatoInput && telefoneContatoInput.value) {
+            const telefoneForm = normalizarTelefone(telefoneContatoInput.value);
+            if (telefoneForm) return telefoneForm;
+        }
+        return telefoneContatoSuporte;
+    }
 
     async function carregarConfiguracoesAtuais() {
         // --- ATUALIZANDO VERIFICAÇÃO ---
@@ -258,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) return;
             const data = await response.json();
             if (data && data.success && data.telefone_contato) {
-                telefoneContatoSuporte = String(data.telefone_contato).replace(/\D/g, '');
+                telefoneContatoSuporte = normalizarTelefone(data.telefone_contato);
             }
         } catch (error) {
             console.warn('Não foi possível carregar telefone de suporte.');
@@ -281,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
             configStatus.style.display = 'none';
             btnSalvarConfig.disabled = true; btnSalvarConfig.textContent = 'Salvando...';
 
-            const telefoneContatoLimpo = telefoneContatoInput.value.replace(/\D/g, '');
+            const telefoneContatoLimpo = normalizarTelefone(telefoneContatoInput.value);
             if (!nomeBingoInput.value.trim()) {
                 alert("Informe o nome do bingo.");
                 nomeBingoInput.focus();
@@ -296,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnSalvarConfig.textContent = 'Salvar Configurações';
                 return;
             }
+            telefoneContatoSuporte = telefoneContatoLimpo;
 
             // --- ATUALIZANDO COLETA DOS DADOS (VERSÃO ORIGINAL SEM COMISSÃO) ---
             const dadosParaSalvar = {
