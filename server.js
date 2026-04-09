@@ -175,7 +175,9 @@ async function inicializarDados() {
             { chave: 'min_bots', valor: '80' },
             { chave: 'max_bots', valor: '150' },
             { chave: 'numero_sorteio_atual', valor: '500' },
-            { chave: 'proximo_alvo_linha_global', valor: '250' }
+            { chave: 'proximo_alvo_linha_global', valor: '250' },
+            { chave: 'nome_bingo', valor: 'Bingo do Pix' },
+            { chave: 'telefone_contato', valor: '69999083361' }
         ];
 
         for (const conf of configsDefault) {
@@ -312,6 +314,8 @@ let numeroDoSorteio = 500;
 let PRECO_CARTELA_ESPECIAL_ATUAL = '10.00', SORTEIO_ESPECIAL_DATAHORA = '', SORTEIO_ESPECIAL_ATIVO = 'false';
 let sorteioEspecialEmAndamento = false;
 let PROXIMO_ALVO_LINHA_GLOBAL = 250;
+let NOME_BINGO_ATUAL = 'Bingo do Pix';
+let TELEFONE_CONTATO_ATUAL = '69999083361';
 
 async function carregarConfiguracoes() {
     try {
@@ -331,6 +335,8 @@ async function carregarConfiguracoes() {
         SORTEIO_ESPECIAL_DATAHORA = map.sorteio_especial_datahora || '';
         PRECO_CARTELA_ESPECIAL_ATUAL = map.sorteio_especial_preco_cartela || '10.00';
         PROXIMO_ALVO_LINHA_GLOBAL = parseFloat(map.proximo_alvo_linha_global || '250') || 250;
+        NOME_BINGO_ATUAL = map.nome_bingo || 'Bingo do Pix';
+        TELEFONE_CONTATO_ATUAL = String(map.telefone_contato || '69999083361').replace(/\D/g, '');
         
         console.log(`Configs carregadas. Sorteio Atual: #${numeroDoSorteio}`);
     } catch (err) {
@@ -363,6 +369,25 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'anuncio.html')));
 app.get('/dashboard-real', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/ping', (req, res) => res.send('pong'));
+app.get('/api/site-branding', async (req, res) => {
+    try {
+        const configs = await Config.find({ chave: { $in: ['nome_bingo', 'telefone_contato'] } });
+        const map = {};
+        configs.forEach(c => map[c.chave] = c.valor);
+
+        const nomeBingo = map.nome_bingo || NOME_BINGO_ATUAL || 'Bingo do Pix';
+        const telefoneLimpo = String(map.telefone_contato || TELEFONE_CONTATO_ATUAL || '69999083361').replace(/\D/g, '');
+
+        res.json({
+            success: true,
+            nome_bingo: nomeBingo,
+            telefone_contato: telefoneLimpo,
+            whatsapp_link: `https://wa.me/55${telefoneLimpo}`
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Erro ao carregar identidade do site.' });
+    }
+});
 
 // --- ROTAS ADMIN ---
 app.post('/admin/login', async (req, res) => {
@@ -393,7 +418,6 @@ app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
     configs.forEach(c => map[c.chave] = c.valor);
     res.json(map);
 });
-
 app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
     const dados = req.body;
     try {
@@ -812,8 +836,7 @@ function escolherJogadorRealParaPremioLinha(sorteioId, sorteadosAtuais) {
             .map((cartela, indice) => ({ cartela, indice }))
             .filter(item => item.cartela.s_id == sorteioId && checarVencedorLinha(item.cartela, sorteadosAtuais));
 
-        if (cartelasElegiveis.length > 0) {
-            candidatos.push({ sid, jog, cartelasElegiveis });
+        if (cartelasElegiveis.length > 0) {            candidatos.push({ sid, jog, cartelasElegiveis });
         }
     }
 
@@ -1232,8 +1255,7 @@ async function sortearNumero() {
                     
                     estadoJogo = "JOGANDO_CHEIA";
                     await salvarEstadoJogo(); // Salva a mudança de estado
-                    io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });
-                    return; 
+                    io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });                    return; 
                 }
             }
         }
