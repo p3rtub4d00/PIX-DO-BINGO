@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-R">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel do Cambista</title>
     <link rel="stylesheet" href="../admin/admin.css">
@@ -12,17 +12,29 @@
             display: flex;
             gap: 10px;
             margin-top: 10px;
+            align-items: stretch;
         }
         #cambista-link {
             flex-grow: 1;
+            min-width: 0;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 1.1em;
+            font-size: 1.05em;
             background-color: #f4f7f6;
         }
         #btn-copiar-link {
             width: auto;
             flex-shrink: 0;
             padding: 10px 15px;
+        }
+
+        @media (max-width: 768px) {
+            .link-afiliado-wrapper {
+                flex-direction: column;
+            }
+
+            #btn-copiar-link {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -92,7 +104,7 @@
             <div id="cartelas-geradas-area">
                 <div class="area-titulo-botoes">
                     <h3>Cartelas Geradas (Prontas para Imprimir):</h3>
-                    <button id="btn-imprimir" class="btn-comprar btn-destaque" style="display: none;">Imprimir Cartelas</to_button>
+                    <button id="btn-imprimir" class="btn-comprar btn-destaque" style="display: none;">Imprimir Cartelas</button>
                 </div>
                 <p id="aviso-impressao"><i>Nenhuma cartela gerada ainda.</i></p>
                 <div id="cartelas-preview-container">
