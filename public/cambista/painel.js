@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnImprimir.style.display = 'none';
 
             try {
+                await carregarBrandingContato();
                 const response = await fetch('/cambista/gerar-cartelas', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
