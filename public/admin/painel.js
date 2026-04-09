@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = document.createElement('div');
         footer.classList.add('mini-cartela-footer');
         footer.innerHTML = `
-            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp 69 99908-3361</strong> para resgatar. O pagamento do prêmio pode demorar ate 48h.</p>
+            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp ${telefoneContatoSuporte}</strong> para resgatar. O pagamento do prêmio pode demorar ate 48h.</p>
         `;
         divCartela.appendChild(footer);
         // --- Fim da Modificação ---
@@ -188,6 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SEÇÃO DE CONFIGURAÇÕES (VERSÃO ORIGINAL SEM COMISSÃO) ---
     const formConfig = document.getElementById('form-config');
+    const nomeBingoInput = document.getElementById('nome-bingo');
+    const telefoneContatoInput = document.getElementById('telefone-contato');
     const premioLinhaInput = document.getElementById('premio-linha');
     const premioCheiaInput = document.getElementById('premio-cheia');
     const precoCartelaInput = document.getElementById('preco-cartela');
@@ -204,10 +206,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnSalvarConfig = document.getElementById('btn-salvar-config');
     const configStatus = document.getElementById('config-status');
+    let telefoneContatoSuporte = '69999083361';
 
     async function carregarConfiguracoesAtuais() {
         // --- ATUALIZANDO VERIFICAÇÃO ---
-        if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput || !proximoAlvoLinhaGlobalInput ||
+        if (!nomeBingoInput || !telefoneContatoInput || !premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput || !proximoAlvoLinhaGlobalInput ||
             !minBotsInput || !maxBotsInput || 
             !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !configStatus) {
             console.error("Um ou mais elementos de configuração não foram encontrados no DOM.");
@@ -222,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             console.log("Configurações recebidas:", data);
 
+            nomeBingoInput.value = data.nome_bingo || 'Bingo do Pix';
+            telefoneContatoInput.value = String(data.telefone_contato || '69999083361').replace(/\D/g, '');
             premioLinhaInput.value = parseFloat(data.premio_linha || '0').toFixed(2);
             premioCheiaInput.value = parseFloat(data.premio_cheia || '0').toFixed(2);
             precoCartelaInput.value = parseFloat(data.preco_cartela || '0').toFixed(2);
@@ -247,12 +252,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function carregarBrandingContato() {
+        try {
+            const response = await fetch('/api/site-branding');
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data && data.success && data.telefone_contato) {
+                telefoneContatoSuporte = String(data.telefone_contato).replace(/\D/g, '');
+            }
+        } catch (error) {
+            console.warn('Não foi possível carregar telefone de suporte.');
+        }
+    }
+
     if (formConfig) { 
         formConfig.addEventListener('submit', async (event) => {
             event.preventDefault();
             
             // --- ATUALIZANDO VERIFICAÇÃO ---
-             if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput || !proximoAlvoLinhaGlobalInput ||
+             if (!nomeBingoInput || !telefoneContatoInput || !premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput || !proximoAlvoLinhaGlobalInput ||
                  !minBotsInput || !maxBotsInput || 
                  !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !configStatus || !btnSalvarConfig) {
                   console.error("Erro no submit: Elementos de configuração não encontrados.");
@@ -263,8 +281,26 @@ document.addEventListener('DOMContentLoaded', () => {
             configStatus.style.display = 'none';
             btnSalvarConfig.disabled = true; btnSalvarConfig.textContent = 'Salvando...';
 
+            const telefoneContatoLimpo = telefoneContatoInput.value.replace(/\D/g, '');
+            if (!nomeBingoInput.value.trim()) {
+                alert("Informe o nome do bingo.");
+                nomeBingoInput.focus();
+                btnSalvarConfig.disabled = false;
+                btnSalvarConfig.textContent = 'Salvar Configurações';
+                return;
+            }
+            if (!/^\d{10,11}$/.test(telefoneContatoLimpo)) {
+                alert("Informe um WhatsApp de contato válido com DDD.");
+                telefoneContatoInput.focus();
+                btnSalvarConfig.disabled = false;
+                btnSalvarConfig.textContent = 'Salvar Configurações';
+                return;
+            }
+
             // --- ATUALIZANDO COLETA DOS DADOS (VERSÃO ORIGINAL SEM COMISSÃO) ---
             const dadosParaSalvar = {
+                nome_bingo: nomeBingoInput.value.trim(),
+                telefone_contato: telefoneContatoLimpo,
                 premio_linha: parseFloat(premioLinhaInput.value),
                 premio_cheia: parseFloat(premioCheiaInput.value),
                 preco_cartela: parseFloat(precoCartelaInput.value),
@@ -304,5 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
          console.error("Formulário 'form-config' não encontrado.");
     }
 
+    carregarBrandingContato();
     carregarConfiguracoesAtuais(); // Carrega tudo ao iniciar
 });
