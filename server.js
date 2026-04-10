@@ -29,120 +29,137 @@ if (!MONGO_URI) {
         });
 }
 
-// --- DEFINIÇÃO DOS MODELOS (SCHEMAS) ---
-
-// Tenant (SaaS)
+// =============================
+// MULTI-TENANT CORE (PASSO 1)
+// =============================
 const TenantSchema = new mongoose.Schema({
-    slug: { type: String, required: true, unique: true },
-    nome_fantasia: { type: String, default: 'Bingo do Pix' },
-    domains: [{ type: String }],
-    ativo: { type: Boolean, default: true },
-    timestamp: { type: Date, default: Date.now }
+  slug: { type: String, required: true, unique: true, index: true },
+  nome_fantasia: { type: String, default: 'Bingo do Pix' },
+  domains: [{ type: String }],
+  ativo: { type: Boolean, default: true },
+  timestamp: { type: Date, default: Date.now }
 });
 const Tenant = mongoose.model('Tenant', TenantSchema);
 
-// Configurações (Chave-Valor)
+function tenantField() {
+  return { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true };
+}
+
+// Configurações (agora por tenant)
 const ConfigSchema = new mongoose.Schema({
-    chave: { type: String, required: true, unique: true },
-    valor: { type: String, default: '' }
+  tenant_id: tenantField(),
+  chave: { type: String, required: true },
+  valor: { type: String, default: '' }
 });
+ConfigSchema.index({ tenant_id: 1, chave: 1 }, { unique: true });
 const Config = mongoose.model('Config', ConfigSchema);
 
-// Admin
+// Admin por tenant
 const AdminSchema = new mongoose.Schema({
-    usuario: { type: String, required: true, unique: true },
-    senha: { type: String, required: true }
+  tenant_id: tenantField(),
+  usuario: { type: String, required: true },
+  senha: { type: String, required: true }
 });
+AdminSchema.index({ tenant_id: 1, usuario: 1 }, { unique: true });
 const Admin = mongoose.model('Admin', AdminSchema);
 
-// Cambistas
+// Cambistas por tenant
 const CambistaSchema = new mongoose.Schema({
-    usuario: { type: String, required: true, unique: true },
-    senha: { type: String, required: true },
-    saldo_creditos: { type: Number, default: 0 },
-    ativo: { type: Boolean, default: true },
-    timestamp: { type: Date, default: Date.now }
+  tenant_id: tenantField(),
+  usuario: { type: String, required: true },
+  senha: { type: String, required: true },
+  saldo_creditos: { type: Number, default: 0 },
+  ativo: { type: Boolean, default: true },
+  timestamp: { type: Date, default: Date.now }
 });
+CambistaSchema.index({ tenant_id: 1, usuario: 1 }, { unique: true });
 const Cambista = mongoose.model('Cambista', CambistaSchema);
 
-// Vendas
+// Vendas por tenant
 const VendaSchema = new mongoose.Schema({
-    sorteio_id: { type: Number, default: 0 }, 
-    nome_jogador: { type: String, required: true },
-    telefone: String,
-    quantidade_cartelas: { type: Number, required: true },
-    valor_total: { type: Number, required: true },
-    tipo_venda: { type: String, required: true },
-    cartelas_json: String,
-    payment_id: String,
-    tipo_sorteio: { type: String, default: 'regular' },
-    sorteio_id_especial: String,
-    cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
-    timestamp: { type: Date, default: Date.now }
+  tenant_id: tenantField(),
+  sorteio_id: { type: Number, default: 0 },
+  nome_jogador: { type: String, required: true },
+  telefone: String,
+  quantidade_cartelas: { type: Number, required: true },
+  valor_total: { type: Number, required: true },
+  tipo_venda: { type: String, required: true },
+  cartelas_json: String,
+  payment_id: String,
+  tipo_sorteio: { type: String, default: 'regular' },
+  sorteio_id_especial: String,
+  cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
+  timestamp: { type: Date, default: Date.now }
 });
+VendaSchema.index({ tenant_id: 1, payment_id: 1 });
 VendaSchema.virtual('id').get(function(){ return this._id.toHexString(); });
 VendaSchema.set('toJSON', { virtuals: true });
 const Venda = mongoose.model('Venda', VendaSchema);
 
-// Vencedores
+// Vencedores por tenant
 const VencedorSchema = new mongoose.Schema({
-    sorteio_id: { type: String, required: true },
-    premio: { type: String, required: true },
-    nome: { type: String, required: true },
-    telefone: String,
-    cartela_id: String,
-    status_pagamento: { type: String, default: 'Pendente' },
-    timestamp: { type: Date, default: Date.now }
+  tenant_id: tenantField(),
+  sorteio_id: { type: String, required: true },
+  premio: { type: String, required: true },
+  nome: { type: String, required: true },
+  telefone: String,
+  cartela_id: String,
+  status_pagamento: { type: String, default: 'Pendente' },
+  timestamp: { type: Date, default: Date.now }
 });
 VencedorSchema.virtual('id').get(function(){ return this._id.toHexString(); });
 VencedorSchema.set('toJSON', { virtuals: true });
 const Vencedor = mongoose.model('Vencedor', VencedorSchema);
 
-// Comissões
+// Comissões por tenant
 const ComissaoSchema = new mongoose.Schema({
-    cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
-    venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda', required: true },
-    valor_venda: Number,
-    valor_comissao: Number,
-    status_pagamento: { type: String, default: 'pendente' },
-    timestamp: { type: Date, default: Date.now }
+  tenant_id: tenantField(),
+  cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
+  venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda', required: true },
+  valor_venda: Number,
+  valor_comissao: Number,
+  status_pagamento: { type: String, default: 'pendente' },
+  timestamp: { type: Date, default: Date.now }
 });
-ComissaoSchema.virtual('id').get(function(){ return this._id.toHexString(); });
-ComissaoSchema.set('toJSON', { virtuals: true });
 const Comissao = mongoose.model('Comissao', ComissaoSchema);
 
-// Histórico de Créditos
+// Transação de crédito por tenant
 const TransacaoCreditoSchema = new mongoose.Schema({
-    cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
-    admin_usuario: String,
-    valor_alteracao: Number,
-    tipo: String,
-    venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda' },
-    timestamp: { type: Date, default: Date.now }
+  tenant_id: tenantField(),
+  cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
+  admin_usuario: String,
+  valor_alteracao: Number,
+  tipo: String,
+  venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda' },
+  timestamp: { type: Date, default: Date.now }
 });
 const TransacaoCredito = mongoose.model('TransacaoCredito', TransacaoCreditoSchema);
 
-// Pagamentos Pendentes
+// Pagamento pendente por tenant
 const PagamentoPendenteSchema = new mongoose.Schema({
-    payment_id: { type: String, required: true, unique: true },
-    socket_id: String,
-    dados_compra_json: String,
-    cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
-    timestamp: { type: Date, default: Date.now }
+  tenant_id: tenantField(),
+  payment_id: { type: String, required: true },
+  socket_id: String,
+  dados_compra_json: String,
+  cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
+  timestamp: { type: Date, default: Date.now }
 });
+PagamentoPendenteSchema.index({ tenant_id: 1, payment_id: 1 }, { unique: true });
 const PagamentoPendente = mongoose.model('PagamentoPendente', PagamentoPendenteSchema);
 
-// --- NOVO SCHEMA: ESTADO DO JOGO (PERSISTÊNCIA) ---
+// GameState por tenant
 const GameStateSchema = new mongoose.Schema({
-    chave: { type: String, default: 'estado_atual', unique: true },
-    estado: String, // 'ESPERANDO', 'JOGANDO_LINHA', 'JOGANDO_CHEIA', etc.
-    numero_sorteio: Number,
-    numeros_sorteados: [Number],
-    numeros_disponiveis: [Number],
-    tempo_restante: Number,
-    sorteio_especial_em_andamento: { type: Boolean, default: false },
-    data_inicio: { type: Date, default: Date.now }
+  tenant_id: tenantField(),
+  chave: { type: String, default: 'estado_atual' },
+  estado: String,
+  numero_sorteio: Number,
+  numeros_sorteados: [Number],
+  numeros_disponiveis: [Number],
+  tempo_restante: Number,
+  sorteio_especial_em_andamento: { type: Boolean, default: false },
+  data_inicio: { type: Date, default: Date.now }
 });
+GameStateSchema.index({ tenant_id: 1, chave: 1 }, { unique: true });
 const GameState = mongoose.model('GameState', GameStateSchema);
 
 
