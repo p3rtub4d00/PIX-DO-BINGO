@@ -641,47 +641,57 @@ app.get('/api/site-branding', async (req, res) => {
     }
 });
 
-// --- ROTAS ADMIN ---
-app.post('/admin/login', async (req, res) => {
+// ==========================================
+// ROTAS ADMIN (TENANTIZADAS)
+// ==========================================
+app.post('/admin/login', requireTenant, async (req, res) => {
     const { usuario, senha } = req.body;
     try {
-        const admin = await Admin.findOne({ usuario });
+        const admin = await Admin.findOne({ tenant_id: req.tenant._id, usuario });
         if (admin && await bcrypt.compare(senha, admin.senha)) {
             req.session.isAdmin = true;
             req.session.usuario = usuario;
-            res.json({ success: true });
-        } else {
-            res.status(401).json({ success: false, message: 'Credenciais inválidas' });
+            req.session.tenantId = String(req.tenant._id);
+            return res.json({ success: true });
         }
+        return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
     } catch (e) {
-        res.status(500).json({ success: false, message: 'Erro interno' });
+        return res.status(500).json({ success: false, message: 'Erro interno' });
     }
 });
 
-function checkAdmin(req, res, next) {    if (req.session.isAdmin) next();
-    else if (req.xhr || req.headers.accept.indexOf('json') > -1) res.status(403).json({success:false, message:'Não autorizado'});
-    else res.redirect('/admin/login.html');
+function checkAdmin(req, res, next) {
+    if (req.session.isAdmin && req.session.tenantId === String(req.tenant?._id)) return next();
+    if (req.xhr || (req.headers.accept || '').includes('json')) return res.status(403).json({success:false, message:'Não autorizado'});
+    return res.redirect('/admin/login.html');
 }
 
-app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
-    const configs = await Config.find({});
+app.get('/admin/premios-e-preco', checkAdmin, requireTenant, async (req, res) => {
+    const configs = await Config.find({ tenant_id: req.tenant._id });
     const map = {};
     configs.forEach(c => map[c.chave] = c.valor);
     res.json(map);
 });
 
-app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
+app.post('/admin/premios-e-preco', checkAdmin, requireTenant, async (req, res) => {
     const dados = req.body;
     try {
         for (const [chave, valor] of Object.entries(dados)) {
-            await Config.findOneAndUpdate({ chave }, { valor: String(valor) }, { upsert: true });
+            await Config.findOneAndUpdate(
+                { tenant_id: req.tenant._id, chave }, 
+                { valor: String(valor) }, 
+                { upsert: true }
+            );
         }
-        await carregarConfiguracoes();
+        // Nota: se a função carregarConfiguracoes for global, precisará de a adaptar mais tarde.
+        await carregarConfiguracoes(); 
         
-        const novasConfigs = await Config.find({});
+        const novasConfigs = await Config.find({ tenant_id: req.tenant._id });
         const map = {};
         novasConfigs.forEach(c => map[c.chave] = c.valor);
-        io.emit('configAtualizada', map);
+        
+        // Emite a configuração apenas para a sala do tenant
+        io.to(String(req.tenant._id)).emit('configAtualizada', map);
         
         res.json({ success: true });
     } catch (e) {
@@ -689,7 +699,7 @@ app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
     }
 });
 
-app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
+app.post('/admin/gerar-cartelas', checkAdmin, requireTenant, async (req, res) => {
     if (sorteioEspecialEmAndamento) return res.status(400).json({ success: false, message: 'Sorteio Especial em andamento' });
     
     const { quantidade, nome, telefone } = req.body;
@@ -700,6 +710,7 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     for(let i=0; i<quantidade; i++) cartelas.push(gerarDadosCartela(sorteioAlvo));
     
     await Venda.create({
+        tenant_id: req.tenant._id,
         sorteio_id: sorteioAlvo,
         nome_jogador: nome,
         telefone: telefone,
@@ -712,13 +723,13 @@ app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
 
     const manualPlayerId = `manual_${gerarIdUnico()}`;
     jogadores[manualPlayerId] = { nome, telefone, isManual: true, cartelas };
-    io.emit('contagemJogadores', getContagemJogadores());
+    io.to(String(req.tenant._id)).emit('contagemJogadores', getContagemJogadores());
     
     res.json(cartelas);
 });
 
-app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
-    const vendas = await Venda.find().sort({ timestamp: -1 });
+app.get('/admin/api/vendas', checkAdmin, requireTenant, async (req, res) => {
+    const vendas = await Venda.find({ tenant_id: req.tenant._id }).sort({ timestamp: -1 });
     const formatadas = vendas.map(v => ({
         ...v.toObject(),
         data_formatada: formatarDataBR(v.timestamp),
@@ -731,13 +742,13 @@ app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
     res.json({ success: true, vendas: formatadas, totais: { faturamento_total: total, cartelas_total: qtd } });
 });
 
-app.post('/admin/api/vendas/limpar', checkAdmin, async (req, res) => {
-    const r = await Venda.deleteMany({});
+app.post('/admin/api/vendas/limpar', checkAdmin, requireTenant, async (req, res) => {
+    const r = await Venda.deleteMany({ tenant_id: req.tenant._id });
     res.json({ success: true, changes: r.deletedCount });
 });
 
-app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
-    const vencedores = await Vencedor.find().sort({ timestamp: -1 });
+app.get('/admin/api/vencedores', checkAdmin, requireTenant, async (req, res) => {
+    const vencedores = await Vencedor.find({ tenant_id: req.tenant._id }).sort({ timestamp: -1 });
     const formatados = vencedores.map(v => ({
         ...v.toObject(),
         data_formatada: formatarDataBR(v.timestamp),
@@ -746,55 +757,69 @@ app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
     res.json({ success: true, vencedores: formatados });
 });
 
-app.post('/admin/api/vencedor/pagar', checkAdmin, async (req, res) => {
-    await Vencedor.findByIdAndUpdate(req.body.id, { status_pagamento: 'Pago' });
+app.post('/admin/api/vencedor/pagar', checkAdmin, requireTenant, async (req, res) => {
+    await Vencedor.findOneAndUpdate(
+        { _id: req.body.id, tenant_id: req.tenant._id }, 
+        { status_pagamento: 'Pago' }
+    );
     res.json({ success: true });
 });
 
-app.post('/admin/api/vencedores/limpar', checkAdmin, async (req, res) => {
-    const r = await Vencedor.deleteMany({});
+app.post('/admin/api/vencedores/limpar', checkAdmin, requireTenant, async (req, res) => {
+    const r = await Vencedor.deleteMany({ tenant_id: req.tenant._id });
     res.json({ success: true, changes: r.deletedCount });
 });
 
-app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
-    const lista = await Cambista.find().sort({ usuario: 1 });
+app.get('/admin/api/cambistas', checkAdmin, requireTenant, async (req, res) => {
+    const lista = await Cambista.find({ tenant_id: req.tenant._id }).sort({ usuario: 1 });
     const formatados = lista.map(c => ({...c.toObject(), id: c._id}));
     res.json({ success: true, cambistas: formatados });
 });
 
-app.post('/admin/api/cambistas/criar', checkAdmin, async (req, res) => {
+app.post('/admin/api/cambistas/criar', checkAdmin, requireTenant, async (req, res) => {
     try {
         const hash = await bcrypt.hash(req.body.senha, 10);
-        const novo = await Cambista.create({ usuario: req.body.usuario, senha: hash });
+        const novo = await Cambista.create({ 
+            tenant_id: req.tenant._id, 
+            usuario: req.body.usuario, 
+            senha: hash 
+        });
         res.json({ success: true, id: novo._id });
     } catch(e) {
         res.status(400).json({ success: false, message: 'Erro ou usuário já existe' });
     }
 });
 
-app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
-    const cambista = await Cambista.findById(req.body.cambistaId);
+app.post('/admin/api/cambistas/toggle-status', checkAdmin, requireTenant, async (req, res) => {
+    const cambista = await Cambista.findOne({ _id: req.body.cambistaId, tenant_id: req.tenant._id });
     if (!cambista) return res.status(404).json({ success: false });
     cambista.ativo = !cambista.ativo;
     await cambista.save();
     res.json({ success: true, novoStatus: cambista.ativo });
 });
 
-app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, async (req, res) => {
+app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, requireTenant, async (req, res) => {
     const { cambistaId, valor } = req.body;
-    const cambista = await Cambista.findByIdAndUpdate(cambistaId, { $inc: { saldo_creditos: parseFloat(valor) } }, { new: true });
+    const cambista = await Cambista.findOneAndUpdate(
+        { _id: cambistaId, tenant_id: req.tenant._id }, 
+        { $inc: { saldo_creditos: parseFloat(valor) } }, 
+        { new: true }
+    );
     
-    await TransacaoCredito.create({
-        cambista_id: cambistaId,
-        admin_usuario: req.session.usuario,
-        valor_alteracao: parseFloat(valor),
-        tipo: 'recarga'
-    });
-    
-    res.json({ success: true, novoSaldo: cambista.saldo_creditos });
+    if(cambista) {
+        await TransacaoCredito.create({
+            tenant_id: req.tenant._id,
+            cambista_id: cambistaId,
+            admin_usuario: req.session.usuario,
+            valor_alteracao: parseFloat(valor),
+            tipo: 'recarga'
+        });
+    }
+    res.json({ success: true, novoSaldo: cambista ? cambista.saldo_creditos : 0 });
 });
-app.get('/admin/api/comissoes', checkAdmin, async (req, res) => {
-    const comissoes = await Comissao.find()
+
+app.get('/admin/api/comissoes', checkAdmin, requireTenant, async (req, res) => {
+    const comissoes = await Comissao.find({ tenant_id: req.tenant._id })
         .populate('cambista_id', 'usuario')
         .populate('venda_id', 'nome_jogador')
         .sort({ timestamp: -1 });
@@ -810,42 +835,47 @@ app.get('/admin/api/comissoes', checkAdmin, async (req, res) => {
     }));
     
     const pendentes = await Comissao.aggregate([
-        { $match: { status_pagamento: 'pendente' } },
+        { $match: { tenant_id: req.tenant._id, status_pagamento: 'pendente' } },
         { $group: { _id: null, total: { $sum: '$valor_comissao' } } }
     ]);
     
     res.json({ success: true, comissoes: formatadas, totalPendente: pendentes[0] ? pendentes[0].total : 0 });
 });
 
-app.post('/admin/api/comissao/pagar', checkAdmin, async (req, res) => {
-    await Comissao.findByIdAndUpdate(req.body.id, { status_pagamento: 'pago' });
+app.post('/admin/api/comissao/pagar', checkAdmin, requireTenant, async (req, res) => {
+    await Comissao.findOneAndUpdate(
+        { _id: req.body.id, tenant_id: req.tenant._id }, 
+        { status_pagamento: 'pago' }
+    );
     res.json({ success: true });
 });
 
-// --- ROTAS CAMBISTA (CORRIGIDO PARA LER O BODY) ---
+// ==========================================
+// ROTAS CAMBISTA (TENANTIZADAS)
+// ==========================================
 function checkCambista(req, res, next) {
-    if (req.session.isCambista) next();
-    else res.status(403).json({ success: false });
+    if (req.session.isCambista && req.session.tenantId === String(req.tenant?._id)) return next();
+    return res.status(403).json({ success: false });
 }
 
 app.get('/cambista/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')));
 app.get('/cambista/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')));
 app.use('/cambista', express.static(path.join(__dirname, 'public', 'cambista')));
 
-app.post('/cambista/login', async (req, res) => {
+app.post('/cambista/login', requireTenant, async (req, res) => {
     const { usuario, senha } = req.body;
     try {
-        const cambista = await Cambista.findOne({ usuario, ativo: true });
+        const cambista = await Cambista.findOne({ tenant_id: req.tenant._id, usuario, ativo: true });
         if (cambista && await bcrypt.compare(senha, cambista.senha)) {
             req.session.isCambista = true;
             req.session.cambistaId = cambista._id;
             req.session.cambistaUsuario = usuario;
-            res.json({ success: true });
-        } else {
-            res.status(401).json({ success: false, message: 'Credenciais inválidas' });
+            req.session.tenantId = String(req.tenant._id);
+            return res.json({ success: true });
         }
+        return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
     } catch(e) {
-        res.status(500).json({ success: false, message: 'Erro interno' });
+        return res.status(500).json({ success: false, message: 'Erro interno' });
     }
 });
 
@@ -856,12 +886,16 @@ app.get('/cambista/logout', (req, res) => {
 
 app.get('/cambista/painel.html', checkCambista, (req, res) => res.sendFile(path.join(__dirname, 'public', 'cambista', 'painel.html')));
 
-app.get('/cambista/meu-status', checkCambista, async (req, res) => {
-    const c = await Cambista.findById(req.session.cambistaId);
-    res.json({ success: true, usuario: c.usuario, saldo: c.saldo_creditos, precoCartela: PRECO_CARTELA });
+app.get('/cambista/meu-status', checkCambista, requireTenant, async (req, res) => {
+    const c = await Cambista.findOne({ _id: req.session.cambistaId, tenant_id: req.tenant._id });
+    if(c) {
+        res.json({ success: true, usuario: c.usuario, saldo: c.saldo_creditos, precoCartela: PRECO_CARTELA });
+    } else {
+        res.status(404).json({ success: false });
+    }
 });
 
-app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
+app.post('/cambista/gerar-cartelas', checkCambista, requireTenant, async (req, res) => {
     if (sorteioEspecialEmAndamento) return res.status(400).json({ success: false, message: 'Sorteio Especial em andamento' });
     
     const { quantidade, nome, telefone } = req.body;
@@ -869,8 +903,8 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
     const total = quantidade * preco;
     const cambistaId = req.session.cambistaId;
     
-    const cambista = await Cambista.findById(cambistaId);
-    if (cambista.saldo_creditos < total) return res.status(400).json({ success: false, message: 'Saldo insuficiente' });
+    const cambista = await Cambista.findOne({ _id: cambistaId, tenant_id: req.tenant._id });
+    if (!cambista || cambista.saldo_creditos < total) return res.status(400).json({ success: false, message: 'Saldo insuficiente' });
     
     cambista.saldo_creditos -= total;
     await cambista.save();
@@ -880,6 +914,7 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
     for(let i=0; i<quantidade; i++) cartelas.push(gerarDadosCartela(sorteioAlvo));
     
     const novaVenda = await Venda.create({
+        tenant_id: req.tenant._id,
         sorteio_id: sorteioAlvo,
         nome_jogador: nome,
         telefone: telefone,
@@ -892,12 +927,19 @@ app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
     });
     
     await TransacaoCredito.create({
+        tenant_id: req.tenant._id,
         cambista_id: cambistaId,
         admin_usuario: req.session.cambistaUsuario,
         valor_alteracao: -total,
         tipo: 'venda',
         venda_id: novaVenda._id
     });
+    
+    res.json(cartelas);
+});
+// ==========================================
+// FIM DAS ROTAS CAMBISTA
+// ==========================================
     
     // ATENÇÃO: NÃO ADICIONAMOS A "jogadores" MANUALMENTE AQUI PARA EVITAR DUPLICIDADE.
     // O SOCKET DO CAMBISTA NÃO É UM JOGADOR.
