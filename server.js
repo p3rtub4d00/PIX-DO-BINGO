@@ -421,6 +421,24 @@ app.use(async (req, res, next) => {
     }
 });
 
+function requireTenant(req, res, next) {
+  if (!req.tenant || !req.tenant._id) {
+    return res.status(400).json({ success: false, message: 'Tenant não resolvido.' });
+  }
+  next();
+}
+
+function tenantFilter(req, extra = {}) {
+  return { tenant_id: req.tenant._id, ...extra };
+}
+
+async function getConfigMapByTenant(tenantId) {
+  const configs = await Config.find({ tenant_id: tenantId });
+  const map = {};
+  configs.forEach(c => { map[c.chave] = c.valor; });
+  return map;
+}
+
 // Webhook
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), async (req, res) => {
     try {
