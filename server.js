@@ -10,6 +10,12 @@ const { randomInt } = require('crypto'); // Importando randomInt especificamente
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 
+const DEFAULT_TENANT_SLUG = process.env.DEFAULT_TENANT_SLUG || 'default';
+const DEFAULT_TENANT_DOMAINS = (process.env.DEFAULT_TENANT_DOMAINS || 'localhost,127.0.0.1')
+    .split(',')
+    .map(d => d.trim().toLowerCase())
+    .filter(Boolean);
+
 // --- CONEXÃO COM MONGODB ---
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -24,6 +30,16 @@ if (!MONGO_URI) {
 }
 
 // --- DEFINIÇÃO DOS MODELOS (SCHEMAS) ---
+
+// Tenant (SaaS)
+const TenantSchema = new mongoose.Schema({
+    slug: { type: String, required: true, unique: true },
+    nome_fantasia: { type: String, default: 'Bingo do Pix' },
+    domains: [{ type: String }],
+    ativo: { type: Boolean, default: true },
+    timestamp: { type: Date, default: Date.now }
+});
+const Tenant = mongoose.model('Tenant', TenantSchema);
 
 // Configurações (Chave-Valor)
 const ConfigSchema = new mongoose.Schema({
@@ -146,9 +162,79 @@ function formatarDataBR(date) {
     return new Date(date).toLocaleString('pt-BR', { timeZone: 'America/Porto_Velho' }); 
 }
 
+function normalizarHost(hostHeader = '') {
+    return String(hostHeader || '')
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .split(':')[0]
+        .trim();
+}
+
+function extrairSlugDoHost(host) {
+    const h = normalizarHost(host);
+    if (!h || h === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(h)) return null;
+    const parts = h.split('.');
+    if (parts.length < 3) return null;
+    const sub = parts[0];
+    if (!sub || ['www', 'app', 'api'].includes(sub)) return null;
+    return sub;
+}
+
+async function resolverTenantDaRequest(req) {
+    const slugHeader = String(req.headers['x-tenant-slug'] || '').trim().toLowerCase();
+    const host = normalizarHost(req.headers.host);
+
+    if (slugHeader) {
+        const bySlugHeader = await Tenant.findOne({ slug: slugHeader, ativo: true });
+        if (bySlugHeader) return bySlugHeader;
+    }
+
+    if (host) {
+        const byDomain = await Tenant.findOne({ domains: host, ativo: true });
+        if (byDomain) return byDomain;
+    }
+
+    const slugFromHost = extrairSlugDoHost(host);
+    if (slugFromHost) {
+        const bySlugHost = await Tenant.findOne({ slug: slugFromHost, ativo: true });
+        if (bySlugHost) return bySlugHost;
+    }
+
+    return Tenant.findOne({ slug: DEFAULT_TENANT_SLUG, ativo: true });
+}
+
+async function obterValorConfigBranding(chaveBase, tenantSlug) {
+    const chaveTenant = `tenant::${tenantSlug}::${chaveBase}`;
+    const cfgTenant = await Config.findOne({ chave: chaveTenant });
+    if (cfgTenant && cfgTenant.valor !== undefined && cfgTenant.valor !== null && String(cfgTenant.valor).length > 0) {
+        return cfgTenant.valor;
+    }
+
+    const cfgGlobal = await Config.findOne({ chave: chaveBase });
+    return cfgGlobal ? cfgGlobal.valor : '';
+}
+
 // --- INICIALIZAÇÃO DE DADOS PADRÃO ---
 async function inicializarDados() {
     try {
+        const tenantPadrao = await Tenant.findOneAndUpdate(
+            { slug: DEFAULT_TENANT_SLUG },
+            {
+                $setOnInsert: {
+                    slug: DEFAULT_TENANT_SLUG,
+                    nome_fantasia: 'Bingo do Pix',
+                    domains: DEFAULT_TENANT_DOMAINS,
+                    ativo: true
+                }
+            },
+            { upsert: true, new: true }
+        );
+
+        if (tenantPadrao && (!tenantPadrao.domains || tenantPadrao.domains.length === 0)) {
+            tenantPadrao.domains = DEFAULT_TENANT_DOMAINS;
+            await tenantPadrao.save();
+        }
+
         const adminExists = await Admin.findOne({ usuario: 'admin' });
         if (!adminExists) {
             const hash = await bcrypt.hash('admin123', 10);
@@ -171,8 +257,7 @@ async function inicializarDados() {
             { chave: 'sorteio_especial_valor', valor: '1000.00' },
             { chave: 'sorteio_especial_datahora', valor: '' },
             { chave: 'sorteio_especial_preco_cartela', valor: '10.00' },
-            { chave: 'duracao_espera', valor: '20' },
-            { chave: 'min_bots', valor: '80' },
+            { chave: 'duracao_espera', valor: '20' },            { chave: 'min_bots', valor: '80' },
             { chave: 'max_bots', valor: '150' },
             { chave: 'numero_sorteio_atual', valor: '500' },
             { chave: 'proximo_alvo_linha_global', valor: '250' },
@@ -203,6 +288,21 @@ app.use(session({
     }),
     cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
 }));
+
+app.use(async (req, res, next) => {
+    try {
+        const tenant = await resolverTenantDaRequest(req);
+        if (!tenant) {
+            return res.status(503).json({ success: false, message: 'Tenant não encontrado para este domínio.' });
+        }
+        req.tenant = tenant;
+        res.locals.tenant = tenant;
+        next();
+    } catch (e) {
+        console.error('Erro ao resolver tenant:', e);
+        res.status(500).json({ success: false, message: 'Erro ao resolver tenant.' });
+    }
+});
 
 // Webhook
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -369,17 +469,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'anuncio.html')));
 app.get('/dashboard-real', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/ping', (req, res) => res.send('pong'));
+app.get('/api/tenant-context', (req, res) => {
+    res.json({
+        success: true,
+        tenant: {
+            id: req.tenant?._id,
+            slug: req.tenant?.slug,
+            nome_fantasia: req.tenant?.nome_fantasia,
+            domains: req.tenant?.domains || []
+        }
+    });
+});
 app.get('/api/site-branding', async (req, res) => {
     try {
-        const configs = await Config.find({ chave: { $in: ['nome_bingo', 'telefone_contato'] } });
-        const map = {};
-        configs.forEach(c => map[c.chave] = c.valor);
-
-        const nomeBingo = map.nome_bingo || NOME_BINGO_ATUAL || 'Bingo do Pix';
-        const telefoneLimpo = String(map.telefone_contato || TELEFONE_CONTATO_ATUAL || '69999083361').replace(/\D/g, '');
+        const tenantSlug = req.tenant?.slug || DEFAULT_TENANT_SLUG;
+        const nomeBingo = (await obterValorConfigBranding('nome_bingo', tenantSlug)) || NOME_BINGO_ATUAL || 'Bingo do Pix';
+        const telefoneRaw = (await obterValorConfigBranding('telefone_contato', tenantSlug)) || TELEFONE_CONTATO_ATUAL || '69999083361';
+        const telefoneLimpo = String(telefoneRaw).replace(/\D/g, '');
 
         res.json({
             success: true,
+            tenant_slug: tenantSlug,
             nome_bingo: nomeBingo,
             telefone_contato: telefoneLimpo,
             whatsapp_link: `https://wa.me/55${telefoneLimpo}`
@@ -406,8 +516,7 @@ app.post('/admin/login', async (req, res) => {
     }
 });
 
-function checkAdmin(req, res, next) {
-    if (req.session.isAdmin) next();
+function checkAdmin(req, res, next) {    if (req.session.isAdmin) next();
     else if (req.xhr || req.headers.accept.indexOf('json') > -1) res.status(403).json({success:false, message:'Não autorizado'});
     else res.redirect('/admin/login.html');
 }
@@ -418,6 +527,7 @@ app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
     configs.forEach(c => map[c.chave] = c.valor);
     res.json(map);
 });
+
 app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
     const dados = req.body;
     try {
@@ -665,8 +775,7 @@ app.get('/cambista/minhas-comissoes', checkCambista, async (req, res) => {
         nome_jogador: c.venda_id ? c.venda_id.nome_jogador : '?'
     }));
     
-    const pendentes = await Comissao.aggregate([
-        { $match: { cambista_id: new mongoose.Types.ObjectId(req.session.cambistaId), status_pagamento: 'pendente' } },
+    const pendentes = await Comissao.aggregate([        { $match: { cambista_id: new mongoose.Types.ObjectId(req.session.cambistaId), status_pagamento: 'pendente' } },
         { $group: { _id: null, total: { $sum: '$valor_comissao' } } }
     ]);
     
@@ -836,7 +945,8 @@ function escolherJogadorRealParaPremioLinha(sorteioId, sorteadosAtuais) {
             .map((cartela, indice) => ({ cartela, indice }))
             .filter(item => item.cartela.s_id == sorteioId && checarVencedorLinha(item.cartela, sorteadosAtuais));
 
-        if (cartelasElegiveis.length > 0) {            candidatos.push({ sid, jog, cartelasElegiveis });
+        if (cartelasElegiveis.length > 0) {
+            candidatos.push({ sid, jog, cartelasElegiveis });
         }
     }
 
@@ -924,8 +1034,7 @@ function escolherJogadorRealParaForcarLinha(sorteioId, sorteadosAtuais) {
 }
 
 async function prepararForcamentoPremioLinhaSeNecessario(idSorteio) {
-    if (estadoJogo !== 'JOGANDO_LINHA' || sorteioEspecialEmAndamento) return false;
-    if (sorteioComPremioLinhaAutomatico === idSorteio) return false;
+    if (estadoJogo !== 'JOGANDO_LINHA' || sorteioEspecialEmAndamento) return false;    if (sorteioComPremioLinhaAutomatico === idSorteio) return false;
     if (premioLinhaForcado && premioLinhaForcado.sorteioId === idSorteio) return true;
 
     const arrecadacaoGlobal = await calcularArrecadacaoGlobalRegular();
@@ -1185,7 +1294,6 @@ async function iniciarNovaRodada() {
         const nomeIndex = gerarNumerosAleatorios(1, 0, nomesBots.length - 1)[0] || 0;
         jogadores[`bot_${gerarIdUnico()}`] = { nome: nomesBots[nomeIndex], isBot: true, cartelas: bC };
     }
-
     // SALVA O ESTADO
     await salvarEstadoJogo();
 
@@ -1255,7 +1363,8 @@ async function sortearNumero() {
                     
                     estadoJogo = "JOGANDO_CHEIA";
                     await salvarEstadoJogo(); // Salva a mudança de estado
-                    io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });                    return; 
+                    io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });
+                    return; 
                 }
             }
         }
