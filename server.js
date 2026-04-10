@@ -288,7 +288,107 @@ app.use(session({
     }),
     cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
 }));
+// --- ROTAS MASTER ADMIN (SaaS) ---
+const MASTER_USER = process.env.MASTER_USER || 'master';
+const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'master123';
 
+function checkMaster(req, res, next) {
+    if (req.session.isMaster) return next();
+    if (req.xhr || (req.headers.accept || '').includes('json')) {
+        return res.status(403).json({ success: false, message: 'Não autorizado (master).' });
+    }
+    return res.redirect('/master/login.html');
+}
+
+app.get('/master/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'master', 'login.html')));
+app.get('/master/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'master', 'login.html')));
+app.get('/master/painel.html', checkMaster, (req, res) => res.sendFile(path.join(__dirname, 'public', 'master', 'painel.html')));
+
+app.post('/master/login', express.json(), (req, res) => {
+    const { usuario, senha } = req.body || {};
+    if (usuario === MASTER_USER && senha === MASTER_PASSWORD) {
+        req.session.isMaster = true;
+        req.session.masterUsuario = usuario;
+        return res.json({ success: true });
+    }
+    return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+});
+
+app.get('/master/logout', (req, res) => {
+    req.session.destroy(() => res.redirect('/master/login.html'));
+});
+
+app.get('/master/api/tenants', checkMaster, async (req, res) => {
+    try {
+        const tenants = await Tenant.find().sort({ slug: 1 });
+        res.json({ success: true, tenants });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+app.post('/master/api/tenants', checkMaster, express.json(), async (req, res) => {
+    try {
+        const { slug, nome_fantasia, domains, ativo } = req.body || {};
+        if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+            return res.status(400).json({ success: false, message: 'Slug inválido (use a-z, 0-9, -).' });
+        }
+
+        const domainsArr = String(domains || '')
+            .split(',')
+            .map(d => d.trim().toLowerCase())
+            .filter(Boolean);
+
+        const updated = await Tenant.findOneAndUpdate(
+            { slug: slug.toLowerCase() },
+            {
+                slug: slug.toLowerCase(),
+                nome_fantasia: String(nome_fantasia || 'Bingo do Pix').trim(),
+                domains: domainsArr,
+                ativo: ativo !== false
+            },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true, tenant: updated });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+app.get('/master/api/tenant-branding/:slug', checkMaster, async (req, res) => {
+    try {
+        const slug = String(req.params.slug || '').toLowerCase();
+        const nome = await obterValorConfigBranding('nome_bingo', slug);
+        const telefone = await obterValorConfigBranding('telefone_contato', slug);
+        res.json({ success: true, nome_bingo: nome, telefone_contato: telefone });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+app.post('/master/api/tenant-branding/:slug', checkMaster, express.json(), async (req, res) => {
+    try {
+        const slug = String(req.params.slug || '').toLowerCase();
+        const nomeBingo = String(req.body?.nome_bingo || '').trim();
+        const telefone = String(req.body?.telefone_contato || '').replace(/\D/g, '');
+
+        await Config.findOneAndUpdate(
+            { chave: `tenant::${slug}::nome_bingo` },
+            { valor: nomeBingo || 'Bingo do Pix' },
+            { upsert: true }
+        );
+        await Config.findOneAndUpdate(
+            { chave: `tenant::${slug}::telefone_contato` },
+            { valor: telefone || '69999083361' },
+            { upsert: true }
+        );
+
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
 app.use(async (req, res, next) => {
     try {
         const tenant = await resolverTenantDaRequest(req);
