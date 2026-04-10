@@ -231,7 +231,47 @@ async function obterValorConfigBranding(chaveBase, tenantSlug) {
     return cfgGlobal ? cfgGlobal.valor : '';
 }
 
-// --- INICIALIZAÇÃO DE DADOS PADRÃO ---
+// --- INICIALIZAÇÃO DE DADOS PADRÃO (SaaS / MULTI-TENANT) ---
+
+// 1. Função que cria as configs e admin para UM tenant específico (Qualquer cliente)
+async function inicializarDadosDoTenant(tenant) {
+    // Admin padrão por tenant
+    let admin = await Admin.findOne({ tenant_id: tenant._id, usuario: 'admin' });
+    if (!admin) {
+        const hash = await bcrypt.hash('admin123', 10);
+        await Admin.create({ tenant_id: tenant._id, usuario: 'admin', senha: hash });
+    } else if (!String(admin.senha).startsWith('$2')) {
+        admin.senha = await bcrypt.hash('admin123', 10);
+        await admin.save();
+    }
+
+    // Configs padrão por tenant
+    const defaults = [
+        { chave: 'premio_linha', valor: '100.00' },
+        { chave: 'premio_cheia', valor: '500.00' },
+        { chave: 'preco_cartela', valor: '5.00' },
+        { chave: 'sorteio_especial_ativo', valor: 'true' },
+        { chave: 'sorteio_especial_valor', valor: '1000.00' },
+        { chave: 'sorteio_especial_datahora', valor: '' },
+        { chave: 'sorteio_especial_preco_cartela', valor: '10.00' },
+        { chave: 'duracao_espera', valor: '20' },
+        { chave: 'min_bots', valor: '80' },
+        { chave: 'max_bots', valor: '150' },
+        { chave: 'numero_sorteio_atual', valor: '500' },
+        { chave: 'proximo_alvo_linha_global', valor: '250' },
+        { chave: 'nome_bingo', valor: tenant.nome_fantasia || 'Bingo do Pix' },
+        { chave: 'telefone_contato', valor: '69999083361' }
+    ];
+
+    for (const d of defaults) {
+        const exists = await Config.findOne({ tenant_id: tenant._id, chave: d.chave });
+        if (!exists) {
+            await Config.create({ tenant_id: tenant._id, chave: d.chave, valor: d.valor });
+        }
+    }
+}
+
+// 2. Função executada ao ligar o servidor para garantir que o seu bingo principal exista
 async function inicializarDados() {
     try {
         const tenantPadrao = await Tenant.findOneAndUpdate(
@@ -252,48 +292,15 @@ async function inicializarDados() {
             await tenantPadrao.save();
         }
 
-        const adminExists = await Admin.findOne({ usuario: 'admin' });
-        if (!adminExists) {
-            const hash = await bcrypt.hash('admin123', 10);
-            await Admin.create({ usuario: 'admin', senha: hash });
-            console.log('Admin criado (admin / admin123).');
-        } else {
-            if (!adminExists.senha.startsWith('$2')) {
-                const hash = await bcrypt.hash('admin123', 10);
-                adminExists.senha = hash;
-                await adminExists.save();
-                console.log('Senha do admin atualizada para hash seguro.');
-            }
-        }
-
-        const configsDefault = [
-            { chave: 'premio_linha', valor: '100.00' },
-            { chave: 'premio_cheia', valor: '500.00' },
-            { chave: 'preco_cartela', valor: '5.00' },
-            { chave: 'sorteio_especial_ativo', valor: 'true' },
-            { chave: 'sorteio_especial_valor', valor: '1000.00' },
-            { chave: 'sorteio_especial_datahora', valor: '' },
-            { chave: 'sorteio_especial_preco_cartela', valor: '10.00' },
-            { chave: 'duracao_espera', valor: '20' },            { chave: 'min_bots', valor: '80' },
-            { chave: 'max_bots', valor: '150' },
-            { chave: 'numero_sorteio_atual', valor: '500' },
-            { chave: 'proximo_alvo_linha_global', valor: '250' },
-            { chave: 'nome_bingo', valor: 'Bingo do Pix' },
-            { chave: 'telefone_contato', valor: '69999083361' }
-        ];
-
-        for (const conf of configsDefault) {
-            const exists = await Config.findOne({ chave: conf.chave });
-            if (!exists) {
-                await Config.create(conf);
-            }
-        }
-        console.log('Dados iniciais verificados.');
+        // Agora, em vez de criar admin e config globalmente, ele inicializa os dados DESTE tenant padrão
+        await inicializarDadosDoTenant(tenantPadrao);
+        
+        console.log('Dados iniciais SaaS verificados (Tenant Padrão garantido).');
     } catch (e) {
-        console.error('Erro na inicialização:', e);
+        console.error('Erro na inicialização SaaS:', e);
     }
 }
-
+// --- FIM DA INICIALIZAÇÃO DE DADOS ---
 // --- MIDDLEWARES ---
 app.use(session({
     secret: process.env.SESSION_SECRET || 'segredo_padrao_troque_isso',
