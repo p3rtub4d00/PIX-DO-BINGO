@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let PRECO_CARTELA_ATUAL = 5.00; // Valor padrão inicial
     let PRECO_CARTELA_ESPECIAL_ATUAL = 10.00; // Valor padrão inicial
     let TIPO_COMPRA_ATUAL = 'regular'; // Controla qual tipo de compra está no modal
-    let TELEFONE_CONTATO_SUPORTE = '69999083361';
 
     // --- Seletores do DOM ---
     const modal = document.getElementById('modal-checkout');
@@ -87,26 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const numero = parseFloat(valor);
         if (isNaN(numero)) return 'R$ --,--';
         return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    }
-
-    function formatarTelefoneWhatsapp(telefone) {
-        const tel = String(telefone || '').replace(/\D/g, '');
-        if (tel.length === 11) return tel.replace(/(\d{2})(\d{5})(\d{4})/, '$1 $2-$3');
-        if (tel.length === 10) return tel.replace(/(\d{2})(\d{4})(\d{4})/, '$1 $2-$3');
-        return tel;
-    }
-
-    async function carregarBrandingSuporte() {
-        try {
-            const response = await fetch('/api/site-branding');
-            if (!response.ok) return;
-            const data = await response.json();
-            if (data && data.success && data.telefone_contato) {
-                TELEFONE_CONTATO_SUPORTE = String(data.telefone_contato).replace(/\D/g, '');
-            }
-        } catch (e) {
-            console.warn('Falha ao carregar telefone de suporte.');
-        }
     }
 
     // --- ================================================== ---
@@ -643,8 +622,8 @@ document.addEventListener('DOMContentLoaded', () => {
             htmlInterno += `
                 <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
                     Se o status estiver "Pendente", entre em contato com a administração pelo 
-                    <a href="https://wa.me/55${TELEFONE_CONTATO_SUPORTE}" target="_blank" style="color:var(--color-pix-green); font-weight:bold;">
-                        WhatsApp ${formatarTelefoneWhatsapp(TELEFONE_CONTATO_SUPORTE)}
+                    <a href="https://wa.me/5569999083361" target="_blank" style="color:var(--color-pix-green); font-weight:bold;">
+                        WhatsApp 69 99908-3361
                     </a> 
                     para receber.
                 </p>`;
@@ -731,6 +710,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    carregarBrandingSuporte();
-
 });

@@ -10,12 +10,6 @@ const { randomInt } = require('crypto'); // Importando randomInt especificamente
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 
-const DEFAULT_TENANT_SLUG = process.env.DEFAULT_TENANT_SLUG || 'default';
-const DEFAULT_TENANT_DOMAINS = (process.env.DEFAULT_TENANT_DOMAINS || 'localhost,127.0.0.1')
-    .split(',')
-    .map(d => d.trim().toLowerCase())
-    .filter(Boolean);
-
 // --- CONEXÃO COM MONGODB ---
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -29,137 +23,110 @@ if (!MONGO_URI) {
         });
 }
 
-// =============================
-// MULTI-TENANT CORE (PASSO 1)
-// =============================
-const TenantSchema = new mongoose.Schema({
-  slug: { type: String, required: true, unique: true, index: true },
-  nome_fantasia: { type: String, default: 'Bingo do Pix' },
-  domains: [{ type: String }],
-  ativo: { type: Boolean, default: true },
-  timestamp: { type: Date, default: Date.now }
-});
-const Tenant = mongoose.model('Tenant', TenantSchema);
+// --- DEFINIÇÃO DOS MODELOS (SCHEMAS) ---
 
-function tenantField() {
-  return { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true };
-}
-
-// Configurações (agora por tenant)
+// Configurações (Chave-Valor)
 const ConfigSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  chave: { type: String, required: true },
-  valor: { type: String, default: '' }
+    chave: { type: String, required: true, unique: true },
+    valor: { type: String, default: '' }
 });
-ConfigSchema.index({ tenant_id: 1, chave: 1 }, { unique: true });
 const Config = mongoose.model('Config', ConfigSchema);
 
-// Admin por tenant
+// Admin
 const AdminSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  usuario: { type: String, required: true },
-  senha: { type: String, required: true }
+    usuario: { type: String, required: true, unique: true },
+    senha: { type: String, required: true }
 });
-AdminSchema.index({ tenant_id: 1, usuario: 1 }, { unique: true });
 const Admin = mongoose.model('Admin', AdminSchema);
 
-// Cambistas por tenant
+// Cambistas
 const CambistaSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  usuario: { type: String, required: true },
-  senha: { type: String, required: true },
-  saldo_creditos: { type: Number, default: 0 },
-  ativo: { type: Boolean, default: true },
-  timestamp: { type: Date, default: Date.now }
+    usuario: { type: String, required: true, unique: true },
+    senha: { type: String, required: true },
+    saldo_creditos: { type: Number, default: 0 },
+    ativo: { type: Boolean, default: true },
+    timestamp: { type: Date, default: Date.now }
 });
-CambistaSchema.index({ tenant_id: 1, usuario: 1 }, { unique: true });
 const Cambista = mongoose.model('Cambista', CambistaSchema);
 
-// Vendas por tenant
+// Vendas
 const VendaSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  sorteio_id: { type: Number, default: 0 },
-  nome_jogador: { type: String, required: true },
-  telefone: String,
-  quantidade_cartelas: { type: Number, required: true },
-  valor_total: { type: Number, required: true },
-  tipo_venda: { type: String, required: true },
-  cartelas_json: String,
-  payment_id: String,
-  tipo_sorteio: { type: String, default: 'regular' },
-  sorteio_id_especial: String,
-  cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
-  timestamp: { type: Date, default: Date.now }
+    sorteio_id: { type: Number, default: 0 }, 
+    nome_jogador: { type: String, required: true },
+    telefone: String,
+    quantidade_cartelas: { type: Number, required: true },
+    valor_total: { type: Number, required: true },
+    tipo_venda: { type: String, required: true },
+    cartelas_json: String,
+    payment_id: String,
+    tipo_sorteio: { type: String, default: 'regular' },
+    sorteio_id_especial: String,
+    cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
+    timestamp: { type: Date, default: Date.now }
 });
-VendaSchema.index({ tenant_id: 1, payment_id: 1 });
 VendaSchema.virtual('id').get(function(){ return this._id.toHexString(); });
 VendaSchema.set('toJSON', { virtuals: true });
 const Venda = mongoose.model('Venda', VendaSchema);
 
-// Vencedores por tenant
+// Vencedores
 const VencedorSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  sorteio_id: { type: String, required: true },
-  premio: { type: String, required: true },
-  nome: { type: String, required: true },
-  telefone: String,
-  cartela_id: String,
-  status_pagamento: { type: String, default: 'Pendente' },
-  timestamp: { type: Date, default: Date.now }
+    sorteio_id: { type: String, required: true },
+    premio: { type: String, required: true },
+    nome: { type: String, required: true },
+    telefone: String,
+    cartela_id: String,
+    status_pagamento: { type: String, default: 'Pendente' },
+    timestamp: { type: Date, default: Date.now }
 });
 VencedorSchema.virtual('id').get(function(){ return this._id.toHexString(); });
 VencedorSchema.set('toJSON', { virtuals: true });
 const Vencedor = mongoose.model('Vencedor', VencedorSchema);
 
-// Comissões por tenant
+// Comissões
 const ComissaoSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
-  venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda', required: true },
-  valor_venda: Number,
-  valor_comissao: Number,
-  status_pagamento: { type: String, default: 'pendente' },
-  timestamp: { type: Date, default: Date.now }
+    cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
+    venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda', required: true },
+    valor_venda: Number,
+    valor_comissao: Number,
+    status_pagamento: { type: String, default: 'pendente' },
+    timestamp: { type: Date, default: Date.now }
 });
+ComissaoSchema.virtual('id').get(function(){ return this._id.toHexString(); });
+ComissaoSchema.set('toJSON', { virtuals: true });
 const Comissao = mongoose.model('Comissao', ComissaoSchema);
 
-// Transação de crédito por tenant
+// Histórico de Créditos
 const TransacaoCreditoSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
-  admin_usuario: String,
-  valor_alteracao: Number,
-  tipo: String,
-  venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda' },
-  timestamp: { type: Date, default: Date.now }
+    cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista', required: true },
+    admin_usuario: String,
+    valor_alteracao: Number,
+    tipo: String,
+    venda_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venda' },
+    timestamp: { type: Date, default: Date.now }
 });
 const TransacaoCredito = mongoose.model('TransacaoCredito', TransacaoCreditoSchema);
 
-// Pagamento pendente por tenant
+// Pagamentos Pendentes
 const PagamentoPendenteSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  payment_id: { type: String, required: true },
-  socket_id: String,
-  dados_compra_json: String,
-  cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
-  timestamp: { type: Date, default: Date.now }
+    payment_id: { type: String, required: true, unique: true },
+    socket_id: String,
+    dados_compra_json: String,
+    cambista_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Cambista' },
+    timestamp: { type: Date, default: Date.now }
 });
-PagamentoPendenteSchema.index({ tenant_id: 1, payment_id: 1 }, { unique: true });
 const PagamentoPendente = mongoose.model('PagamentoPendente', PagamentoPendenteSchema);
 
-// GameState por tenant
+// --- NOVO SCHEMA: ESTADO DO JOGO (PERSISTÊNCIA) ---
 const GameStateSchema = new mongoose.Schema({
-  tenant_id: tenantField(),
-  chave: { type: String, default: 'estado_atual' },
-  estado: String,
-  numero_sorteio: Number,
-  numeros_sorteados: [Number],
-  numeros_disponiveis: [Number],
-  tempo_restante: Number,
-  sorteio_especial_em_andamento: { type: Boolean, default: false },
-  data_inicio: { type: Date, default: Date.now }
+    chave: { type: String, default: 'estado_atual', unique: true },
+    estado: String, // 'ESPERANDO', 'JOGANDO_LINHA', 'JOGANDO_CHEIA', etc.
+    numero_sorteio: Number,
+    numeros_sorteados: [Number],
+    numeros_disponiveis: [Number],
+    tempo_restante: Number,
+    sorteio_especial_em_andamento: { type: Boolean, default: false },
+    data_inicio: { type: Date, default: Date.now }
 });
-GameStateSchema.index({ tenant_id: 1, chave: 1 }, { unique: true });
 const GameState = mongoose.model('GameState', GameStateSchema);
 
 
@@ -179,128 +146,50 @@ function formatarDataBR(date) {
     return new Date(date).toLocaleString('pt-BR', { timeZone: 'America/Porto_Velho' }); 
 }
 
-function normalizarHost(hostHeader = '') {
-    return String(hostHeader || '')
-        .toLowerCase()
-        .replace(/^https?:\/\//, '')
-        .split(':')[0]
-        .trim();
-}
-
-function extrairSlugDoHost(host) {
-    const h = normalizarHost(host);
-    if (!h || h === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(h)) return null;
-    const parts = h.split('.');
-    if (parts.length < 3) return null;
-    const sub = parts[0];
-    if (!sub || ['www', 'app', 'api'].includes(sub)) return null;
-    return sub;
-}
-
-async function resolverTenantDaRequest(req) {
-    const slugHeader = String(req.headers['x-tenant-slug'] || '').trim().toLowerCase();
-    const host = normalizarHost(req.headers.host);
-
-    if (slugHeader) {
-        const bySlugHeader = await Tenant.findOne({ slug: slugHeader, ativo: true });
-        if (bySlugHeader) return bySlugHeader;
-    }
-
-    if (host) {
-        const byDomain = await Tenant.findOne({ domains: host, ativo: true });
-        if (byDomain) return byDomain;
-    }
-
-    const slugFromHost = extrairSlugDoHost(host);
-    if (slugFromHost) {
-        const bySlugHost = await Tenant.findOne({ slug: slugFromHost, ativo: true });
-        if (bySlugHost) return bySlugHost;
-    }
-
-    return Tenant.findOne({ slug: DEFAULT_TENANT_SLUG, ativo: true });
-}
-
-async function obterValorConfigBranding(chaveBase, tenantSlug) {
-    const chaveTenant = `tenant::${tenantSlug}::${chaveBase}`;
-    const cfgTenant = await Config.findOne({ chave: chaveTenant });
-    if (cfgTenant && cfgTenant.valor !== undefined && cfgTenant.valor !== null && String(cfgTenant.valor).length > 0) {
-        return cfgTenant.valor;
-    }
-
-    const cfgGlobal = await Config.findOne({ chave: chaveBase });
-    return cfgGlobal ? cfgGlobal.valor : '';
-}
-
-// --- INICIALIZAÇÃO DE DADOS PADRÃO (SaaS / MULTI-TENANT) ---
-
-// 1. Função que cria as configs e admin para UM tenant específico (Qualquer cliente)
-async function inicializarDadosDoTenant(tenant) {
-    // Admin padrão por tenant
-    let admin = await Admin.findOne({ tenant_id: tenant._id, usuario: 'admin' });
-    if (!admin) {
-        const hash = await bcrypt.hash('admin123', 10);
-        await Admin.create({ tenant_id: tenant._id, usuario: 'admin', senha: hash });
-    } else if (!String(admin.senha).startsWith('$2')) {
-        admin.senha = await bcrypt.hash('admin123', 10);
-        await admin.save();
-    }
-
-    // Configs padrão por tenant
-    const defaults = [
-        { chave: 'premio_linha', valor: '100.00' },
-        { chave: 'premio_cheia', valor: '500.00' },
-        { chave: 'preco_cartela', valor: '5.00' },
-        { chave: 'sorteio_especial_ativo', valor: 'true' },
-        { chave: 'sorteio_especial_valor', valor: '1000.00' },
-        { chave: 'sorteio_especial_datahora', valor: '' },
-        { chave: 'sorteio_especial_preco_cartela', valor: '10.00' },
-        { chave: 'duracao_espera', valor: '20' },
-        { chave: 'min_bots', valor: '80' },
-        { chave: 'max_bots', valor: '150' },
-        { chave: 'numero_sorteio_atual', valor: '500' },
-        { chave: 'proximo_alvo_linha_global', valor: '250' },
-        { chave: 'nome_bingo', valor: tenant.nome_fantasia || 'Bingo do Pix' },
-        { chave: 'telefone_contato', valor: '69999083361' }
-    ];
-
-    for (const d of defaults) {
-        const exists = await Config.findOne({ tenant_id: tenant._id, chave: d.chave });
-        if (!exists) {
-            await Config.create({ tenant_id: tenant._id, chave: d.chave, valor: d.valor });
-        }
-    }
-}
-
-// 2. Função executada ao ligar o servidor para garantir que o seu bingo principal exista
+// --- INICIALIZAÇÃO DE DADOS PADRÃO ---
 async function inicializarDados() {
     try {
-        const tenantPadrao = await Tenant.findOneAndUpdate(
-            { slug: DEFAULT_TENANT_SLUG },
-            {
-                $setOnInsert: {
-                    slug: DEFAULT_TENANT_SLUG,
-                    nome_fantasia: 'Bingo do Pix',
-                    domains: DEFAULT_TENANT_DOMAINS,
-                    ativo: true
-                }
-            },
-            { upsert: true, new: true }
-        );
-
-        if (tenantPadrao && (!tenantPadrao.domains || tenantPadrao.domains.length === 0)) {
-            tenantPadrao.domains = DEFAULT_TENANT_DOMAINS;
-            await tenantPadrao.save();
+        const adminExists = await Admin.findOne({ usuario: 'admin' });
+        if (!adminExists) {
+            const hash = await bcrypt.hash('admin123', 10);
+            await Admin.create({ usuario: 'admin', senha: hash });
+            console.log('Admin criado (admin / admin123).');
+        } else {
+            if (!adminExists.senha.startsWith('$2')) {
+                const hash = await bcrypt.hash('admin123', 10);
+                adminExists.senha = hash;
+                await adminExists.save();
+                console.log('Senha do admin atualizada para hash seguro.');
+            }
         }
 
-        // Agora, em vez de criar admin e config globalmente, ele inicializa os dados DESTE tenant padrão
-        await inicializarDadosDoTenant(tenantPadrao);
-        
-        console.log('Dados iniciais SaaS verificados (Tenant Padrão garantido).');
+        const configsDefault = [
+            { chave: 'premio_linha', valor: '100.00' },
+            { chave: 'premio_cheia', valor: '500.00' },
+            { chave: 'preco_cartela', valor: '5.00' },
+            { chave: 'sorteio_especial_ativo', valor: 'true' },
+            { chave: 'sorteio_especial_valor', valor: '1000.00' },
+            { chave: 'sorteio_especial_datahora', valor: '' },
+            { chave: 'sorteio_especial_preco_cartela', valor: '10.00' },
+            { chave: 'duracao_espera', valor: '20' },
+            { chave: 'min_bots', valor: '80' },
+            { chave: 'max_bots', valor: '150' },
+            { chave: 'numero_sorteio_atual', valor: '500' },
+            { chave: 'proximo_alvo_linha_global', valor: '250' }
+        ];
+
+        for (const conf of configsDefault) {
+            const exists = await Config.findOne({ chave: conf.chave });
+            if (!exists) {
+                await Config.create(conf);
+            }
+        }
+        console.log('Dados iniciais verificados.');
     } catch (e) {
-        console.error('Erro na inicialização SaaS:', e);
+        console.error('Erro na inicialização:', e);
     }
 }
-// --- FIM DA INICIALIZAÇÃO DE DADOS ---
+
 // --- MIDDLEWARES ---
 app.use(session({
     secret: process.env.SESSION_SECRET || 'segredo_padrao_troque_isso',
@@ -312,139 +201,6 @@ app.use(session({
     }),
     cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
 }));
-// --- ROTAS MASTER ADMIN (SaaS) ---
-const MASTER_USER = process.env.MASTER_USER || 'master';
-const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'master123';
-
-function checkMaster(req, res, next) {
-    if (req.session.isMaster) return next();
-    if (req.xhr || (req.headers.accept || '').includes('json')) {
-        return res.status(403).json({ success: false, message: 'Não autorizado (master).' });
-    }
-    return res.redirect('/master/login.html');
-}
-
-app.get('/master/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'master', 'login.html')));
-app.get('/master/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'master', 'login.html')));
-app.get('/master/painel.html', checkMaster, (req, res) => res.sendFile(path.join(__dirname, 'public', 'master', 'painel.html')));
-
-app.post('/master/login', express.json(), (req, res) => {
-    const { usuario, senha } = req.body || {};
-    if (usuario === MASTER_USER && senha === MASTER_PASSWORD) {
-        req.session.isMaster = true;
-        req.session.masterUsuario = usuario;
-        return res.json({ success: true });
-    }
-    return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
-});
-
-app.get('/master/logout', (req, res) => {
-    req.session.destroy(() => res.redirect('/master/login.html'));
-});
-
-app.get('/master/api/tenants', checkMaster, async (req, res) => {
-    try {
-        const tenants = await Tenant.find().sort({ slug: 1 });
-        res.json({ success: true, tenants });
-    } catch (e) {
-        res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-app.post('/master/api/tenants', checkMaster, express.json(), async (req, res) => {
-    try {
-        const { slug, nome_fantasia, domains, ativo } = req.body || {};
-        if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
-            return res.status(400).json({ success: false, message: 'Slug inválido (use a-z, 0-9, -).' });
-        }
-
-        const domainsArr = String(domains || '')
-            .split(',')
-            .map(d => d.trim().toLowerCase())
-            .filter(Boolean);
-
-        const updated = await Tenant.findOneAndUpdate(
-            { slug: slug.toLowerCase() },
-            {
-                slug: slug.toLowerCase(),
-                nome_fantasia: String(nome_fantasia || 'Bingo do Pix').trim(),
-                domains: domainsArr,
-                ativo: ativo !== false
-            },
-            { upsert: true, new: true }
-        );
-
-        res.json({ success: true, tenant: updated });
-    } catch (e) {
-        res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-app.get('/master/api/tenant-branding/:slug', checkMaster, async (req, res) => {
-    try {
-        const slug = String(req.params.slug || '').toLowerCase();
-        const nome = await obterValorConfigBranding('nome_bingo', slug);
-        const telefone = await obterValorConfigBranding('telefone_contato', slug);
-        res.json({ success: true, nome_bingo: nome, telefone_contato: telefone });
-    } catch (e) {
-        res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-app.post('/master/api/tenant-branding/:slug', checkMaster, express.json(), async (req, res) => {
-    try {
-        const slug = String(req.params.slug || '').toLowerCase();
-        const nomeBingo = String(req.body?.nome_bingo || '').trim();
-        const telefone = String(req.body?.telefone_contato || '').replace(/\D/g, '');
-
-        await Config.findOneAndUpdate(
-            { chave: `tenant::${slug}::nome_bingo` },
-            { valor: nomeBingo || 'Bingo do Pix' },
-            { upsert: true }
-        );
-        await Config.findOneAndUpdate(
-            { chave: `tenant::${slug}::telefone_contato` },
-            { valor: telefone || '69999083361' },
-            { upsert: true }
-        );
-
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ success: false, message: e.message });
-    }
-});
-app.use(async (req, res, next) => {
-    try {
-        const tenant = await resolverTenantDaRequest(req);
-        if (!tenant) {
-            return res.status(503).json({ success: false, message: 'Tenant não encontrado para este domínio.' });
-        }
-        req.tenant = tenant;
-        res.locals.tenant = tenant;
-        next();
-    } catch (e) {
-        console.error('Erro ao resolver tenant:', e);
-        res.status(500).json({ success: false, message: 'Erro ao resolver tenant.' });
-    }
-});
-
-function requireTenant(req, res, next) {
-  if (!req.tenant || !req.tenant._id) {
-    return res.status(400).json({ success: false, message: 'Tenant não resolvido.' });
-  }
-  next();
-}
-
-function tenantFilter(req, extra = {}) {
-  return { tenant_id: req.tenant._id, ...extra };
-}
-
-async function getConfigMapByTenant(tenantId) {
-  const configs = await Config.find({ tenant_id: tenantId });
-  const map = {};
-  configs.forEach(c => { map[c.chave] = c.valor; });
-  return map;
-}
 
 // Webhook
 app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -556,8 +312,6 @@ let numeroDoSorteio = 500;
 let PRECO_CARTELA_ESPECIAL_ATUAL = '10.00', SORTEIO_ESPECIAL_DATAHORA = '', SORTEIO_ESPECIAL_ATIVO = 'false';
 let sorteioEspecialEmAndamento = false;
 let PROXIMO_ALVO_LINHA_GLOBAL = 250;
-let NOME_BINGO_ATUAL = 'Bingo do Pix';
-let TELEFONE_CONTATO_ATUAL = '69999083361';
 
 async function carregarConfiguracoes() {
     try {
@@ -577,8 +331,6 @@ async function carregarConfiguracoes() {
         SORTEIO_ESPECIAL_DATAHORA = map.sorteio_especial_datahora || '';
         PRECO_CARTELA_ESPECIAL_ATUAL = map.sorteio_especial_preco_cartela || '10.00';
         PROXIMO_ALVO_LINHA_GLOBAL = parseFloat(map.proximo_alvo_linha_global || '250') || 250;
-        NOME_BINGO_ATUAL = map.nome_bingo || 'Bingo do Pix';
-        TELEFONE_CONTATO_ATUAL = String(map.telefone_contato || '69999083361').replace(/\D/g, '');
         
         console.log(`Configs carregadas. Sorteio Atual: #${numeroDoSorteio}`);
     } catch (err) {
@@ -611,87 +363,49 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'anuncio.html')));
 app.get('/dashboard-real', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/ping', (req, res) => res.send('pong'));
-app.get('/api/tenant-context', (req, res) => {
-    res.json({
-        success: true,
-        tenant: {
-            id: req.tenant?._id,
-            slug: req.tenant?.slug,
-            nome_fantasia: req.tenant?.nome_fantasia,
-            domains: req.tenant?.domains || []
-        }
-    });
-});
-app.get('/api/site-branding', async (req, res) => {
-    try {
-        const tenantSlug = req.tenant?.slug || DEFAULT_TENANT_SLUG;
-        const nomeBingo = (await obterValorConfigBranding('nome_bingo', tenantSlug)) || NOME_BINGO_ATUAL || 'Bingo do Pix';
-        const telefoneRaw = (await obterValorConfigBranding('telefone_contato', tenantSlug)) || TELEFONE_CONTATO_ATUAL || '69999083361';
-        const telefoneLimpo = String(telefoneRaw).replace(/\D/g, '');
 
-        res.json({
-            success: true,
-            tenant_slug: tenantSlug,
-            nome_bingo: nomeBingo,
-            telefone_contato: telefoneLimpo,
-            whatsapp_link: `https://wa.me/55${telefoneLimpo}`
-        });
-    } catch (e) {
-        res.status(500).json({ success: false, message: 'Erro ao carregar identidade do site.' });
-    }
-});
-
-// ==========================================
-// ROTAS ADMIN (TENANTIZADAS)
-// ==========================================
-app.post('/admin/login', requireTenant, async (req, res) => {
+// --- ROTAS ADMIN ---
+app.post('/admin/login', async (req, res) => {
     const { usuario, senha } = req.body;
     try {
-        const admin = await Admin.findOne({ tenant_id: req.tenant._id, usuario });
+        const admin = await Admin.findOne({ usuario });
         if (admin && await bcrypt.compare(senha, admin.senha)) {
             req.session.isAdmin = true;
             req.session.usuario = usuario;
-            req.session.tenantId = String(req.tenant._id);
-            return res.json({ success: true });
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ success: false, message: 'Credenciais inválidas' });
         }
-        return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
     } catch (e) {
-        return res.status(500).json({ success: false, message: 'Erro interno' });
+        res.status(500).json({ success: false, message: 'Erro interno' });
     }
 });
 
 function checkAdmin(req, res, next) {
-    if (req.session.isAdmin && req.session.tenantId === String(req.tenant?._id)) return next();
-    if (req.xhr || (req.headers.accept || '').includes('json')) return res.status(403).json({success:false, message:'Não autorizado'});
-    return res.redirect('/admin/login.html');
+    if (req.session.isAdmin) next();
+    else if (req.xhr || req.headers.accept.indexOf('json') > -1) res.status(403).json({success:false, message:'Não autorizado'});
+    else res.redirect('/admin/login.html');
 }
 
-app.get('/admin/premios-e-preco', checkAdmin, requireTenant, async (req, res) => {
-    const configs = await Config.find({ tenant_id: req.tenant._id });
+app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
+    const configs = await Config.find({});
     const map = {};
     configs.forEach(c => map[c.chave] = c.valor);
     res.json(map);
 });
 
-app.post('/admin/premios-e-preco', checkAdmin, requireTenant, async (req, res) => {
+app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
     const dados = req.body;
     try {
         for (const [chave, valor] of Object.entries(dados)) {
-            await Config.findOneAndUpdate(
-                { tenant_id: req.tenant._id, chave }, 
-                { valor: String(valor) }, 
-                { upsert: true }
-            );
+            await Config.findOneAndUpdate({ chave }, { valor: String(valor) }, { upsert: true });
         }
-        // Nota: se a função carregarConfiguracoes for global, precisará de a adaptar mais tarde.
-        await carregarConfiguracoes(); 
+        await carregarConfiguracoes();
         
-        const novasConfigs = await Config.find({ tenant_id: req.tenant._id });
+        const novasConfigs = await Config.find({});
         const map = {};
         novasConfigs.forEach(c => map[c.chave] = c.valor);
-        
-        // Emite a configuração apenas para a sala do tenant
-        io.to(String(req.tenant._id)).emit('configAtualizada', map);
+        io.emit('configAtualizada', map);
         
         res.json({ success: true });
     } catch (e) {
@@ -699,7 +413,7 @@ app.post('/admin/premios-e-preco', checkAdmin, requireTenant, async (req, res) =
     }
 });
 
-app.post('/admin/gerar-cartelas', checkAdmin, requireTenant, async (req, res) => {
+app.post('/admin/gerar-cartelas', checkAdmin, async (req, res) => {
     if (sorteioEspecialEmAndamento) return res.status(400).json({ success: false, message: 'Sorteio Especial em andamento' });
     
     const { quantidade, nome, telefone } = req.body;
@@ -710,7 +424,6 @@ app.post('/admin/gerar-cartelas', checkAdmin, requireTenant, async (req, res) =>
     for(let i=0; i<quantidade; i++) cartelas.push(gerarDadosCartela(sorteioAlvo));
     
     await Venda.create({
-        tenant_id: req.tenant._id,
         sorteio_id: sorteioAlvo,
         nome_jogador: nome,
         telefone: telefone,
@@ -723,13 +436,13 @@ app.post('/admin/gerar-cartelas', checkAdmin, requireTenant, async (req, res) =>
 
     const manualPlayerId = `manual_${gerarIdUnico()}`;
     jogadores[manualPlayerId] = { nome, telefone, isManual: true, cartelas };
-    io.to(String(req.tenant._id)).emit('contagemJogadores', getContagemJogadores());
+    io.emit('contagemJogadores', getContagemJogadores());
     
     res.json(cartelas);
 });
 
-app.get('/admin/api/vendas', checkAdmin, requireTenant, async (req, res) => {
-    const vendas = await Venda.find({ tenant_id: req.tenant._id }).sort({ timestamp: -1 });
+app.get('/admin/api/vendas', checkAdmin, async (req, res) => {
+    const vendas = await Venda.find().sort({ timestamp: -1 });
     const formatadas = vendas.map(v => ({
         ...v.toObject(),
         data_formatada: formatarDataBR(v.timestamp),
@@ -742,13 +455,13 @@ app.get('/admin/api/vendas', checkAdmin, requireTenant, async (req, res) => {
     res.json({ success: true, vendas: formatadas, totais: { faturamento_total: total, cartelas_total: qtd } });
 });
 
-app.post('/admin/api/vendas/limpar', checkAdmin, requireTenant, async (req, res) => {
-    const r = await Venda.deleteMany({ tenant_id: req.tenant._id });
+app.post('/admin/api/vendas/limpar', checkAdmin, async (req, res) => {
+    const r = await Venda.deleteMany({});
     res.json({ success: true, changes: r.deletedCount });
 });
 
-app.get('/admin/api/vencedores', checkAdmin, requireTenant, async (req, res) => {
-    const vencedores = await Vencedor.find({ tenant_id: req.tenant._id }).sort({ timestamp: -1 });
+app.get('/admin/api/vencedores', checkAdmin, async (req, res) => {
+    const vencedores = await Vencedor.find().sort({ timestamp: -1 });
     const formatados = vencedores.map(v => ({
         ...v.toObject(),
         data_formatada: formatarDataBR(v.timestamp),
@@ -757,69 +470,55 @@ app.get('/admin/api/vencedores', checkAdmin, requireTenant, async (req, res) => 
     res.json({ success: true, vencedores: formatados });
 });
 
-app.post('/admin/api/vencedor/pagar', checkAdmin, requireTenant, async (req, res) => {
-    await Vencedor.findOneAndUpdate(
-        { _id: req.body.id, tenant_id: req.tenant._id }, 
-        { status_pagamento: 'Pago' }
-    );
+app.post('/admin/api/vencedor/pagar', checkAdmin, async (req, res) => {
+    await Vencedor.findByIdAndUpdate(req.body.id, { status_pagamento: 'Pago' });
     res.json({ success: true });
 });
 
-app.post('/admin/api/vencedores/limpar', checkAdmin, requireTenant, async (req, res) => {
-    const r = await Vencedor.deleteMany({ tenant_id: req.tenant._id });
+app.post('/admin/api/vencedores/limpar', checkAdmin, async (req, res) => {
+    const r = await Vencedor.deleteMany({});
     res.json({ success: true, changes: r.deletedCount });
 });
 
-app.get('/admin/api/cambistas', checkAdmin, requireTenant, async (req, res) => {
-    const lista = await Cambista.find({ tenant_id: req.tenant._id }).sort({ usuario: 1 });
+app.get('/admin/api/cambistas', checkAdmin, async (req, res) => {
+    const lista = await Cambista.find().sort({ usuario: 1 });
     const formatados = lista.map(c => ({...c.toObject(), id: c._id}));
     res.json({ success: true, cambistas: formatados });
 });
 
-app.post('/admin/api/cambistas/criar', checkAdmin, requireTenant, async (req, res) => {
+app.post('/admin/api/cambistas/criar', checkAdmin, async (req, res) => {
     try {
         const hash = await bcrypt.hash(req.body.senha, 10);
-        const novo = await Cambista.create({ 
-            tenant_id: req.tenant._id, 
-            usuario: req.body.usuario, 
-            senha: hash 
-        });
+        const novo = await Cambista.create({ usuario: req.body.usuario, senha: hash });
         res.json({ success: true, id: novo._id });
     } catch(e) {
         res.status(400).json({ success: false, message: 'Erro ou usuário já existe' });
     }
 });
 
-app.post('/admin/api/cambistas/toggle-status', checkAdmin, requireTenant, async (req, res) => {
-    const cambista = await Cambista.findOne({ _id: req.body.cambistaId, tenant_id: req.tenant._id });
+app.post('/admin/api/cambistas/toggle-status', checkAdmin, async (req, res) => {
+    const cambista = await Cambista.findById(req.body.cambistaId);
     if (!cambista) return res.status(404).json({ success: false });
     cambista.ativo = !cambista.ativo;
     await cambista.save();
     res.json({ success: true, novoStatus: cambista.ativo });
 });
 
-app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, requireTenant, async (req, res) => {
+app.post('/admin/api/cambistas/adicionar-creditos', checkAdmin, async (req, res) => {
     const { cambistaId, valor } = req.body;
-    const cambista = await Cambista.findOneAndUpdate(
-        { _id: cambistaId, tenant_id: req.tenant._id }, 
-        { $inc: { saldo_creditos: parseFloat(valor) } }, 
-        { new: true }
-    );
+    const cambista = await Cambista.findByIdAndUpdate(cambistaId, { $inc: { saldo_creditos: parseFloat(valor) } }, { new: true });
     
-    if(cambista) {
-        await TransacaoCredito.create({
-            tenant_id: req.tenant._id,
-            cambista_id: cambistaId,
-            admin_usuario: req.session.usuario,
-            valor_alteracao: parseFloat(valor),
-            tipo: 'recarga'
-        });
-    }
-    res.json({ success: true, novoSaldo: cambista ? cambista.saldo_creditos : 0 });
+    await TransacaoCredito.create({
+        cambista_id: cambistaId,
+        admin_usuario: req.session.usuario,
+        valor_alteracao: parseFloat(valor),
+        tipo: 'recarga'
+    });
+    
+    res.json({ success: true, novoSaldo: cambista.saldo_creditos });
 });
-
-app.get('/admin/api/comissoes', checkAdmin, requireTenant, async (req, res) => {
-    const comissoes = await Comissao.find({ tenant_id: req.tenant._id })
+app.get('/admin/api/comissoes', checkAdmin, async (req, res) => {
+    const comissoes = await Comissao.find()
         .populate('cambista_id', 'usuario')
         .populate('venda_id', 'nome_jogador')
         .sort({ timestamp: -1 });
@@ -835,47 +534,42 @@ app.get('/admin/api/comissoes', checkAdmin, requireTenant, async (req, res) => {
     }));
     
     const pendentes = await Comissao.aggregate([
-        { $match: { tenant_id: req.tenant._id, status_pagamento: 'pendente' } },
+        { $match: { status_pagamento: 'pendente' } },
         { $group: { _id: null, total: { $sum: '$valor_comissao' } } }
     ]);
     
     res.json({ success: true, comissoes: formatadas, totalPendente: pendentes[0] ? pendentes[0].total : 0 });
 });
 
-app.post('/admin/api/comissao/pagar', checkAdmin, requireTenant, async (req, res) => {
-    await Comissao.findOneAndUpdate(
-        { _id: req.body.id, tenant_id: req.tenant._id }, 
-        { status_pagamento: 'pago' }
-    );
+app.post('/admin/api/comissao/pagar', checkAdmin, async (req, res) => {
+    await Comissao.findByIdAndUpdate(req.body.id, { status_pagamento: 'pago' });
     res.json({ success: true });
 });
 
-// ==========================================
-// ROTAS CAMBISTA (TENANTIZADAS)
-// ==========================================
+// --- ROTAS CAMBISTA (CORRIGIDO PARA LER O BODY) ---
 function checkCambista(req, res, next) {
-    if (req.session.isCambista && req.session.tenantId === String(req.tenant?._id)) return next();
-    return res.status(403).json({ success: false });
+    if (req.session.isCambista) next();
+    else res.status(403).json({ success: false });
 }
 
 app.get('/cambista/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')));
 app.get('/cambista/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cambista', 'login.html')));
 app.use('/cambista', express.static(path.join(__dirname, 'public', 'cambista')));
 
-app.post('/cambista/login', requireTenant, async (req, res) => {
+app.post('/cambista/login', async (req, res) => {
     const { usuario, senha } = req.body;
     try {
-        const cambista = await Cambista.findOne({ tenant_id: req.tenant._id, usuario, ativo: true });
+        const cambista = await Cambista.findOne({ usuario, ativo: true });
         if (cambista && await bcrypt.compare(senha, cambista.senha)) {
             req.session.isCambista = true;
             req.session.cambistaId = cambista._id;
             req.session.cambistaUsuario = usuario;
-            req.session.tenantId = String(req.tenant._id);
-            return res.json({ success: true });
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ success: false, message: 'Credenciais inválidas' });
         }
-        return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
     } catch(e) {
-        return res.status(500).json({ success: false, message: 'Erro interno' });
+        res.status(500).json({ success: false, message: 'Erro interno' });
     }
 });
 
@@ -886,16 +580,12 @@ app.get('/cambista/logout', (req, res) => {
 
 app.get('/cambista/painel.html', checkCambista, (req, res) => res.sendFile(path.join(__dirname, 'public', 'cambista', 'painel.html')));
 
-app.get('/cambista/meu-status', checkCambista, requireTenant, async (req, res) => {
-    const c = await Cambista.findOne({ _id: req.session.cambistaId, tenant_id: req.tenant._id });
-    if(c) {
-        res.json({ success: true, usuario: c.usuario, saldo: c.saldo_creditos, precoCartela: PRECO_CARTELA });
-    } else {
-        res.status(404).json({ success: false });
-    }
+app.get('/cambista/meu-status', checkCambista, async (req, res) => {
+    const c = await Cambista.findById(req.session.cambistaId);
+    res.json({ success: true, usuario: c.usuario, saldo: c.saldo_creditos, precoCartela: PRECO_CARTELA });
 });
 
-app.post('/cambista/gerar-cartelas', checkCambista, requireTenant, async (req, res) => {
+app.post('/cambista/gerar-cartelas', checkCambista, async (req, res) => {
     if (sorteioEspecialEmAndamento) return res.status(400).json({ success: false, message: 'Sorteio Especial em andamento' });
     
     const { quantidade, nome, telefone } = req.body;
@@ -903,8 +593,8 @@ app.post('/cambista/gerar-cartelas', checkCambista, requireTenant, async (req, r
     const total = quantidade * preco;
     const cambistaId = req.session.cambistaId;
     
-    const cambista = await Cambista.findOne({ _id: cambistaId, tenant_id: req.tenant._id });
-    if (!cambista || cambista.saldo_creditos < total) return res.status(400).json({ success: false, message: 'Saldo insuficiente' });
+    const cambista = await Cambista.findById(cambistaId);
+    if (cambista.saldo_creditos < total) return res.status(400).json({ success: false, message: 'Saldo insuficiente' });
     
     cambista.saldo_creditos -= total;
     await cambista.save();
@@ -914,7 +604,6 @@ app.post('/cambista/gerar-cartelas', checkCambista, requireTenant, async (req, r
     for(let i=0; i<quantidade; i++) cartelas.push(gerarDadosCartela(sorteioAlvo));
     
     const novaVenda = await Venda.create({
-        tenant_id: req.tenant._id,
         sorteio_id: sorteioAlvo,
         nome_jogador: nome,
         telefone: telefone,
@@ -927,19 +616,12 @@ app.post('/cambista/gerar-cartelas', checkCambista, requireTenant, async (req, r
     });
     
     await TransacaoCredito.create({
-        tenant_id: req.tenant._id,
         cambista_id: cambistaId,
         admin_usuario: req.session.cambistaUsuario,
         valor_alteracao: -total,
         tipo: 'venda',
         venda_id: novaVenda._id
     });
-    
-    res.json(cartelas);
-});
-// ==========================================
-// FIM DAS ROTAS CAMBISTA
-// ==========================================
     
     // ATENÇÃO: NÃO ADICIONAMOS A "jogadores" MANUALMENTE AQUI PARA EVITAR DUPLICIDADE.
     // O SOCKET DO CAMBISTA NÃO É UM JOGADOR.
@@ -959,7 +641,8 @@ app.get('/cambista/minhas-comissoes', checkCambista, async (req, res) => {
         nome_jogador: c.venda_id ? c.venda_id.nome_jogador : '?'
     }));
     
-    const pendentes = await Comissao.aggregate([        { $match: { cambista_id: new mongoose.Types.ObjectId(req.session.cambistaId), status_pagamento: 'pendente' } },
+    const pendentes = await Comissao.aggregate([
+        { $match: { cambista_id: new mongoose.Types.ObjectId(req.session.cambistaId), status_pagamento: 'pendente' } },
         { $group: { _id: null, total: { $sum: '$valor_comissao' } } }
     ]);
     
@@ -1218,7 +901,8 @@ function escolherJogadorRealParaForcarLinha(sorteioId, sorteadosAtuais) {
 }
 
 async function prepararForcamentoPremioLinhaSeNecessario(idSorteio) {
-    if (estadoJogo !== 'JOGANDO_LINHA' || sorteioEspecialEmAndamento) return false;    if (sorteioComPremioLinhaAutomatico === idSorteio) return false;
+    if (estadoJogo !== 'JOGANDO_LINHA' || sorteioEspecialEmAndamento) return false;
+    if (sorteioComPremioLinhaAutomatico === idSorteio) return false;
     if (premioLinhaForcado && premioLinhaForcado.sorteioId === idSorteio) return true;
 
     const arrecadacaoGlobal = await calcularArrecadacaoGlobalRegular();
@@ -1478,6 +1162,7 @@ async function iniciarNovaRodada() {
         const nomeIndex = gerarNumerosAleatorios(1, 0, nomesBots.length - 1)[0] || 0;
         jogadores[`bot_${gerarIdUnico()}`] = { nome: nomesBots[nomeIndex], isBot: true, cartelas: bC };
     }
+
     // SALVA O ESTADO
     await salvarEstadoJogo();
 

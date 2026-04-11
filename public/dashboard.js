@@ -33,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
 
     let ultimoEstadoConhecido = null;
-    let ultimoSorteioConhecido = null;
-    let NOME_BINGO_DASH = 'BINGO DO PIX';
     let contadorPingFalhas = 0;
 
     // --- Lógica de Voz ---
@@ -82,25 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = Math.floor(tempo / 60);
         const s = tempo % 60;
         return `${m}:${s < 10 ? '0' + s : s}`;
-    }
-
-    function atualizarCabecalhoSorteio(sorteioId) {
-        ultimoSorteioConhecido = sorteioId || ultimoSorteioConhecido || '...';
-        if (sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `${NOME_BINGO_DASH} - SORTEIO #${ultimoSorteioConhecido}`;
-    }
-
-    async function carregarBrandingDashboard() {
-        try {
-            const response = await fetch('/api/site-branding');
-            if (!response.ok) return;
-            const data = await response.json();
-            if (data && data.success && data.nome_bingo) {
-                NOME_BINGO_DASH = String(data.nome_bingo).toUpperCase();
-                atualizarCabecalhoSorteio(ultimoSorteioConhecido);
-            }
-        } catch (e) {
-            console.warn('Dashboard: não foi possível carregar branding.');
-        }
     }
 
     // --- PING (Anti-Queda) ---
@@ -199,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else {
             estadoHeaderEl.textContent = estadoStr || "...";
             estadoHeaderEl.classList.add('estado-esperando');
-            if (headlineAlertEl) headlineAlertEl.textContent = `🎯 ${NOME_BINGO_DASH} AO VIVO`;
+            if (headlineAlertEl) headlineAlertEl.textContent = '🎯 BINGO DO PIX AO VIVO';
             if (headlineSubEl) headlineSubEl.textContent = 'Acompanhe os números em tempo real.';
         }
     }
@@ -301,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data) return;
         console.log("Estado Inicial:", data);
         gerarGlobo();
-        atualizarCabecalhoSorteio(data.sorteioId || '...');
+        if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '...'}`;
         if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline || '--';
         
         atualizarEstadoVisual(data.estado);
@@ -329,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CORREÇÃO: Múltiplos listeners para garantir atualização de estado ---
     socket.on('estadoJogoUpdate', (data) => {
         console.log("Update de Estado:", data);
-        if (data.sorteioId) atualizarCabecalhoSorteio(data.sorteioId);
+        if(data.sorteioId && sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId}`;
         atualizarEstadoVisual(data.estado);
     });
 
@@ -368,5 +347,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     iniciarSlider();
-    carregarBrandingDashboard();
 });

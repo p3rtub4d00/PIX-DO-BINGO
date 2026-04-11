@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabelaComissoesCorpo = document.getElementById('tabela-comissoes-corpo');
 
     let precoPorCartela = 5.00; // Valor padrão, será atualizado
-    let telefoneContatoSuporte = '69999083361';
 
     // Função para formatar BRL
     function formatarBRL(valor) {
@@ -37,19 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elemento.className = sucesso ? 'status-message status-success' : 'status-message status-error';
         elemento.style.display = 'block';
         setTimeout(() => { elemento.style.display = 'none'; }, 5000);
-    }
-
-    async function carregarBrandingContato() {
-        try {
-            const response = await fetch('/api/site-branding');
-            if (!response.ok) return;
-            const data = await response.json();
-            if (data && data.success && data.telefone_contato) {
-                telefoneContatoSuporte = String(data.telefone_contato).replace(/\D/g, '');
-            }
-        } catch (error) {
-            console.warn('Não foi possível carregar telefone de suporte.');
-        }
     }
 
     // 1. Carregar Status do Cambista (Saldo e Nome)
@@ -117,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnImprimir.style.display = 'none';
 
             try {
-                await carregarBrandingContato();
                 const response = await fetch('/cambista/gerar-cartelas', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -185,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = document.createElement('div');
         footer.classList.add('mini-cartela-footer');
         footer.innerHTML = `
-            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp ${telefoneContatoSuporte}</strong> para resgatar. O pagamento do prêmio pode demorar ate 48h.</p>
+            <p><strong>Atenção:</strong> Em caso de prêmio (Linha ou Cheia), entre em contato pelo <strong>WhatsApp 69 99908-3361</strong> para resgatar. O pagamento do prêmio pode demorar ate 48h.</p>
         `;
         divCartela.appendChild(footer);
         
@@ -269,7 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==================================================
 
     // Carrega tudo ao iniciar
-    carregarBrandingContato();
     carregarStatus();
     carregarComissoes(); // <-- CHAMA A NOVA FUNÇÃO
 });
