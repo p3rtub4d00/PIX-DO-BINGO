@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const anuncioNomeEl = document.getElementById('anuncio-vencedor-nome');
     const anuncioEsperaOverlay = document.getElementById('anuncio-espera-overlay');
     const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
+    const esperaVencedoresListaEl = document.getElementById('espera-vencedores-lista');
 
     let ultimoEstadoConhecido = null;
     let contadorPingFalhas = 0;
@@ -243,6 +244,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function atualizarListaVencedoresEspera(vencedores) {
+        if (!esperaVencedoresListaEl) return;
+        esperaVencedoresListaEl.innerHTML = '';
+
+        if (!vencedores || vencedores.length === 0) {
+            esperaVencedoresListaEl.innerHTML = '<p>Nenhum ganhador ainda.</p>';
+            return;
+        }
+
+        vencedores.slice(0, 5).forEach(v => {
+            const div = document.createElement('div');
+            div.className = 'item-vencedor';
+            div.textContent = `Sorteio #${v.sorteioId}: [${v.premio}] ${v.nome}`;
+            esperaVencedoresListaEl.appendChild(div);
+        });
+    }
+
     function atualizarPremios(configs, sorteioId) {
         if (!configs || !dashPremioLinhaEl || !dashPremioCheiaEl) return;
         
@@ -302,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         atualizarEstadoVisual(data.estado);
         atualizarListaVencedores(data.ultimosVencedores, false);
+        atualizarListaVencedoresEspera(data.ultimosVencedores);
         atualizarGloboSorteados(data.numerosSorteados);
         atualizarPremios(data.configuracoes, data.sorteioId);
         
@@ -343,7 +362,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('contagemJogadores', (d) => { if(jogadoresTotalEl) jogadoresTotalEl.textContent = d.total; });
-    socket.on('atualizarVencedores', (v) => atualizarListaVencedores(v, true));
+    socket.on('atualizarVencedores', (v) => {
+        atualizarListaVencedores(v, true);
+        atualizarListaVencedoresEspera(v);
+    });
     
     // --- CORREÇÃO: Escuta ambos os nomes de evento para Quase Lá ---
     socket.on('listaQuaseLa', (data) => processarQuaseLa(data));

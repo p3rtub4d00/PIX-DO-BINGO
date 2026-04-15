@@ -295,3 +295,37 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
     #espera-cronometro-display { font-size: 4rem; }
     .anuncio-area-espera { width: 95%; margin-bottom: 10px; }
 }
+
+
+#espera-vencedores-box {
+    margin-top: 18px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    width: min(900px, 90vw);
+    margin-left: auto;
+    margin-right: auto;
+}
+#espera-vencedores-box h3 {
+    margin: 0 0 10px;
+    color: #00ffbf;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+}
+#espera-vencedores-lista {
+    max-height: 160px;
+    overflow-y: auto;
+    text-align: left;
+}
+#espera-vencedores-lista p {
+    margin: 0;
+}
+#espera-vencedores-lista .item-vencedor {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-left: 3px solid #00ffbf;
+    background: rgba(255,255,255,0.08);
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
