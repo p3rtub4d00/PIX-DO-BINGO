@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const jogadoresTotalEl = document.getElementById('dash-jogadores-total');
     const ultimoNumeroEl = document.getElementById('dash-ultimo-numero');
     const globoContainer = document.getElementById('dash-globo-numeros');
-    const listaVencedoresContainer = document.getElementById('lista-ganhadores');    const dashPremioLinhaEl = document.getElementById('dash-premio-linha');
+    const listaVencedoresContainer = document.getElementById('lista-ganhadores');
+    const dashPremioLinhaEl = document.getElementById('dash-premio-linha');
     const dashPremioCheiaEl = document.getElementById('dash-premio-cheia');
     const btnToggleSom = document.getElementById('btn-toggle-som');
     const listaQuaseLaContainer = document.getElementById('lista-quase-la');
@@ -114,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             globoContainer.appendChild(el);
         }
     }
+
     function atualizarListaVencedores(vencedores, anunciar = false) {
         if (!listaVencedoresContainer) return;
         listaVencedoresContainer.innerHTML = '';
@@ -125,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         vencedores.forEach((v, index) => {
             const div = document.createElement('div');
+            // Estilo compatível com o CSS atual
             div.innerHTML = `Sorteio #${v.sorteioId}: <span class="premio-tag">[${v.premio}]</span> <span>${v.nome}</span>`;
             
             if (index === 0 && anunciar) {
@@ -298,7 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline || '--';
         
         atualizarEstadoVisual(data.estado);
-        atualizarListaVencedores(data.ultimosVencedores, false);        atualizarGloboSorteados(data.numerosSorteados);
+        atualizarListaVencedores(data.ultimosVencedores, false);
+        atualizarGloboSorteados(data.numerosSorteados);
         atualizarPremios(data.configuracoes, data.sorteioId);
         
         // Se já tiver lista de quase lá no estado inicial
@@ -340,9 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('contagemJogadores', (d) => { if(jogadoresTotalEl) jogadoresTotalEl.textContent = d.total; });
     socket.on('atualizarVencedores', (v) => atualizarListaVencedores(v, true));
-        mostrarAnuncioVencedor(vencedorMaisRecente.nome, vencedorMaisRecente.premio || 'Cartela Cheia');
-    });
-
+    
     // --- CORREÇÃO: Escuta ambos os nomes de evento para Quase Lá ---
     socket.on('listaQuaseLa', (data) => processarQuaseLa(data));
     socket.on('atualizarQuaseLa', (data) => processarQuaseLa(data));
