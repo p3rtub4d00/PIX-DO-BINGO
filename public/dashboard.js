@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const headlineAlertEl = document.getElementById('dash-headline-alert');
     const headlineSubEl = document.getElementById('dash-headline-sub');
     const tickerTextoEl = document.getElementById('dash-ticker-texto');
+    const dashboardQrImg = document.getElementById('dashboard-qr-img');
+    const dashboardQrLink = document.getElementById('dashboard-qr-link');
+    const dashboardQrUrl = document.getElementById('dashboard-qr-url');
     
     // Overlays e Anúncios
     const anuncioVencedorOverlay = document.getElementById('anuncio-vencedor-overlay');
@@ -80,6 +83,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = Math.floor(tempo / 60);
         const s = tempo % 60;
         return `${m}:${s < 10 ? '0' + s : s}`;
+    }
+
+    function configurarQrCompra() {
+        if (!dashboardQrImg || !dashboardQrLink || !dashboardQrUrl) return;
+
+        const destinoCompra = 'https://pix-do-bingo.onrender.com/';
+        const qrEndpoint = 'https://api.qrserver.com/v1/create-qr-code/';
+        const qrSrc = `${qrEndpoint}?size=280x280&margin=8&data=${encodeURIComponent(destinoCompra)}`;
+
+        dashboardQrImg.src = qrSrc;
+        dashboardQrLink.href = destinoCompra;
+        dashboardQrUrl.textContent = destinoCompra.replace(/^https?:\/\//, '');
     }
 
     // --- PING (Anti-Queda) ---
@@ -276,6 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- SOCKET EVENTS ---
+    configurarQrCompra();
+
     socket.on('estadoInicial', (data) => {
         if (!data) return;
         console.log("Estado Inicial:", data);
