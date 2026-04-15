@@ -387,8 +387,7 @@ function checkAdmin(req, res, next) {
     else res.redirect('/admin/login.html');
 }
 
-app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
-    const configs = await Config.find({});
+app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {    const configs = await Config.find({});
     const map = {};
     configs.forEach(c => map[c.chave] = c.valor);
     res.json(map);
@@ -727,6 +726,7 @@ let numerosSorteados = [];
 let jogadores = {};
 let sorteioComPremioLinhaAutomatico = null;
 let premioLinhaForcado = null;
+let sorteioEmProcessamento = false;
 const INTERVALO_ALVO_PREMIO_LINHA_GLOBAL = 250;
 
 function gerarIdUnico() { return Math.random().toString(36).substring(2, 6); }
@@ -742,6 +742,22 @@ function gerarNumerosAleatorios(qtd, min, max) {
         nums.add(randomInt(min, max + 1)); 
     }
     return Array.from(nums); 
+}
+
+function calcularQuantidadeBots(minConfigurado, maxConfigurado) {
+    const minVal = Number.isFinite(minConfigurado) ? Math.max(1, Math.floor(minConfigurado)) : 80;
+    const maxValBase = Number.isFinite(maxConfigurado) ? Math.floor(maxConfigurado) : 150;
+    const maxVal = Math.max(minVal, maxValBase);
+    return randomInt(minVal, maxVal + 1);
+}
+
+function escolherNomeBot() {
+    if (!Array.isArray(nomesBots) || nomesBots.length === 0) {
+        return `Bot ${gerarIdUnico().toUpperCase()}`;
+    }
+
+    const nomeIndex = randomInt(0, nomesBots.length);
+    return nomesBots[nomeIndex];
 }
 
 function gerarDadosCartela(sId) {
@@ -761,7 +777,7 @@ function gerarDadosCartela(sId) {
         c.push(linha);
     }
     return { c_id: gerarIdUnico(), s_id: sId, data: c };
-}
+}}
 
 function checarVencedorLinha(cartelaData, sorteados) { 
     const c = cartelaData.data; const s = new Set(sorteados); s.add("FREE");
@@ -1084,11 +1100,11 @@ async function iniciarSorteioEspecial() {
         jogadores[`especial_${v._id}`] = { nome: v.nome_jogador, telefone: v.telefone, isManual: true, cartelas };
     });
 
-    const nBots = gerarNumerosAleatorios(1, MIN_BOTS_ATUAL, MAX_BOTS_ATUAL)[0] || MIN_BOTS_ATUAL; 
+    const nBots = calcularQuantidadeBots(MIN_BOTS_ATUAL, MAX_BOTS_ATUAL);
     for(let i=0; i<nBots; i++) {
         const bC = [];
         for(let k=0; k<3; k++) bC.push(gerarDadosCartela(SORTEIO_ESPECIAL_DATAHORA));
-        jogadores[`bot_${gerarIdUnico()}`] = { nome: nomesBots[i%nomesBots.length], isBot: true, cartelas: bC };
+        jogadores[`bot_${gerarIdUnico()}`] = { nome: escolherNomeBot(), isBot: true, cartelas: bC };
     }
     
     // SALVA O ESTADO
@@ -1151,16 +1167,14 @@ async function iniciarNovaRodada() {
     } catch (error) {
         console.error("Erro crítico ao carregar vendas do banco:", error);
     }
-
     // 3. Adiciona Bots
-    const nBots = gerarNumerosAleatorios(1, MIN_BOTS_ATUAL, MAX_BOTS_ATUAL)[0] || MIN_BOTS_ATUAL; 
+    const nBots = calcularQuantidadeBots(MIN_BOTS_ATUAL, MAX_BOTS_ATUAL);
     for(let i=0; i<nBots; i++) {
         const bC = [];
-        const qtdCartelasBot = gerarNumerosAleatorios(1, 1, 4)[0] || 1;
+        const qtdCartelasBot = gerarNumerosAleatorios(1, MIN_CARTELAS_POR_BOT, MAX_CARTELAS_POR_BOT)[0] || MIN_CARTELAS_POR_BOT;
         for(let k=0; k<qtdCartelasBot; k++) bC.push(gerarDadosCartela(numeroDoSorteio));
-        
-        const nomeIndex = gerarNumerosAleatorios(1, 0, nomesBots.length - 1)[0] || 0;
-        jogadores[`bot_${gerarIdUnico()}`] = { nome: nomesBots[nomeIndex], isBot: true, cartelas: bC };
+
+        jogadores[`bot_${gerarIdUnico()}`] = { nome: escolherNomeBot(), isBot: true, cartelas: bC };
     }
 
     // SALVA O ESTADO
@@ -1174,6 +1188,10 @@ async function iniciarNovaRodada() {
 }
 
 async function sortearNumero() {
+    if (sorteioEmProcessamento) return;
+    sorteioEmProcessamento = true;
+
+    try {
     if (estadoJogo !== "JOGANDO_LINHA" && estadoJogo !== "JOGANDO_CHEIA") {
         if (intervaloSorteio) {
             clearInterval(intervaloSorteio);
@@ -1252,12 +1270,14 @@ async function sortearNumero() {
                     
                     await salvarVencedor(idSorteio, 'Cartela Cheia', jog.nome, jog.telefone, jog.cartelas[i].c_id);
                     
-                    setTimeout(() => {
-                        const premioValor = sorteioEspecialEmAndamento 
-                            ? parseFloat(String(Config.findOne({chave:'sorteio_especial_valor'}).valor || '1000')) 
-                            : PREMIO_CHEIA;
-                            
-                        const dadosVencedor = { nome: jog.nome, cartelaGanhadora: jog.cartelas[i], indiceCartela: i, premioValor: premioValor };
+                    setTimeout(async () => {
+                        let premioValor = PREMIO_CHEIA;
+                        if (sorteioEspecialEmAndamento) {
+                            const confEspecial = await Config.findOne({ chave: 'sorteio_especial_valor' });
+                            premioValor = parseFloat(confEspecial?.valor || '1000');
+                        }
+
+                        const dadosVencedor = { nome: jog.nome, cartelaGanhadora: jog.cartelas[i], indiceCartela: i, premioValor };
                         const sock = (!jog.isBot && !jog.isManual) ? sid : null;
                         terminarRodada(dadosVencedor, sock);
                     }, 5000);
@@ -1277,6 +1297,9 @@ async function sortearNumero() {
         }
     }
     io.emit('atualizarQuaseLa', perto.sort((a,b)=>a.faltam-b.faltam).slice(0, MAX_JOGADORES_QUASELA));
+    } finally {
+        sorteioEmProcessamento = false;
+    }
 }
 
 async function salvarVencedor(sid, premio, nome, tel, cid) {
