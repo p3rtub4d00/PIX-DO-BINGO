@@ -58,3 +58,39 @@ body.anuncio-body {
     display: block; /* Para ocupar a linha */
     line-height: 1;
 }
+
+.vencedores-area {
+    margin-top: 24px;
+    text-align: left;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.vencedores-area h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.15rem;
+    margin: 0 0 12px;
+    color: #00ffbf;
+}
+
+#lista-ganhadores {
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+#lista-ganhadores p {
+    margin: 0;
+    opacity: 0.85;
+}
+
+#lista-ganhadores .vencedor-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 3px solid #00ffbf;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    line-height: 1.3;
+}

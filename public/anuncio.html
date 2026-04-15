@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anúncio - Bingo do Pix</title>
     <link rel="stylesheet" href="style.css"> <link rel="stylesheet" href="anuncio.css"> <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
 </head>
 <body class="anuncio-body">
 
@@ -20,8 +21,16 @@
             <p>segundos...</p>
         </div>
 
+            <section id="ultimos-ganhadores" class="vencedores-area">
+            <h2><i class="fa-solid fa-trophy"></i> Últimos Vencedores</h2>
+            <div id="lista-ganhadores">
+                <p>Nenhum ganhador ainda.</p>
+            </div>
+        </section>
+
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script src="anuncio.js"></script> 
 </body>
 </html>

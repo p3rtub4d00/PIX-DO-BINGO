@@ -1,26 +1,50 @@
 document.addEventListener('DOMContentLoaded', () => {
     const contadorElemento = document.getElementById('contador-tempo');
-    let tempoRestante = 10; // Defina aqui quantos segundos o anúncio dura
+    const listaGanhadoresEl = document.getElementById('lista-ganhadores');
+    let tempoRestante = 10;
 
     if (!contadorElemento) {
-        console.error("Elemento do contador não encontrado!");
-        // Redireciona imediatamente se o contador falhar, para não travar
-        window.location.href = '/dashboard-real'; 
+        window.location.href = '/dashboard-real';
         return;
     }
 
-    // Função para atualizar o contador
     function atualizarContador() {
         contadorElemento.textContent = tempoRestante;
         if (tempoRestante <= 0) {
-            clearInterval(intervalo); // Para o contador
-            console.log("Tempo esgotado. Redirecionando para o dashboard...");
-            window.location.href = '/dashboard-real'; // Redireciona para a URL real do dashboard
+            clearInterval(intervalo);
+            window.location.href = '/dashboard-real';
         }
         tempoRestante--;
     }
 
-    // Inicia o contador
-    atualizarContador(); // Chama uma vez imediatamente
-    const intervalo = setInterval(atualizarContador, 1000); // Atualiza a cada segundo
+    atualizarContador();
+    const intervalo = setInterval(atualizarContador, 1000);
+
+    if (typeof io === 'undefined' || !listaGanhadoresEl) return;
+    const socket = io();
+
+    function renderizarVencedores(vencedores) {
+        listaGanhadoresEl.innerHTML = '';
+
+        if (!Array.isArray(vencedores) || vencedores.length === 0) {
+            listaGanhadoresEl.innerHTML = '<p>Nenhum ganhador ainda.</p>';
+            return;
+        }
+
+        vencedores.slice(0, 8).forEach(v => {
+            const item = document.createElement('div');
+            item.className = 'vencedor-item';
+            item.textContent = `Sorteio #${v.sorteioId}: ${v.premio} — ${v.nome}`;
+            listaGanhadoresEl.appendChild(item);
+        });
+    }
+
+    socket.on('estadoInicial', (data) => {
+        if (!data) return;
+        renderizarVencedores(data.ultimosVencedores);
+    });
+
+    socket.on('atualizarVencedores', (vencedores) => {
+        renderizarVencedores(vencedores);
+    });
 });
