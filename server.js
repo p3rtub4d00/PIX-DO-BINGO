@@ -360,7 +360,7 @@ async function salvarEstadoJogo() {
 
 // --- ROTAS DE ARQUIVOS ---
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'anuncio.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/dashboard-real', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/ping', (req, res) => res.send('pong'));
 
