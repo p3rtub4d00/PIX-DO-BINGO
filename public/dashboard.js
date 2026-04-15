@@ -15,9 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const estadoHeaderEl = document.getElementById('dash-estado-header');
     const jogadoresTotalEl = document.getElementById('dash-jogadores-total');
     const ultimoNumeroEl = document.getElementById('dash-ultimo-numero');
-    const globoContainer = document.getElementById('dash-globo-numeros');
-    const listaVencedoresContainer = document.getElementById('lista-ganhadores');
-    const dashPremioLinhaEl = document.getElementById('dash-premio-linha');
+    const globoContainer = document.getElementById('dash-globo-numeros');    const dashPremioLinhaEl = document.getElementById('dash-premio-linha');
     const dashPremioCheiaEl = document.getElementById('dash-premio-cheia');
     const btnToggleSom = document.getElementById('btn-toggle-som');
     const listaQuaseLaContainer = document.getElementById('lista-quase-la');
@@ -116,134 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             globoContainer.appendChild(el);
         }
     }
-
-    function atualizarListaVencedores(vencedores, anunciar = false) {
-        if (!listaVencedoresContainer) return;
-        listaVencedoresContainer.innerHTML = '';
-        
-        if (!vencedores || vencedores.length === 0) {
-            listaVencedoresContainer.innerHTML = '<p>Nenhum ganhador ainda.</p>';
-            return;
-        }
-
-        vencedores.forEach((v, index) => {
-            const div = document.createElement('div');
-            // Estilo compatível com o CSS atual
-            div.innerHTML = `Sorteio #${v.sorteioId}: <span class="premio-tag">[${v.premio}]</span> <span>${v.nome}</span>`;
-            
-            if (index === 0 && anunciar) {
-                div.classList.add('novo-vencedor');
-                setTimeout(() => div.classList.remove('novo-vencedor'), 3000);
-                const textoPremio = v.premio.includes('Linha') ? 'Linha' : 'Bingo';
-                falar(`Vencedor da ${textoPremio}: ${v.nome}`);
-                mostrarAnuncioVencedor(v.nome, v.premio);
-            }
-            listaVencedoresContainer.appendChild(div);
-        });
-    }
-
-    function atualizarGloboSorteados(nums) {
-        if (!globoContainer) return;
-        // Limpa anteriores
-        document.querySelectorAll('.dash-globo-numero').forEach(el => el.classList.remove('sorteado'));
-        
-        if (nums && nums.length > 0) {
-            nums.forEach(n => {
-                const el = document.getElementById(`dash-globo-${n}`);
-                if (el) el.classList.add('sorteado');
-            });
-            if(ultimoNumeroEl) ultimoNumeroEl.textContent = nums[nums.length - 1];
-        } else {
-            if(ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
-        }
-    }
-
-    // --- CORREÇÃO DO STATUS (LINHA -> CHEIA) ---
-    function atualizarEstadoVisual(estadoStr) {
-        console.log("Atualizando Estado Visual:", estadoStr);
-        ultimoEstadoConhecido = estadoStr;
-        if (!estadoHeaderEl) return;
-
-        // 1. Limpa TODAS as classes de cor
-        estadoHeaderEl.className = 'estado-texto'; // Reseta para o básico
-        
-        // 2. Define texto e nova classe
-        if (estadoStr === 'ESPERANDO') {
-            estadoHeaderEl.textContent = "AGUARDANDO";
-            estadoHeaderEl.classList.add('estado-esperando');
-            if (headlineAlertEl) headlineAlertEl.textContent = '🔥 PREPARE-SE! O BINGO VAI COMEÇAR 🔥';
-            if (headlineSubEl) headlineSubEl.textContent = 'Compre suas cartelas e acompanhe ao vivo.';
-            if(!anuncioVencedorOverlay.classList.contains('ativo')) {
-                anuncioEsperaOverlay.classList.remove('oculto');
-            }
-        } 
-        else if (estadoStr === 'JOGANDO_LINHA') {
-            estadoHeaderEl.textContent = "VALENDO LINHA";
-            estadoHeaderEl.classList.add('estado-jogando-linha');
-            if (headlineAlertEl) headlineAlertEl.textContent = '⚡ VALENDO LINHA AGORA! ⚡';
-            if (headlineSubEl) headlineSubEl.textContent = 'Atenção no tabuleiro: o prêmio de linha pode sair a qualquer momento.';
-            anuncioEsperaOverlay.classList.add('oculto');
-        } 
-        else if (estadoStr === 'JOGANDO_CHEIA') {
-            estadoHeaderEl.textContent = "VALENDO BINGO";
-            estadoHeaderEl.classList.add('estado-jogando-cheia');
-            if (headlineAlertEl) headlineAlertEl.textContent = '🚨 AGORA É CARTELA CHEIA! 🚨';
-            if (headlineSubEl) headlineSubEl.textContent = 'Foco total: o BINGO pode sair na próxima pedra.';
-            anuncioEsperaOverlay.classList.add('oculto');
-        }
-        else {
-            estadoHeaderEl.textContent = estadoStr || "...";
-            estadoHeaderEl.classList.add('estado-esperando');
-            if (headlineAlertEl) headlineAlertEl.textContent = '🎯 BINGO DO PIX AO VIVO';
-            if (headlineSubEl) headlineSubEl.textContent = 'Acompanhe os números em tempo real.';
-        }
-    }
-
-    // --- CORREÇÃO DO QUASE LÁ ---
-    function processarQuaseLa(data) {
-        if (!listaQuaseLaContainer) return;
-        listaQuaseLaContainer.innerHTML = '';
-
-        // Se não tiver dados ou array vazio
-        if (!data || data.length === 0) {
-            listaQuaseLaContainer.innerHTML = '<p>Aguardando...</p>';
-            return;
-        }
-
-        // 1. FILTRO: Apenas quem falta 5 ou menos
-        const filtrados = data.filter(item => item.faltam <= 5);
-
-        // 2. ORDENAÇÃO: Quem falta menos primeiro
-        filtrados.sort((a, b) => a.faltam - b.faltam);
-
-        if (filtrados.length === 0) {
-            listaQuaseLaContainer.innerHTML = '<p>Ninguém perto ainda...</p>';
-            return;
-        }
-
-        // 3. EXIBIÇÃO
-        filtrados.slice(0, 5).forEach(item => {
-            const p = document.createElement('p');
-            
-            // Define cor baseada na urgência
-            let estiloContador = 'background-color: #00c2ff;'; // Padrão
-            if (item.faltam === 1) estiloContador = 'background-color: #ff0040; animation: pulse 1s infinite;'; // Vermelho piscando
-            else if (item.faltam === 2) estiloContador = 'background-color: #ffaa00;'; // Laranja
-
-            const nomeSeguro = item.nome ? item.nome.substring(0, 15) : 'Jogador';
-
-            p.innerHTML = `
-                <span class="nome-jogador">${nomeSeguro}</span> 
-                <span class="faltam-contador" style="${estiloContador}">${item.faltam}</span>
-            `;
-            listaQuaseLaContainer.appendChild(p);
-        });
-
-        if (tickerTextoEl && filtrados[0]) {
-            tickerTextoEl.textContent = `🔥 Quase lá: ${filtrados[0].nome} (faltam ${filtrados[0].faltam})`;
-        }
-    }
-
     function atualizarListaVencedoresEspera(vencedores) {
         if (!esperaVencedoresListaEl) return;
         esperaVencedoresListaEl.innerHTML = '';
@@ -318,9 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '...'}`;
         if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline || '--';
         
-        atualizarEstadoVisual(data.estado);
-        atualizarListaVencedores(data.ultimosVencedores, false);
-        atualizarListaVencedoresEspera(data.ultimosVencedores);
+        atualizarEstadoVisual(data.estado);        atualizarListaVencedoresEspera(data.ultimosVencedores);
         atualizarGloboSorteados(data.numerosSorteados);
         atualizarPremios(data.configuracoes, data.sorteioId);
         
@@ -363,11 +231,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('contagemJogadores', (d) => { if(jogadoresTotalEl) jogadoresTotalEl.textContent = d.total; });
     socket.on('atualizarVencedores', (v) => {
-        atualizarListaVencedores(v, true);
         atualizarListaVencedoresEspera(v);
+
+        if (!Array.isArray(v) || v.length === 0) return;
+        const ultimo = v[0];
+        const textoPremio = ultimo.premio?.includes('Linha') ? 'Linha' : 'Bingo';
+        falar(`Vencedor da ${textoPremio}: ${ultimo.nome}`);
+        mostrarAnuncioVencedor(ultimo.nome, ultimo.premio || 'Cartela Cheia');
     });
-    
-    // --- CORREÇÃO: Escuta ambos os nomes de evento para Quase Lá ---
+
+// --- CORREÇÃO: Escuta ambos os nomes de evento para Quase Lá ---
     socket.on('listaQuaseLa', (data) => processarQuaseLa(data));
     socket.on('atualizarQuaseLa', (data) => processarQuaseLa(data));
 
