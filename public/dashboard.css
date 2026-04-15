@@ -127,6 +127,37 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
 .info-item { display: flex; justify-content: space-between; font-size: 2vh; margin-bottom: 0.8vh; }
 .text-pix-sidebar { color: var(--neon-green); font-weight: bold; font-size: 2.2vh; }
 
+#acesso-mobile {
+    flex: 0 0 auto;
+    text-align: center;
+}
+#acesso-mobile p {
+    font-size: 1.55vh;
+    color: #c7d2fe;
+    margin-bottom: 1.2vh;
+}
+#dashboard-qr-link {
+    display: inline-flex;
+    border-radius: 12px;
+    padding: 0.6vh;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+#dashboard-qr-img {
+    width: min(17vh, 100%);
+    aspect-ratio: 1;
+    display: block;
+    border-radius: 8px;
+    background: #ffffff;
+}
+#dashboard-qr-url {
+    display: block;
+    margin-top: 0.8vh;
+    color: #94a3b8;
+    font-size: 1.25vh;
+    word-break: break-all;
+}
+
 #quase-la { flex: 0 0 auto; min-height: 15vh; display: flex; flex-direction: column; }
 #lista-quase-la { flex: 1; overflow-y: auto; }
 
@@ -243,6 +274,9 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
     .barra-lateral h2 { font-size: 1.2rem; }
     .info-item { font-size: 1rem; }
     .text-pix-sidebar { font-size: 1.2rem; }
+    #acesso-mobile p { font-size: 0.95rem; }
+    #dashboard-qr-img { width: min(220px, 70vw); }
+    #dashboard-qr-url { font-size: 0.8rem; }
     #anuncio-vencedor-nome { font-size: 2rem; }
     #anuncio-vencedor-premio { font-size: 3rem; }
     
