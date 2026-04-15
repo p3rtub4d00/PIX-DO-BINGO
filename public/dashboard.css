@@ -130,18 +130,27 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
 #acesso-mobile {
     flex: 0 0 auto;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 #acesso-mobile p {
     font-size: 1.55vh;
     color: #c7d2fe;
     margin-bottom: 1.2vh;
+    max-width: 32ch;
 }
 #dashboard-qr-link {
-    display: inline-flex;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     border-radius: 12px;
-    padding: 0.6vh;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 0.7vh;
+    width: fit-content;
+    margin: 0 auto;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(148, 163, 184, 0.16));
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 #dashboard-qr-img {
     width: min(17vh, 100%);
@@ -149,10 +158,11 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
     display: block;
     border-radius: 8px;
     background: #ffffff;
+    border: 2px solid rgba(15, 23, 42, 0.18);
 }
 #dashboard-qr-url {
     display: block;
-    margin-top: 0.8vh;
+    margin-top: 0.9vh;
     color: #94a3b8;
     font-size: 1.25vh;
     word-break: break-all;
