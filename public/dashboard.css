@@ -168,8 +168,18 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
     word-break: break-all;
 }
 
-#quase-la { flex: 1; min-height: 15vh; display: flex; flex-direction: column; }
+#quase-la { flex: 0 0 auto; min-height: 15vh; display: flex; flex-direction: column; }
 #lista-quase-la { flex: 1; overflow-y: auto; }
+
+#ultimos-ganhadores { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+#lista-ganhadores { flex: 1; overflow-y: auto; padding-right: 5px; }
+
+#lista-ganhadores div {
+    background: rgba(0, 255, 191, 0.1);
+    border-left: 0.5vh solid var(--neon-green);
+    padding: 1vh; margin-bottom: 0.8vh; font-size: 1.8vh;
+    animation: slideLeft 0.5s;
+}
 
 /* --- ÁREA DE ANÚNCIOS (SLIDER) --- */
 .anuncio-area-espera {
