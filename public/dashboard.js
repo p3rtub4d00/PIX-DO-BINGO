@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const estadoHeaderEl = document.getElementById('dash-estado-header');
     const jogadoresTotalEl = document.getElementById('dash-jogadores-total');
     const ultimoNumeroEl = document.getElementById('dash-ultimo-numero');
-    const globoContainer = document.getElementById('dash-globo-numeros');    const dashPremioLinhaEl = document.getElementById('dash-premio-linha');
+    const globoContainer = document.getElementById('dash-globo-numeros');
+    const listaVencedoresContainer = document.getElementById('lista-ganhadores');    const dashPremioLinhaEl = document.getElementById('dash-premio-linha');
     const dashPremioCheiaEl = document.getElementById('dash-premio-cheia');
     const btnToggleSom = document.getElementById('btn-toggle-som');
     const listaQuaseLaContainer = document.getElementById('lista-quase-la');
@@ -113,6 +114,30 @@ document.addEventListener('DOMContentLoaded', () => {
             globoContainer.appendChild(el);
         }
     }
+    function atualizarListaVencedores(vencedores, anunciar = false) {
+        if (!listaVencedoresContainer) return;
+        listaVencedoresContainer.innerHTML = '';
+        
+        if (!vencedores || vencedores.length === 0) {
+            listaVencedoresContainer.innerHTML = '<p>Nenhum ganhador ainda.</p>';
+            return;
+        }
+
+        vencedores.forEach((v, index) => {
+            const div = document.createElement('div');
+            div.innerHTML = `Sorteio #${v.sorteioId}: <span class="premio-tag">[${v.premio}]</span> <span>${v.nome}</span>`;
+            
+            if (index === 0 && anunciar) {
+                div.classList.add('novo-vencedor');
+                setTimeout(() => div.classList.remove('novo-vencedor'), 3000);
+                const textoPremio = v.premio.includes('Linha') ? 'Linha' : 'Bingo';
+                falar(`Vencedor da ${textoPremio}: ${v.nome}`);
+                mostrarAnuncioVencedor(v.nome, v.premio);
+            }
+            listaVencedoresContainer.appendChild(div);
+        });
+    }
+
     function atualizarGloboSorteados(nums) {
         if (!globoContainer) return;
         // Limpa anteriores
@@ -272,7 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '...'}`;
         if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline || '--';
         
-        atualizarEstadoVisual(data.estado);        atualizarGloboSorteados(data.numerosSorteados);
+        atualizarEstadoVisual(data.estado);
+        atualizarListaVencedores(data.ultimosVencedores, false);        atualizarGloboSorteados(data.numerosSorteados);
         atualizarPremios(data.configuracoes, data.sorteioId);
         
         // Se já tiver lista de quase lá no estado inicial
@@ -313,13 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('contagemJogadores', (d) => { if(jogadoresTotalEl) jogadoresTotalEl.textContent = d.total; });
-    socket.on('atualizarVencedores', (vencedores) => {
-        if (!Array.isArray(vencedores) || vencedores.length === 0) return;
-        const vencedorMaisRecente = vencedores[0];
-        if (!vencedorMaisRecente) return;
-
-        const textoPremio = vencedorMaisRecente.premio?.includes('Linha') ? 'Linha' : 'Bingo';
-        falar(`Vencedor da ${textoPremio}: ${vencedorMaisRecente.nome}`);
+    socket.on('atualizarVencedores', (v) => atualizarListaVencedores(v, true));
         mostrarAnuncioVencedor(vencedorMaisRecente.nome, vencedorMaisRecente.premio || 'Cartela Cheia');
     });
 

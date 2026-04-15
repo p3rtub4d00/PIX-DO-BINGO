@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const contadorElemento = document.getElementById('contador-tempo');
-    const listaGanhadoresEl = document.getElementById('lista-ganhadores');
-    let tempoRestante = 10;
+    let tempoRestante = 10; // Defina aqui quantos segundos o anúncio dura
 
     if (!contadorElemento) {
+        console.error("Elemento do contador não encontrado!");
         window.location.href = '/dashboard-real';
         return;
     }
@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         contadorElemento.textContent = tempoRestante;
         if (tempoRestante <= 0) {
             clearInterval(intervalo);
+            console.log("Tempo esgotado. Redirecionando para o dashboard...");
             window.location.href = '/dashboard-real';
         }
         tempoRestante--;
@@ -19,32 +20,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     atualizarContador();
     const intervalo = setInterval(atualizarContador, 1000);
-
-    if (typeof io === 'undefined' || !listaGanhadoresEl) return;
-    const socket = io();
-
-    function renderizarVencedores(vencedores) {
-        listaGanhadoresEl.innerHTML = '';
-
-        if (!Array.isArray(vencedores) || vencedores.length === 0) {
-            listaGanhadoresEl.innerHTML = '<p>Nenhum ganhador ainda.</p>';
-            return;
-        }
-
-        vencedores.slice(0, 8).forEach(v => {
-            const item = document.createElement('div');
-            item.className = 'vencedor-item';
-            item.textContent = `Sorteio #${v.sorteioId}: ${v.premio} — ${v.nome}`;
-            listaGanhadoresEl.appendChild(item);
-        });
-    }
-
-    socket.on('estadoInicial', (data) => {
-        if (!data) return;
-        renderizarVencedores(data.ultimosVencedores);
-    });
-
-    socket.on('atualizarVencedores', (vencedores) => {
-        renderizarVencedores(vencedores);
-    });
 });
