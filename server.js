@@ -380,14 +380,14 @@ app.post('/admin/login', async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro interno' });
     }
 });
-
 function checkAdmin(req, res, next) {
     if (req.session.isAdmin) next();
     else if (req.xhr || req.headers.accept.indexOf('json') > -1) res.status(403).json({success:false, message:'Não autorizado'});
     else res.redirect('/admin/login.html');
 }
 
-app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {    const configs = await Config.find({});
+app.get('/admin/premios-e-preco', checkAdmin, async (req, res) => {
+    const configs = await Config.find({});
     const map = {};
     configs.forEach(c => map[c.chave] = c.valor);
     res.json(map);
@@ -777,8 +777,7 @@ function gerarDadosCartela(sId) {
         c.push(linha);
     }
     return { c_id: gerarIdUnico(), s_id: sId, data: c };
-}}
-
+}
 function checarVencedorLinha(cartelaData, sorteados) { 
     const c = cartelaData.data; const s = new Set(sorteados); s.add("FREE");
     for(let i=0; i<5; i++) if(c[i].every(n => s.has(n))) return true; 
@@ -1167,7 +1166,7 @@ async function iniciarNovaRodada() {
     } catch (error) {
         console.error("Erro crítico ao carregar vendas do banco:", error);
     }
-    // 3. Adiciona Bots
+        // 3. Adiciona Bots
     const nBots = calcularQuantidadeBots(MIN_BOTS_ATUAL, MAX_BOTS_ATUAL);
     for(let i=0; i<nBots; i++) {
         const bC = [];
