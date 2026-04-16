@@ -27,6 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardQrImg = document.getElementById('dashboard-qr-img');
     const dashboardQrLink = document.getElementById('dashboard-qr-link');
     const dashboardQrUrl = document.getElementById('dashboard-qr-url');
+    const esperaEspecialCardEl = document.getElementById('espera-especial-card');
+    const esperaEspecialDataEl = document.getElementById('espera-especial-data');
+    const esperaEspecialValorEl = document.getElementById('espera-especial-valor');
+    const esperaVencedorAtualEl = document.getElementById('espera-vencedor-atual');
+    const esperaQrImg = document.getElementById('espera-qr-img');
+    const esperaQrLink = document.getElementById('espera-qr-link');
+    const esperaQrUrl = document.getElementById('espera-qr-url');
     const faixaPromocionalEl = document.getElementById('dash-faixa-promocional');
     const faixaPromocionalTextoEl = document.getElementById('dash-faixa-promocional-texto');
     
@@ -40,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let ultimoEstadoConhecido = null;
     let contadorPingFalhas = 0;
+    let vencedoresCarousel = [];
+    let indiceVencedorCarousel = 0;
+    let timerVencedorCarousel = null;
 
     // --- Lógica de Voz ---
     let somAtivo = false; 
@@ -96,8 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const qrSrc = `${qrEndpoint}?size=280x280&margin=8&data=${encodeURIComponent(destinoCompra)}`;
 
         dashboardQrImg.src = qrSrc;
+        if (esperaQrImg) esperaQrImg.src = qrSrc;
         dashboardQrLink.href = destinoCompra;
+        if (esperaQrLink) esperaQrLink.href = destinoCompra;
         dashboardQrUrl.textContent = destinoCompra.replace(/^https?:\/\//, '');
+        if (esperaQrUrl) esperaQrUrl.textContent = destinoCompra.replace(/^https?:\/\//, '');
     }
 
     // --- PING (Anti-Queda) ---
@@ -281,6 +294,57 @@ document.addEventListener('DOMContentLoaded', () => {
         faixaPromocionalEl.classList.remove('oculto');
     }
 
+    function atualizarCardSorteioEspecial(configs) {
+        if (!esperaEspecialCardEl || !esperaEspecialDataEl || !esperaEspecialValorEl) return;
+        const ativo = String(configs?.sorteio_especial_ativo || 'false').toLowerCase() === 'true';
+        const dataHoraRaw = (configs?.sorteio_especial_datahora || '').trim();
+        const valorRaw = configs?.sorteio_especial_valor || '0';
+
+        if (!ativo || !dataHoraRaw) {
+            esperaEspecialCardEl.classList.add('oculto');
+            return;
+        }
+
+        let dataFormatada = dataHoraRaw;
+        try {
+            const dt = new Date(dataHoraRaw);
+            if (!Number.isNaN(dt.getTime())) dataFormatada = dt.toLocaleString('pt-BR');
+        } catch (e) {}
+
+        const valorNum = parseFloat(valorRaw);
+        const valorFmt = Number.isFinite(valorNum)
+            ? valorNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            : 'R$ --';
+
+        esperaEspecialDataEl.textContent = `Data: ${dataFormatada}`;
+        esperaEspecialValorEl.textContent = `Prêmio: ${valorFmt}`;
+        esperaEspecialCardEl.classList.remove('oculto');
+    }
+
+    function atualizarVencedoresCarousel(vencedores) {
+        if (!esperaVencedorAtualEl) return;
+        vencedoresCarousel = Array.isArray(vencedores) ? vencedores.slice(0, 10) : [];
+        indiceVencedorCarousel = 0;
+
+        if (vencedoresCarousel.length === 0) {
+            esperaVencedorAtualEl.textContent = 'Aguardando vencedor...';
+            return;
+        }
+
+        const v = vencedoresCarousel[0];
+        esperaVencedorAtualEl.textContent = `Sorteio #${v.sorteioId} [${v.premio}] ${v.nome}`;
+    }
+
+    function iniciarVencedoresCarousel() {
+        if (timerVencedorCarousel || !esperaVencedorAtualEl) return;
+        timerVencedorCarousel = setInterval(() => {
+            if (!vencedoresCarousel.length) return;
+            indiceVencedorCarousel = (indiceVencedorCarousel + 1) % vencedoresCarousel.length;
+            const v = vencedoresCarousel[indiceVencedorCarousel];
+            esperaVencedorAtualEl.textContent = `Sorteio #${v.sorteioId} [${v.premio}] ${v.nome}`;
+        }, 3000);
+    }
+
     function atualizarPremios(configs, sorteioId) {
         if (!configs || !dashPremioLinhaEl || !dashPremioCheiaEl) return;
         
@@ -343,6 +407,8 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarListaVencedoresEspera(data.ultimosVencedores);
         atualizarGloboSorteados(data.numerosSorteados);
         atualizarPremios(data.configuracoes, data.sorteioId);
+        atualizarCardSorteioEspecial(data.configuracoes);
+        atualizarVencedoresCarousel(data.ultimosVencedores);
         atualizarFaixaPromocional(data.configuracoes);
         
         // Se já tiver lista de quase lá no estado inicial
@@ -384,23 +450,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('contagemJogadores', (d) => { if(jogadoresTotalEl) jogadoresTotalEl.textContent = d.total; });
     socket.on('atualizarVencedores', (vencedores) => {
-        // Atualiza painel/overlay de espera, se existir
-        if (typeof atualizarListaVencedoresEspera === 'function') {
-            atualizarListaVencedoresEspera(vencedores);
-        }
-        if (typeof atualizarListaVencedores === 'function') {
-            atualizarListaVencedores(vencedores, false);
-        }
+        atualizarVencedoresCarousel(vencedores);
 
-        // Sempre anuncia o vencedor mais recente em tela cheia
         if (!Array.isArray(vencedores) || vencedores.length === 0) return;
         const v = vencedores[0];
-        if (!v || !v.nome) return;
-
-        const premioTexto = (v.premio || '').toString();
-        const textoPremio = premioTexto.includes('Linha') ? 'Linha' : 'Bingo';
+        const textoPremio = (v.premio || '').includes('Linha') ? 'Linha' : 'Bingo';
         falar(`Vencedor da ${textoPremio}: ${v.nome}`);
-        mostrarAnuncioVencedor(v.nome, premioTexto || 'Cartela Cheia');
+        mostrarAnuncioVencedor(v.nome, v.premio || 'Cartela Cheia');
     });
 
 // --- CORREÇÃO: Escuta ambos os nomes de evento para Quase Lá ---
@@ -419,8 +475,9 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('configAtualizada', (data) => {
         const idAtual = sorteioIdHeaderEl ? sorteioIdHeaderEl.textContent : '';
         atualizarPremios(data, idAtual);
-        atualizarFaixaPromocional(data);
+        atualizarCardSorteioEspecial(data);
     });
 
     iniciarSlider();
+    iniciarVencedoresCarousel();
 });

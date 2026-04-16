@@ -394,3 +394,71 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
     0%   { transform: translateX(0); }
     100% { transform: translateX(-120%); }
 }
+
+
+/* ===== Pacote promocional no overlay ===== */
+#overlay-promo-pack {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    width: min(1180px, 94vw);
+    margin-left: auto;
+    margin-right: auto;
+}
+.overlay-card {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-height: 120px;
+    text-align: center;
+}
+.overlay-card.oculto { display: none; }
+.overlay-card h3 {
+    margin: 0 0 8px;
+    color: #00e5ff;
+    font-size: 1.05rem;
+    font-weight: 900;
+}
+.overlay-card p {
+    margin: 4px 0;
+    color: #e5f7ff;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+#espera-vencedor-atual {
+    font-size: 1.15rem;
+    color: #fff;
+    font-weight: 900;
+    min-height: 54px;
+}
+
+#espera-qr-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.08);
+}
+#espera-qr-img {
+    width: 96px;
+    height: 96px;
+    border-radius: 8px;
+    background: #fff;
+}
+#espera-qr-url {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: #9fdcff;
+    word-break: break-all;
+}
+
+@media (max-width: 1100px) {
+    #overlay-promo-pack {
+        grid-template-columns: 1fr;
+        width: min(700px, 94vw);
+    }
+}
