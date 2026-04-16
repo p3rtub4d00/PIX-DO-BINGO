@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardQrImg = document.getElementById('dashboard-qr-img');
     const dashboardQrLink = document.getElementById('dashboard-qr-link');
     const dashboardQrUrl = document.getElementById('dashboard-qr-url');
+    const faixaPromocionalEl = document.getElementById('dash-faixa-promocional');
+    const faixaPromocionalTextoEl = document.getElementById('dash-faixa-promocional-texto');
     
     // Overlays e Anúncios
     const anuncioVencedorOverlay = document.getElementById('anuncio-vencedor-overlay');
@@ -263,6 +265,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function atualizarFaixaPromocional(configs) {
+        if (!faixaPromocionalEl || !faixaPromocionalTextoEl) return;
+
+        const texto = configs?.mensagem_promocional_dashboard || '';
+        const ativoRaw = (configs?.mostrar_promocao_dashboard ?? 'true').toString().toLowerCase();
+        const ativo = ativoRaw === 'true' || ativoRaw === '1';
+
+        if (!ativo || !texto.trim()) {
+            faixaPromocionalEl.classList.add('oculto');
+            return;
+        }
+
+        faixaPromocionalTextoEl.textContent = texto.trim();
+        faixaPromocionalEl.classList.remove('oculto');
+    }
+
     function atualizarPremios(configs, sorteioId) {
         if (!configs || !dashPremioLinhaEl || !dashPremioCheiaEl) return;
         
@@ -325,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarListaVencedoresEspera(data.ultimosVencedores);
         atualizarGloboSorteados(data.numerosSorteados);
         atualizarPremios(data.configuracoes, data.sorteioId);
+        atualizarFaixaPromocional(data.configuracoes);
         
         // Se já tiver lista de quase lá no estado inicial
         if(data.quaseLa) processarQuaseLa(data.quaseLa);
@@ -400,6 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('configAtualizada', (data) => {
         const idAtual = sorteioIdHeaderEl ? sorteioIdHeaderEl.textContent : '';
         atualizarPremios(data, idAtual);
+        atualizarFaixaPromocional(data);
     });
 
     iniciarSlider();
