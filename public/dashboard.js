@@ -223,20 +223,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. EXIBIÇÃO
         filtrados.slice(0, 5).forEach(item => {
-            const p = document.createElement('p');
-            
-            // Define cor baseada na urgência
-            let estiloContador = 'background-color: #00c2ff;'; // Padrão
-            if (item.faltam === 1) estiloContador = 'background-color: #ff0040; animation: pulse 1s infinite;'; // Vermelho piscando
-            else if (item.faltam === 2) estiloContador = 'background-color: #ffaa00;'; // Laranja
+            const row = document.createElement('div');
+            row.className = 'quase-item';
 
-            const nomeSeguro = item.nome ? item.nome.substring(0, 15) : 'Jogador';
+            let classeCor = 'azul';
+            if (item.faltam === 1) classeCor = 'vermelho';
+            else if (item.faltam === 2) classeCor = 'laranja';
 
-            p.innerHTML = `
-                <span class="nome-jogador">${nomeSeguro}</span> 
-                <span class="faltam-contador" style="${estiloContador}">${item.faltam}</span>
+            const nomeSeguro = item.nome ? item.nome.substring(0, 20) : 'Jogador';
+            const textoBolas = item.faltam === 1 ? 'BOLA' : 'BOLAS';
+
+            row.innerHTML = `
+                <span class="quase-nome">${nomeSeguro}</span>
+                <span class="quase-faltam ${classeCor}">FALTAM ${item.faltam} ${textoBolas}</span>
             `;
-            listaQuaseLaContainer.appendChild(p);
+
+            listaQuaseLaContainer.appendChild(row);
         });
 
         if (tickerTextoEl && filtrados[0]) {

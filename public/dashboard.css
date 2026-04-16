@@ -319,3 +319,43 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
     border-radius: 6px;
     font-size: 0.95rem;
 }
+
+
+/* QUASE LÁ - leitura de longe */
+#lista-quase-la .quase-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border-left: 3px solid #00c2ff;
+}
+
+#lista-quase-la .quase-nome {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+    max-width: 65%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#lista-quase-la .quase-faltam {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    min-width: 220px;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+#lista-quase-la .quase-faltam.azul { background: #00c2ff; }
+#lista-quase-la .quase-faltam.laranja { background: #ff9800; }
+#lista-quase-la .quase-faltam.vermelho { background: #ff003c; animation: pulse 1s infinite; }
