@@ -462,3 +462,8 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
         width: min(700px, 94vw);
     }
 }
+
+/* Oculta bloco inferior de últimos vencedores no overlay */
+#espera-vencedores-box {
+  display: none !important;
+}
