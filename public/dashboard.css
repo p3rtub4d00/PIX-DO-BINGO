@@ -467,3 +467,44 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
 #espera-vencedores-box {
   display: none !important;
 }
+
+/* ===== Ajuste de encaixe do overlay (evita corte na parte inferior) ===== */
+#espera-cronometro-display {
+    font-size: 14vh !important;   /* antes estava muito grande */
+    margin-top: 4px !important;
+}
+
+#overlay-promo-pack {
+    margin-top: 8px !important;
+    width: min(1100px, 92vw) !important;
+    gap: 8px !important;
+}
+
+#overlay-promo-pack .overlay-card {
+    min-height: 95px !important;
+    padding: 8px 10px !important;
+}
+
+#overlay-promo-pack .overlay-card h3 {
+    font-size: 0.95rem !important;
+    margin-bottom: 4px !important;
+}
+
+#overlay-promo-pack .overlay-card p,
+#espera-vencedor-atual {
+    font-size: 0.9rem !important;
+    line-height: 1.15 !important;
+}
+
+#espera-qr-img {
+    width: 78px !important;
+    height: 78px !important;
+}
+
+/* telas baixas (notebook/TV com menos altura útil) */
+@media (max-height: 900px) {
+    .anuncio-espera-container {
+        transform: scale(0.92);
+        transform-origin: top center;
+    }
+}
