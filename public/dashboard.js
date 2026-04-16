@@ -364,12 +364,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('contagemJogadores', (d) => { if(jogadoresTotalEl) jogadoresTotalEl.textContent = d.total; });
-    socket.on('atualizarVencedores', (v) => {
-        atualizarListaVencedores(v, true);
-        atualizarListaVencedoresEspera(v);
+    socket.on('atualizarVencedores', (vencedores) => {
+        // Atualiza painel/overlay de espera, se existir
+        if (typeof atualizarListaVencedoresEspera === 'function') {
+            atualizarListaVencedoresEspera(vencedores);
+        }
+        if (typeof atualizarListaVencedores === 'function') {
+            atualizarListaVencedores(vencedores, false);
+        }
+
+        // Sempre anuncia o vencedor mais recente em tela cheia
+        if (!Array.isArray(vencedores) || vencedores.length === 0) return;
+        const v = vencedores[0];
+        if (!v || !v.nome) return;
+
+        const premioTexto = (v.premio || '').toString();
+        const textoPremio = premioTexto.includes('Linha') ? 'Linha' : 'Bingo';
+        falar(`Vencedor da ${textoPremio}: ${v.nome}`);
+        mostrarAnuncioVencedor(v.nome, premioTexto || 'Cartela Cheia');
     });
-    
-    // --- CORREÇÃO: Escuta ambos os nomes de evento para Quase Lá ---
+
+// --- CORREÇÃO: Escuta ambos os nomes de evento para Quase Lá ---
     socket.on('listaQuaseLa', (data) => processarQuaseLa(data));
     socket.on('atualizarQuaseLa', (data) => processarQuaseLa(data));
 
