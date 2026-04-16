@@ -175,7 +175,9 @@ async function inicializarDados() {
             { chave: 'min_bots', valor: '80' },
             { chave: 'max_bots', valor: '150' },
             { chave: 'numero_sorteio_atual', valor: '500' },
-            { chave: 'proximo_alvo_linha_global', valor: '250' }
+            { chave: 'proximo_alvo_linha_global', valor: '250' },
+            { chave: 'mostrar_promocao_dashboard', valor: 'false' },
+            { chave: 'mensagem_promocional_dashboard', valor: '' }
         ];
 
         for (const conf of configsDefault) {

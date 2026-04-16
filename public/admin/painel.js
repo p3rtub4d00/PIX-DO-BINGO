@@ -201,6 +201,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CAMPOS MODIFICADOS E NOVO CAMPO ---
     const especialDataHoraInput = document.getElementById('sorteio-especial-datahora'); // ID MODIFICADO
     const especialPrecoCartelaInput = document.getElementById('sorteio-especial-preco-cartela'); // ID NOVO
+    const mostrarPromocaoDashboardInput = document.getElementById('mostrar-promocao-dashboard');
+    const mensagemPromocionalDashboardInput = document.getElementById('mensagem-promocional-dashboard');
 
     const btnSalvarConfig = document.getElementById('btn-salvar-config');
     const configStatus = document.getElementById('config-status');
@@ -209,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- ATUALIZANDO VERIFICAÇÃO ---
         if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput || !proximoAlvoLinhaGlobalInput ||
             !minBotsInput || !maxBotsInput || 
-            !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !configStatus) {
+            !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !mostrarPromocaoDashboardInput || !mensagemPromocionalDashboardInput || !configStatus) {
             console.error("Um ou mais elementos de configuração não foram encontrados no DOM.");
             if(configStatus) { configStatus.textContent = `Erro: Elementos do formulário não encontrados.`; configStatus.className = 'status-message status-error'; configStatus.style.display = 'block'; }
             return;
@@ -236,6 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Carrega a data/hora no formato 'YYYY-MM-DDThh:mm' que o input 'datetime-local' espera
             especialDataHoraInput.value = data.sorteio_especial_datahora || ''; 
             especialPrecoCartelaInput.value = parseFloat(data.sorteio_especial_preco_cartela || '10.00').toFixed(2); // Carrega novo valor
+            mostrarPromocaoDashboardInput.value = (data.mostrar_promocao_dashboard || 'false').toString();
+            mensagemPromocionalDashboardInput.value = data.mensagem_promocional_dashboard || '';
 
         } catch (error) {
             console.error("Erro ao carregar configurações:", error);
@@ -254,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- ATUALIZANDO VERIFICAÇÃO ---
              if (!premioLinhaInput || !premioCheiaInput || !precoCartelaInput || !duracaoEsperaInput || !proximoAlvoLinhaGlobalInput ||
                  !minBotsInput || !maxBotsInput || 
-                 !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !configStatus || !btnSalvarConfig) {
+                 !especialAtivoInput || !especialValorInput || !especialDataHoraInput || !especialPrecoCartelaInput || !mostrarPromocaoDashboardInput || !mensagemPromocionalDashboardInput || !configStatus || !btnSalvarConfig) {
                   console.error("Erro no submit: Elementos de configuração não encontrados.");
                   alert("Erro: Elementos do formulário não encontrados.");
                   return;
@@ -275,7 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 sorteio_especial_ativo: especialAtivoInput.value,
                 sorteio_especial_valor: parseFloat(especialValorInput.value),
                 sorteio_especial_datahora: especialDataHoraInput.value, // Enviando o valor 'datetime-local'
-                sorteio_especial_preco_cartela: parseFloat(especialPrecoCartelaInput.value) // Enviando novo valor
+                sorteio_especial_preco_cartela: parseFloat(especialPrecoCartelaInput.value), // Enviando novo valor
+                mostrar_promocao_dashboard: mostrarPromocaoDashboardInput.value,
+                mensagem_promocional_dashboard: mensagemPromocionalDashboardInput.value.trim()
             };
             console.log("Salvando configurações:", dadosParaSalvar);
 
