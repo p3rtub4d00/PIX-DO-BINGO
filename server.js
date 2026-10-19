@@ -367,6 +367,55 @@ app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 
 app.get('/dashboard-real', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/ping', (req, res) => res.send('pong'));
 
+function lerCartelasDaVenda(venda) {
+    if (!venda) return [];
+    if (Array.isArray(venda.cartelas_json)) return venda.cartelas_json;
+    if (typeof venda.cartelas_json !== 'string' || !venda.cartelas_json.trim()) return [];
+
+    const parsed = JSON.parse(venda.cartelas_json);
+    return Array.isArray(parsed) ? parsed : [];
+}
+
+// Fallback HTTP para sala de espera/jogo.
+// Evita depender exclusivamente de uma resposta Socket.IO para carregar as cartelas.
+app.get('/api/minhas-cartelas/:vendaId', async (req, res) => {
+    try {
+        const { vendaId } = req.params;
+        if (!mongoose.isValidObjectId(vendaId)) {
+            return res.status(400).json({ success: false, message: 'ID da venda inválido.' });
+        }
+
+        const venda = await Venda.findById(vendaId).lean();
+        if (!venda) {
+            return res.status(404).json({ success: false, message: 'Compra não encontrada.' });
+        }
+
+        const cartelas = lerCartelasDaVenda(venda);
+        if (cartelas.length === 0) {
+            return res.status(404).json({ success: false, message: 'Nenhuma cartela registrada nesta compra.' });
+        }
+
+        res.set('Cache-Control', 'no-store');
+        return res.json({
+            success: true,
+            vendaId: String(venda._id),
+            nome: venda.nome_jogador || '',
+            telefone: venda.telefone || '',
+            quantidade: cartelas.length,
+            sorteioId: venda.tipo_sorteio === 'especial_agendado'
+                ? venda.sorteio_id_especial
+                : venda.sorteio_id,
+            tipoSorteio: venda.tipo_sorteio || 'regular',
+            cartelas
+        });
+    } catch (e) {
+        console.error('Erro GET /api/minhas-cartelas/:vendaId:', e.message);
+        return res.status(500).json({ success: false, message: 'Erro ao carregar cartelas.' });
+    }
+});
+
+
+
 // --- ROTAS ADMIN ---
 app.post('/admin/login', async (req, res) => {
     const { usuario, senha } = req.body;
@@ -1539,7 +1588,18 @@ io.on('connection', async (socket) => {
                 console.warn(`Aviso buscarMinhasCartelas: identificadores não conferem para venda ${data.vendaId}. Retornando cartelas por vendaId para evitar travamento de UI.`);
             }
 
-            socket.emit('cartelasEncontradas', { cartelas: JSON.parse(v.cartelas_json) });
+            const cartelas = lerCartelasDaVenda(v);
+            if (cartelas.length === 0) {
+                socket.emit('cartelasNaoEncontradas');
+                return;
+            }
+
+            socket.emit('cartelasEncontradas', {
+                cartelas,
+                nome: v.nome_jogador || '',
+                telefone: v.telefone || '',
+                vendaId: String(v._id)
+            });
         } catch (e) {
             console.error('Erro ao buscarMinhasCartelas:', e.message);
             socket.emit('cartelasNaoEncontradas');
