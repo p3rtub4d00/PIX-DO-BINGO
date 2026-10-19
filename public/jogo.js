@@ -50,16 +50,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Pega Venda ID e dados do Jogador ---
     const urlParams = new URLSearchParams(window.location.search);
     const vendaId = urlParams.get('venda');
-    const nomeJogador = sessionStorage.getItem('bingo_usuario_nome'); 
-    const telefoneJogador = sessionStorage.getItem('bingo_usuario_telefone');
-    
-    if (!vendaId || !nomeJogador) {
-        alert("Seus dados de jogo não foram encontrados! Redirecionando para a página inicial.");
+    let nomeJogador = sessionStorage.getItem('bingo_usuario_nome') || '';
+    let telefoneJogador = sessionStorage.getItem('bingo_usuario_telefone') || '';
+    let cartelasCarregadas = false;
+
+    if (!vendaId) {
+        alert("ID da compra não encontrado! Redirecionando para a página inicial.");
         window.location.href = 'index.html';
         return;
     }
-    console.log(`Página de Jogo para Venda ID: ${vendaId} | Jogador: ${nomeJogador}`);
-
+    console.log(`Página de Jogo para Venda ID: ${vendaId}`);
 
     // --- Lógica de Voz (Sem alterações) ---
     let somAtivo = false; 
@@ -488,47 +488,75 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     // *** FIM DA ATUALIZAÇÃO ***
 
-    socket.on('cartelasEncontradas', (data) => {
-        const { cartelas } = data;
-        console.log(`Recebidas ${cartelas.length} cartelas do servidor.`);
-        
-        // Agora que temos as cartelas, podemos registrar o jogador e renderizar
-        cartelasSalvas = cartelas; // Salva globalmente
-        totalDeCartelas = cartelasSalvas.length;
-        console.log(`Bem-vindo, ${nomeJogador}! Lendo ${totalDeCartelas} cartela(s).`);
+    function processarCartelasDoJogador(cartelas, meta = {}) {
+        if (cartelasCarregadas) return;
+        if (!Array.isArray(cartelas) || cartelas.length === 0) return;
 
-        // Gera o globo (necessário aqui também, caso 'estadoInicial' chegue antes)
-        gerarGlobo();
-
-        cartelasContainer.innerHTML = ''; 
-        cartelasGeradas = []; 
-        
-        for (let i = 0; i < totalDeCartelas; i++) {
-            const dadosCartela = cartelasSalvas[i]; 
-            const elementoCartela = criarElementoCartela(dadosCartela);
-            elementoCartela.id = `cartela-indice-${i}`;
-            cartelasGeradas.push(elementoCartela); 
+        if (meta.nome) {
+            nomeJogador = String(meta.nome);
+            sessionStorage.setItem('bingo_usuario_nome', nomeJogador);
         }
-        
-        cartelaAtualIndex = 0; 
-        atualizarVisibilidadeCartela(); 
-        
-        // *** ATUALIZAÇÃO (CORREÇÃO RECONEXÃO) ***
-        // Após desenhar as cartelas, marca os números que já saíram
-        marcarNumerosSorteados(numerosSorteadosDaRodada);
-        // *** FIM DA ATUALIZAÇÃO ***
+        if (meta.telefone) {
+            telefoneJogador = String(meta.telefone);
+            sessionStorage.setItem('bingo_usuario_telefone', telefoneJogador);
+        }
 
-        // Agora que as cartelas estão prontas, registra o jogador no sorteio
+        cartelasCarregadas = true;
+        cartelasSalvas = cartelas;
+        totalDeCartelas = cartelasSalvas.length;
+
+        gerarGlobo();
+        cartelasContainer.innerHTML = '';
+        cartelasGeradas = [];
+
+        for (let i = 0; i < totalDeCartelas; i++) {
+            const elementoCartela = criarElementoCartela(cartelasSalvas[i]);
+            elementoCartela.id = `cartela-indice-${i}`;
+            cartelasGeradas.push(elementoCartela);
+        }
+
+        cartelaAtualIndex = 0;
+        atualizarVisibilidadeCartela();
+        marcarNumerosSorteados(numerosSorteadosDaRodada);
+
         socket.emit('registerPlayer', {
-            nome: nomeJogador,
+            nome: nomeJogador || 'Jogador',
             telefone: telefoneJogador || '',
-            cartelas: cartelasSalvas 
+            cartelas: cartelasSalvas
+        });
+    }
+
+    socket.on('cartelasEncontradas', (data) => {
+        processarCartelasDoJogador(data?.cartelas, {
+            nome: data?.nome,
+            telefone: data?.telefone
         });
     });
 
+    async function carregarCartelasJogoViaHttp() {
+        try {
+            const response = await fetch(`/api/minhas-cartelas/${encodeURIComponent(vendaId)}?t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) throw new Error(data.message || `Erro ${response.status}`);
+
+            processarCartelasDoJogador(data.cartelas, {
+                nome: data.nome,
+                telefone: data.telefone
+            });
+        } catch (error) {
+            console.error('Fallback HTTP das cartelas falhou:', error);
+        }
+    }
+
     socket.on('cartelasNaoEncontradas', () => {
-        alert("Erro: Suas cartelas não foram encontradas no servidor.\n\nIsso pode acontecer se o nome salvo não bater com o da compra. Redirecionando.");
-        window.location.href = 'index.html';
+        if (!cartelasCarregadas) {
+            console.warn('Socket não encontrou as cartelas; aguardando fallback HTTP.');
+        }
     });
     
+    carregarCartelasJogoViaHttp();
+
 });
