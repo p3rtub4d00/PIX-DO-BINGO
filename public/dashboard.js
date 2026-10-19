@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const esperaVencedoresListaEl = document.getElementById('espera-vencedores-lista');
     const dashboardAdStage = document.getElementById('dashboard-ad-stage');
     const dashboardAdImage = document.getElementById('dashboard-ad-image');
+    const dashboardAdBackdrop = document.getElementById('dashboard-ad-backdrop');
     const dashboardAdCompany = document.getElementById('dashboard-ad-company');
     const dashboardAdEmpty = document.getElementById('dashboard-ad-empty');
     const advertiseQrImg = document.getElementById('advertise-qr-img');
@@ -275,6 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!anunciosComerciais.length) {
             dashboardAdStage.classList.remove('has-ad');
             dashboardAdImage.removeAttribute('src');
+            if (dashboardAdBackdrop) dashboardAdBackdrop.removeAttribute('src');
             if (dashboardAdCompany) dashboardAdCompany.textContent = 'Anuncie no Pix do Bingo';
             return;
         }
@@ -283,6 +285,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = anunciosComerciais[indiceAnuncioComercial];
 
         dashboardAdImage.style.opacity = '0';
+        if (dashboardAdBackdrop) {
+            dashboardAdBackdrop.style.opacity = '0';
+            dashboardAdBackdrop.src = item.data;
+            dashboardAdBackdrop.onload = () => {
+                dashboardAdBackdrop.style.opacity = '1';
+            };
+        }
         dashboardAdImage.src = item.data;
         dashboardAdImage.onload = () => {
             dashboardAdStage.classList.add('has-ad');
