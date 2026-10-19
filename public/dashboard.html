@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Telão | Pix do Bingo</title>
   <meta name="theme-color" content="#061626">
-<link rel="stylesheet" href="dashboard.css?v=globo-animado-20261019">
+<link rel="stylesheet" href="dashboard.css?v=ultimos-rodape-20261019">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -172,20 +172,32 @@
         <div class="tv-dynamic-ball" id="tv-dynamic-ball"><span id="dash-ultimo-numero">--</span></div>
         <div class="tv-draw-status" id="tv-draw-status">AGUARDANDO PRÓXIMA BOLA</div>
       </div>
+
+      <div class="tv-recent-footer">
+        <span class="recent-footer-label"><i class="fa-solid fa-clock-rotate-left"></i> ÚLTIMOS</span>
+        <div class="recent-footer-balls">
+          <b id="dash-recente-1">--</b>
+          <b id="dash-recente-2">--</b>
+          <b id="dash-recente-3">--</b>
+          <b id="dash-recente-4">--</b>
+          <b id="dash-recente-5">--</b>
+        </div>
+      </div>
+
       <div class="tv-machine-caption"><i></i> SORTEIO EM TEMPO REAL</div>
     </section>
-  </section>
 
-  <section class="tv-bottom-zone">
-    <section class="reference-tv-numbers tv-board bottom-called-numbers">
+    <section class="reference-tv-numbers tv-board right-called-numbers">
       <div class="tv-board-head">
         <h3 id="titulo-numeros-sorteados">NÚMEROS CHAMADOS</h3>
         <span>AO VIVO</span>
       </div>
       <div id="dash-globo-numeros"></div>
     </section>
+  </section>
 
-    <section id="quase-la" class="tv-side-card almost-side bottom-almost">
+  <section class="tv-support-rail almost-only">
+    <section id="quase-la" class="tv-side-card almost-side compact">
       <span class="tv-side-kicker">QUASE LÁ</span>
       <div id="lista-quase-la"><p>Aguardando...</p></div>
     </section>
@@ -193,6 +205,6 @@
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="dashboard.js?v=globo-animado-20261019"></script>
+<script src="dashboard.js?v=ultimos-rodape-20261019"></script>
 </body>
 </html>
