@@ -542,3 +542,214 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
 @media(max-width:1000px){
   .premium-dashboard .dashboard-main-fullscreen{grid-template-columns:1fr 260px}.tv-main-card{grid-template-columns:260px 1fr}.premium-dashboard #dash-ultimo-numero{width:180px;height:180px;font-size:5.5rem}.premium-dashboard #dash-globo-numeros{grid-template-columns:repeat(8,1fr)}
 }
+
+
+/* ============================================================
+   FIDELIDADE AO TELÃO DO FLYER APROVADO
+   ============================================================ */
+.premium-dashboard .dashboard-header{
+  height:72px;
+  padding:0 20px;
+  background:#071827;
+  border-bottom:1px solid #17364d;
+}
+.premium-dashboard .dashboard-main-fullscreen.reference-tv-layout{
+  height:calc(100vh - 72px);
+  min-height:0;
+  display:grid;
+  grid-template-columns:1fr;
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:10px;
+  padding:12px;
+  background:
+    radial-gradient(circle at 50% 38%,rgba(20,226,133,.13),transparent 34%),
+    linear-gradient(160deg,#03111e,#061b2c 55%,#04131f);
+}
+.premium-dashboard #dash-faixa-promocional:not(.oculto)~.dashboard-main-fullscreen.reference-tv-layout{
+  height:calc(100vh - 114px);
+}
+.reference-tv-stage{
+  min-height:0;
+  display:grid;
+  grid-template-columns:260px minmax(360px,1fr) 320px;
+  gap:10px;
+  overflow:hidden;
+}
+.reference-tv-info,
+.reference-tv-machine,
+.reference-tv-numbers{
+  min-height:0;
+  border:1px solid #173a53;
+  border-radius:14px;
+  background:linear-gradient(145deg,#071a2c,#0b2438);
+  box-shadow:0 14px 38px rgba(0,0,0,.20);
+}
+.reference-tv-info{
+  padding:14px;
+  display:grid;
+  align-content:start;
+  gap:10px;
+}
+.tv-info-logo{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding-bottom:12px;
+  border-bottom:1px solid #193950;
+}
+.tv-info-logo .tv-brand-mark{width:30px;height:30px}
+.tv-info-logo b{font-size:.75rem}
+.tv-info-logo em{font-style:normal;color:#28df86}
+.tv-info-box{
+  display:grid;
+  gap:5px;
+  padding:13px;
+  border:1px solid #1b3d56;
+  border-radius:11px;
+  background:#091f32;
+}
+.tv-info-box small{color:#7f97aa;font-size:.58rem;font-weight:900;letter-spacing:.07em}
+.tv-info-box>strong{font-size:1.05rem}
+.tv-info-box>span{display:flex;justify-content:space-between;gap:8px;color:#8299ab;font-size:.66rem}
+.tv-info-box.prize{background:linear-gradient(145deg,#082b25,#07402f);border-color:#126f4b}
+.tv-info-box.prize>strong{font-size:1.45rem;color:#30e991}
+.tv-info-box.prize>span b{color:#eafdf3}
+
+.reference-tv-machine{
+  position:relative;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:
+    linear-gradient(180deg,rgba(3,20,31,.18),rgba(3,14,22,.52)),
+    radial-gradient(circle at 50% 50%,rgba(17,238,137,.12),transparent 55%),
+    #061725;
+}
+.reference-tv-machine:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    repeating-linear-gradient(90deg,transparent 0 78px,rgba(25,224,132,.06) 78px 80px),
+    repeating-linear-gradient(0deg,transparent 0 64px,rgba(25,224,132,.04) 64px 66px);
+  opacity:.55;
+}
+.tv-machine-image{
+  width:min(94%,650px);
+  height:100%;
+  max-height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 22px 45px rgba(0,0,0,.5));
+}
+.tv-dynamic-ball{
+  position:absolute;
+  left:50%;
+  top:48%;
+  transform:translate(-50%,-50%);
+  width:126px;
+  height:126px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:radial-gradient(circle at 30% 25%,#ffd6df,#ff6f8a 30%,#ef3157 67%,#a5092d);
+  border:8px solid rgba(255,255,255,.5);
+  box-shadow:0 15px 38px rgba(0,0,0,.48),inset -9px -12px 18px rgba(0,0,0,.16),0 0 35px rgba(255,52,98,.18);
+  z-index:3;
+}
+.tv-dynamic-ball #dash-ultimo-numero{
+  width:auto!important;height:auto!important;margin:0!important;border:0!important;
+  background:none!important;box-shadow:none!important;border-radius:0!important;
+  font-size:3.6rem!important;color:#081622!important;
+}
+.tv-machine-caption{
+  position:absolute;
+  left:18px;
+  bottom:14px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#8fe8bb;
+  font-size:.58rem;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.tv-machine-caption i{width:7px;height:7px;border-radius:50%;background:#28df86;box-shadow:0 0 10px #28df86}
+
+.reference-tv-numbers{
+  padding:14px;
+  overflow:hidden;
+}
+.reference-tv-numbers .tv-board-head{
+  padding-bottom:9px;
+  border-bottom:1px solid #193950;
+}
+.reference-tv-numbers .tv-board-head span{
+  padding:5px 7px;
+  border-radius:999px;
+  background:#ef4054;
+  color:#fff;
+  font-size:.52rem;
+  font-weight:900;
+}
+.premium-dashboard .reference-tv-numbers #dash-globo-numeros{
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+  align-content:start;
+  max-height:calc(100% - 42px);
+  overflow:hidden;
+}
+.premium-dashboard .reference-tv-numbers .globo-numero,
+.premium-dashboard .reference-tv-numbers [id^="dash-globo-"]>div{
+  min-height:38px;
+  aspect-ratio:auto;
+  border-radius:8px;
+  font-size:.72rem;
+}
+.tv-support-rail{
+  min-height:88px;
+  display:grid;
+  grid-template-columns:.78fr 1.22fr;
+  gap:10px;
+}
+.tv-side-card.compact{
+  min-height:0;
+  padding:10px 12px;
+  border-radius:12px;
+}
+.qr-side.compact{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:12px;
+  align-items:center;
+  text-align:left;
+}
+.qr-side.compact h2{font-size:.82rem;margin:3px 0}
+.qr-side.compact img{width:68px;height:68px;padding:4px;border-radius:8px}
+.qr-side.compact small{font-size:.48rem;max-width:250px}
+.almost-side.compact{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  align-items:center;
+  gap:12px;
+  overflow:hidden;
+}
+.almost-side.compact #lista-quase-la{
+  display:flex;
+  gap:7px;
+  margin:0;
+  overflow:hidden;
+}
+.almost-side.compact #lista-quase-la .quase-item{
+  min-width:145px;
+  margin:0;
+  padding:6px 8px;
+}
+.almost-side.compact #lista-quase-la .quase-nome{font-size:.65rem}
+.almost-side.compact #lista-quase-la .quase-faltam{min-width:70px;font-size:.62rem;padding:5px}
+
+@media(max-width:1100px){
+  .reference-tv-stage{grid-template-columns:220px minmax(320px,1fr) 260px}
+  .tv-dynamic-ball{width:105px;height:105px}
+  .tv-dynamic-ball #dash-ultimo-numero{font-size:3rem!important}
+  .premium-dashboard .reference-tv-numbers #dash-globo-numeros{grid-template-columns:repeat(4,1fr)}
+}
