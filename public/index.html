@@ -53,20 +53,35 @@
         </div>
       </div>
 
-      <div class="hero-visual" aria-hidden="true">
-        <div class="globe-stage">
-          <div class="globe-ring"></div>
-          <div class="bingo-globe">
-            <div class="pix-core"><span class="brand-mark mini"><i></i><i></i><i></i><i></i></span></div>
-            <span class="hero-ball b1">17</span>
-            <span class="hero-ball b2">28</span>
-            <span class="hero-ball b3">09</span>
-            <span class="hero-ball b4">42</span>
-            <span class="hero-ball b5">56</span>
-          </div>
-          <div class="globe-base"></div>
+      <div class="hero-visual">
+        <div class="reference-machine-wrap">
+          <div class="reference-neon-grid" aria-hidden="true"></div>
+          <img src="/imagens/bingo-machine-neon.svg" class="reference-machine" alt="Globo de bingo iluminado em verde com bolas coloridas">
+          <div class="machine-glow" aria-hidden="true"></div>
         </div>
       </div>
+    </div>
+
+    <div class="mobile-reference-board">
+      <div class="mobile-round-card">
+        <div class="mobile-round-top">
+          <div><small>SORTEIO ATUAL</small><strong id="mobile-round-id">Rodada em andamento</strong></div>
+          <span class="mobile-live-pill">AO VIVO</span>
+        </div>
+        <div class="mobile-countdown">
+          <span>Próximo número</span>
+          <strong id="mobile-hero-timer">--:--</strong>
+        </div>
+      </div>
+      <div class="mobile-prize-card">
+        <span class="mobile-prize-icon"><i class="fa-solid fa-coins"></i></span>
+        <div><small>Prêmio principal</small><strong id="mobile-hero-prize">R$ ...</strong></div>
+      </div>
+      <div class="mobile-recent-card">
+        <small>Últimos números sorteados</small>
+        <div class="mobile-number-row"><b>17</b><b>28</b><b>42</b><b>09</b><b>56</b></div>
+      </div>
+      <button class="mobile-buy" type="button" onclick="document.querySelector('[data-package=&quot;10&quot;]')?.click()">Comprar cartelas <i class="fa-solid fa-arrow-right"></i></button>
     </div>
   </section>
 
@@ -142,27 +157,34 @@
         <span class="ticket-unit">Cartela: <b id="index-preco-cartela">R$ ...</b></span>
       </div>
 
-      <div class="package-grid">
-        <button class="package-card" type="button" data-package="1">
-          <span class="package-name">Pacote Inicial</span>
-          <strong>1 cartela</strong>
-          <span class="package-price" id="package-price-1">R$ ...</span>
-          <small>Entre na rodada</small>
-          <em>Comprar</em>
-        </button>
-        <button class="package-card featured" type="button" data-package="5">
-          <span class="popular-tag">MAIS POPULAR</span>
-          <span class="package-name">Pacote Popular</span>
+      <div class="package-grid reference-packages">
+        <button class="package-card" type="button" data-package="5">
+          <span class="package-name">Pacote Iniciante</span>
           <strong>5 cartelas</strong>
           <span class="package-price" id="package-price-5">R$ ...</span>
-          <small>Mais chances de ganhar</small>
+          <small>Ideal para começar</small>
           <em>Comprar</em>
         </button>
-        <button class="package-card" type="button" data-package="10">
-          <span class="package-name">Mega Sorte</span>
+        <button class="package-card featured" type="button" data-package="10">
+          <span class="popular-tag"><i class="fa-solid fa-crown"></i> MAIS POPULAR</span>
+          <span class="package-name">Pacote Popular</span>
           <strong>10 cartelas</strong>
           <span class="package-price" id="package-price-10">R$ ...</span>
-          <small>Pacote para quem quer jogar mais</small>
+          <small>Mais chances de ganhar!</small>
+          <em>Comprar</em>
+        </button>
+        <button class="package-card" type="button" data-package="25">
+          <span class="package-name">Pacote Premiado</span>
+          <strong>25 cartelas</strong>
+          <span class="package-price" id="package-price-25">R$ ...</span>
+          <small>Para quem joga sempre</small>
+          <em>Comprar</em>
+        </button>
+        <button class="package-card" type="button" data-package="50">
+          <span class="package-name">Mega Sorte</span>
+          <strong>50 cartelas</strong>
+          <span class="package-price" id="package-price-50">R$ ...</span>
+          <small>O pacote dos campeões</small>
           <em>Comprar</em>
         </button>
       </div>
@@ -270,6 +292,8 @@
   const buyButton=document.getElementById('btn-jogue-agora');
   const heroPrize=document.getElementById('hero-premio-cheia');
   const heroTimer=document.getElementById('hero-timer');
+  const mobileHeroPrize=document.getElementById('mobile-hero-prize');
+  const mobileHeroTimer=document.getElementById('mobile-hero-timer');
   const prizeSource=document.getElementById('index-premio-cheia');
   const timerSource=document.getElementById('status-cronometro');
 
@@ -280,7 +304,7 @@
   }
   function syncPackagePrices(){
     const unit=parsePrice();
-    [1,5,10].forEach(q=>{
+    [5,10,25,50].forEach(q=>{
       const el=document.getElementById('package-price-'+q);
       if(el) el.textContent=unit?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(unit*q):'R$ ...';
     });
@@ -292,9 +316,11 @@
   }));
 
   if(basePriceEl) new MutationObserver(syncPackagePrices).observe(basePriceEl,{childList:true,subtree:true,characterData:true});
-  if(prizeSource) new MutationObserver(()=>{if(heroPrize) heroPrize.textContent=prizeSource.textContent}).observe(prizeSource,{childList:true,subtree:true,characterData:true});
-  if(timerSource) new MutationObserver(()=>{if(heroTimer) heroTimer.textContent=timerSource.textContent}).observe(timerSource,{childList:true,subtree:true,characterData:true});
+  if(prizeSource) new MutationObserver(()=>{if(heroPrize) heroPrize.textContent=prizeSource.textContent;if(mobileHeroPrize)mobileHeroPrize.textContent=prizeSource.textContent}).observe(prizeSource,{childList:true,subtree:true,characterData:true});
+  if(timerSource) new MutationObserver(()=>{if(heroTimer) heroTimer.textContent=timerSource.textContent;if(mobileHeroTimer)mobileHeroTimer.textContent=timerSource.textContent}).observe(timerSource,{childList:true,subtree:true,characterData:true});
   syncPackagePrices();
+  if(heroPrize&&mobileHeroPrize) mobileHeroPrize.textContent=heroPrize.textContent;
+  if(heroTimer&&mobileHeroTimer) mobileHeroTimer.textContent=heroTimer.textContent;
 
   if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'));}
   let deferredPrompt;
