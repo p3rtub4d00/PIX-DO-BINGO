@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tvMachineEl = document.getElementById('tv-machine');
     const tvDynamicBallEl = document.getElementById('tv-dynamic-ball');
     const tvDrawStatusEl = document.getElementById('tv-draw-status');
+    const recentBallEls = [1,2,3,4,5].map(i => document.getElementById(`dash-recente-${i}`));
     const headlineAlertEl = document.getElementById('dash-headline-alert');
     const headlineSubEl = document.getElementById('dash-headline-sub');
     const tickerTextoEl = document.getElementById('dash-ticker-texto');
@@ -283,6 +284,31 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarVencedoresDaRodada(vencedores);
     }
 
+    function atualizarUltimosCinco(numeroAtual = null) {
+        if (!recentBallEls.length) return;
+
+        let limite = numerosSorteadosAtuais.length;
+        const atual = Number(numeroAtual);
+
+        if (Number.isFinite(atual)) {
+            const idx = numerosSorteadosAtuais.lastIndexOf(atual);
+            if (idx >= 0) limite = idx;
+        } else if (limite > 0) {
+            // Quando reconecta, a bola grande já é o último chamado.
+            limite = Math.max(0, limite - 1);
+        }
+
+        const anteriores = numerosSorteadosAtuais.slice(Math.max(0, limite - 5), limite);
+        const slots = Array(5 - anteriores.length).fill(null).concat(anteriores);
+
+        recentBallEls.forEach((el, index) => {
+            if (!el) return;
+            const valor = slots[index];
+            el.textContent = valor == null ? '--' : String(valor);
+            el.classList.toggle('empty', valor == null);
+        });
+    }
+
     function atualizarGloboSorteados(nums) {
         if (!globoContainer) return;
 
@@ -301,9 +327,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const ultimo = numerosSorteadosAtuais[numerosSorteadosAtuais.length - 1];
             if (ultimoNumeroEl) ultimoNumeroEl.textContent = String(ultimo);
             if (tvDrawStatusEl) tvDrawStatusEl.textContent = 'ÚLTIMA BOLA SORTEADA';
+            atualizarUltimosCinco(ultimo);
         } else {
             if (ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
             if (tvDrawStatusEl) tvDrawStatusEl.textContent = 'AGUARDANDO PRÓXIMA BOLA';
+            atualizarUltimosCinco(null);
         }
     }
 
@@ -317,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const el = document.getElementById(`dash-globo-${numero}`);
         if (el) el.classList.add('sorteado');
+        atualizarUltimosCinco(numero);
 
         if (tvMachineEl) {
             tvMachineEl.classList.remove('is-shuffling');
@@ -677,6 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
         numerosSorteadosAtuais = [];
         filaAnimacaoNumeros = [];
         animacaoNumeroEmAndamento = false;
+        atualizarUltimosCinco(null);
 
         if (tvMachineEl) tvMachineEl.classList.remove('is-shuffling', 'is-revealing');
         if (ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
