@@ -78,23 +78,23 @@
 <g filter="url(#ballShadow)" font-family="Inter,Arial,sans-serif" font-weight="900" text-anchor="middle" dominant-baseline="middle" fill="#071823">
   <g transform="translate(247 297)">
     <circle r="56" fill="url(#yellow)" stroke="#fff6ba" stroke-width="7"/><ellipse cx="-17" cy="-18" rx="17" ry="10" fill="#fff" opacity=".25"/>
-    <text y="4" font-size="33">17</text>
+    
   </g>
   <g transform="translate(322 430)">
     <circle r="58" fill="url(#blue)" stroke="#caefff" stroke-width="7"/><ellipse cx="-18" cy="-20" rx="18" ry="11" fill="#fff" opacity=".24"/>
-    <text y="4" font-size="33">28</text>
+    
   </g>
   <g transform="translate(457 431)">
     <circle r="58" fill="url(#red)" stroke="#ffd8dc" stroke-width="7"/><ellipse cx="-18" cy="-20" rx="18" ry="11" fill="#fff" opacity=".24"/>
-    <text y="4" font-size="33">09</text>
+    
   </g>
   <g transform="translate(518 316)">
     <circle r="54" fill="url(#purple)" stroke="#e9dfff" stroke-width="7"/><ellipse cx="-16" cy="-18" rx="16" ry="10" fill="#fff" opacity=".24"/>
-    <text y="4" font-size="31">56</text>
+    
   </g>
   <g transform="translate(470 196)">
     <circle r="48" fill="url(#greenBall)" stroke="#d7ffe8" stroke-width="7"/><ellipse cx="-15" cy="-16" rx="15" ry="9" fill="#fff" opacity=".25"/>
-    <text y="4" font-size="29">42</text>
+    
   </g>
 </g>
 
