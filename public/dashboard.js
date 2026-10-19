@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashPremioCheiaEl = document.getElementById('dash-premio-cheia');
     const btnToggleSom = document.getElementById('btn-toggle-som');
     const listaQuaseLaContainer = document.getElementById('lista-quase-la');
+    const vencedorLinhaEl = document.getElementById('dash-vencedor-linha');
+    const vencedorCheiaEl = document.getElementById('dash-vencedor-cheia');
+    const recentBallEls = [1,2,3,4,5].map(i => document.getElementById(`dash-recente-${i}`));
     const headlineAlertEl = document.getElementById('dash-headline-alert');
     const headlineSubEl = document.getElementById('dash-headline-sub');
     const tickerTextoEl = document.getElementById('dash-ticker-texto');
@@ -132,45 +135,77 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function atualizarVencedoresDaRodada(vencedores) {
+        const lista = Array.isArray(vencedores) ? vencedores : [];
+        const rodada = sorteioAtualId == null ? null : String(sorteioAtualId);
+        const candidatos = rodada
+            ? lista.filter(v => v?.sorteioId == null || String(v.sorteioId) === rodada)
+            : lista;
+
+        const linha = candidatos.find(v => String(v?.premio || '').toLowerCase().includes('linha'));
+        const cheia = candidatos.find(v => {
+            const premio = String(v?.premio || '').toLowerCase();
+            return premio.includes('cheia') || premio.includes('bingo');
+        });
+
+        if (vencedorLinhaEl) vencedorLinhaEl.textContent = linha?.nome || 'Aguardando...';
+        if (vencedorCheiaEl) vencedorCheiaEl.textContent = cheia?.nome || 'Aguardando...';
+    }
+
     function atualizarListaVencedores(vencedores, anunciar = false) {
-        if (!listaVencedoresContainer) return;
-        listaVencedoresContainer.innerHTML = '';
-        
-        if (!vencedores || vencedores.length === 0) {
-            listaVencedoresContainer.innerHTML = '<p>Nenhum ganhador ainda.</p>';
-            return;
+        if (listaVencedoresContainer) {
+            listaVencedoresContainer.innerHTML = '';
+
+            if (!vencedores || vencedores.length === 0) {
+                listaVencedoresContainer.innerHTML = '<p>Nenhum ganhador ainda.</p>';
+            } else {
+                vencedores.forEach((v, index) => {
+                    const div = document.createElement('div');
+                    div.textContent = `Sorteio #${v.sorteioId}: [${v.premio}] ${v.nome}`;
+                    if (index === 0 && anunciar) {
+                        div.classList.add('novo-vencedor');
+                        setTimeout(() => div.classList.remove('novo-vencedor'), 3000);
+                    }
+                    listaVencedoresContainer.appendChild(div);
+                });
+            }
         }
 
-        vencedores.forEach((v, index) => {
-            const div = document.createElement('div');
-            // Estilo compatível com o CSS atual
-            div.innerHTML = `Sorteio #${v.sorteioId}: <span class="premio-tag">[${v.premio}]</span> <span>${v.nome}</span>`;
-            
-            if (index === 0 && anunciar) {
-                div.classList.add('novo-vencedor');
-                setTimeout(() => div.classList.remove('novo-vencedor'), 3000);
-                const textoPremio = v.premio.includes('Linha') ? 'Linha' : 'Bingo';
-                falar(`Vencedor da ${textoPremio}: ${v.nome}`);
-                mostrarAnuncioVencedor(v.nome, v.premio);
-            }
-            listaVencedoresContainer.appendChild(div);
+        atualizarVencedoresDaRodada(vencedores);
+    }
+
+    function atualizarBolasRecentes(nums) {
+        numerosSorteadosAtuais = Array.isArray(nums)
+            ? nums.map(n => Number(n)).filter(n => Number.isFinite(n))
+            : [];
+
+        const anteriores = numerosSorteadosAtuais.slice(-6, -1);
+        const slots = Array(5 - anteriores.length).fill(null).concat(anteriores);
+
+        recentBallEls.forEach((el, index) => {
+            if (!el) return;
+            const valor = slots[index];
+            el.textContent = valor == null ? '•' : String(valor);
+            el.classList.toggle('empty', valor == null);
         });
     }
 
     function atualizarGloboSorteados(nums) {
         if (!globoContainer) return;
-        // Limpa anteriores
         document.querySelectorAll('.dash-globo-numero').forEach(el => el.classList.remove('sorteado'));
-        
-        if (nums && nums.length > 0) {
-            nums.forEach(n => {
+
+        const lista = Array.isArray(nums) ? nums : [];
+        if (lista.length > 0) {
+            lista.forEach(n => {
                 const el = document.getElementById(`dash-globo-${n}`);
                 if (el) el.classList.add('sorteado');
             });
-            if(ultimoNumeroEl) ultimoNumeroEl.textContent = nums[nums.length - 1];
-        } else {
-            if(ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
+            if (ultimoNumeroEl) ultimoNumeroEl.textContent = lista[lista.length - 1];
+        } else if (ultimoNumeroEl) {
+            ultimoNumeroEl.textContent = '--';
         }
+
+        atualizarBolasRecentes(lista);
     }
 
     // --- CORREÇÃO DO STATUS (LINHA -> CHEIA) ---
@@ -237,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 3. EXIBIÇÃO
-        filtrados.slice(0, 5).forEach(item => {
+        filtrados.slice(0, 4).forEach(item => {
             const row = document.createElement('div');
             row.className = 'quase-item';
 
@@ -245,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.faltam === 1) classeCor = 'vermelho';
             else if (item.faltam === 2) classeCor = 'laranja';
 
-            const nomeSeguro = item.nome ? item.nome.substring(0, 20) : 'Jogador';
+            const nomeSeguro = item.nome ? item.nome.substring(0, 36) : 'Jogador';
             const textoBolas = item.faltam === 1 ? 'BOLA' : 'BOLAS';
 
             row.innerHTML = `
@@ -399,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data) return;
         console.log("Estado Inicial:", data);
         gerarGlobo();
+        sorteioAtualId = data.sorteioId ?? sorteioAtualId;
         if(sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId || '...'}`;
         if(jogadoresTotalEl) jogadoresTotalEl.textContent = data.jogadoresOnline || '--';
         
@@ -431,6 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CORREÇÃO: Múltiplos listeners para garantir atualização de estado ---
     socket.on('estadoJogoUpdate', (data) => {
         console.log("Update de Estado:", data);
+        if (data.sorteioId) sorteioAtualId = data.sorteioId;
         if(data.sorteioId && sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId}`;
         atualizarEstadoVisual(data.estado);
     });
@@ -450,6 +487,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('contagemJogadores', (d) => { if(jogadoresTotalEl) jogadoresTotalEl.textContent = d.total; });
     socket.on('atualizarVencedores', (vencedores) => {
+        atualizarListaVencedores(vencedores, false);
+        atualizarListaVencedoresEspera(vencedores);
         atualizarVencedoresCarousel(vencedores);
 
         if (!Array.isArray(vencedores) || vencedores.length === 0) return;
