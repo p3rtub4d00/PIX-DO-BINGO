@@ -1,48 +1,46 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aguardando Sorteio</title>
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#ffffff">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="jogo.css">
-    
-    <style>
-        body.espera-body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
-        .espera-card { background: white; border-radius: 20px; padding: 30px; width: 100%; max-width: 450px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aguardando Sorteio | Pix do Bingo</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#061626">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="jogo.css">
+  <link rel="stylesheet" href="espera.css">
 </head>
-<body class="espera-body">
+<body class="espera-body premium-wait">
+  <main class="wait-shell">
+    <section class="wait-head">
+      <a class="game-brand" href="/">
+        <span class="game-brand-mark"><i></i><i></i><i></i><i></i></span>
+        <span><b>PIX <em>DO</em></b><strong>BINGO</strong></span>
+      </a>
+      <a href="/" class="wait-back"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+    </section>
 
-    <div class="espera-card">
-        <div class="game-logo" style="margin-bottom: 20px; font-size: 1.5rem;">BINGO<span class="highlight">PIX</span></div>
+    <section class="wait-card">
+      <div class="wait-status"><i></i> PRÓXIMO SORTEIO</div>
+      <div id="sorteio-id-display" class="badge-id">#CARREGANDO</div>
+      <h1>Suas cartelas já estão garantidas.</h1>
+      <p>Fique nesta tela. Assim que a rodada começar, você acompanha tudo em tempo real.</p>
+      <div class="wait-timer-label">O sorteio começa em</div>
+      <div id="cronometro" class="wait-timer">--:--</div>
 
-        <h1 style="font-size: 0.9rem; color: #64748b; margin-bottom: 5px;">PRÓXIMO SORTEIO:</h1>
-        
-        <div id="sorteio-id-display" class="badge-id" style="display:inline-block; margin-bottom:15px;">#CARREGANDO</div>
+      <div class="wait-divider"></div>
 
-        <div id="cronometro" style="color: #1e293b; font-size: 4rem; margin: 10px 0; font-weight: 900; font-family: 'Roboto', sans-serif;">--:--</div>
-        
-        <p style="color: #64748b; margin-bottom: 20px;">Aguarde o início...</p>
-        <hr style="border:0; border-top:1px solid #eee; margin-bottom:20px;">
-
-        <div class="cartela-controls" id="cartela-switcher">
-            <button id="btn-cartela-anterior" class="btn-nav"><i class="fa-solid fa-chevron-left"></i></button>
-            <span id="cartela-titulo-atual" class="paginacao-txt">Carregando...</span>
-            <button id="btn-cartela-proxima" class="btn-nav"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-
-        <div id="cartelas-container" style="display:flex; justify-content:center;"></div>
-
-        <div id="cartela-id-display" class="cartela-hash"></div>
-
-        <a href="/" class="btn-acao-primaria" style="display:block; text-decoration:none; margin-top:20px; background:white; color:#1e293b; border:1px solid #ddd;">Voltar</a>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="espera.js"></script>
+      <div class="cartela-controls" id="cartela-switcher">
+        <button id="btn-cartela-anterior" class="btn-nav"><i class="fa-solid fa-chevron-left"></i></button>
+        <span id="cartela-titulo-atual" class="paginacao-txt">Carregando...</span>
+        <button id="btn-cartela-proxima" class="btn-nav"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+      <div id="cartelas-container"></div>
+      <div id="cartela-id-display" class="cartela-hash"></div>
+    </section>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="espera.js"></script>
 </body>
 </html>
