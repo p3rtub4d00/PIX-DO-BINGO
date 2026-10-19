@@ -1,11 +1,11 @@
 {
-  "name": "Painel TV - Bingo do Pix",
-  "short_name": "PainelPix",
+  "name": "Pix do Bingo • Telão",
+  "short_name": "Pix Bingo TV",
   "start_url": "/dashboard.html",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#061626",
+  "theme_color": "#061626",
   "orientation": "landscape",
   "icons": [
     {
