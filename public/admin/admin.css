@@ -635,3 +635,106 @@ body.admin-body{font-family:'Inter',sans-serif;background:radial-gradient(circle
 @media(max-width:640px){
   .card.admin-section{padding:15px}.status-grid{grid-template-columns:1fr}.form-grupo-inline{grid-template-columns:1fr}.form-grupo-inline label{text-align:left}.content-header h1{font-size:1.15rem}.admin-section h2{font-size:.9rem}
 }
+
+
+/* ============================================================
+   FIDELIDADE AO DASHBOARD ADMINISTRATIVO DO FLYER
+   ============================================================ */
+body.admin-panel-body{
+  background:#f5f7f9;
+}
+.admin-sidebar{
+  width:230px;
+  background:linear-gradient(180deg,#061522,#071b2c);
+}
+.admin-content{
+  max-width:none;
+  padding:18px 22px 34px;
+}
+.content-header{
+  min-height:62px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 4px 12px;
+}
+.content-header h1{
+  font-size:1.18rem;
+  margin:0;
+}
+.content-header:after{
+  content:"Visão geral da operação";
+  color:#8294a3;
+  font-size:.68rem;
+  font-weight:700;
+}
+.admin-status-section{
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.admin-status-section>h2{
+  display:none;
+}
+.admin-status-section .status-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin:0 0 14px;
+}
+.admin-status-section .status-item{
+  position:relative;
+  min-height:92px;
+  padding:15px 14px;
+  border:1px solid #dfe6eb;
+  border-radius:11px;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.03);
+}
+.admin-status-section .status-item:before{
+  content:"";
+  position:absolute;
+  left:0;top:14px;bottom:14px;
+  width:3px;
+  border-radius:0 3px 3px 0;
+  background:#25d77f;
+}
+.admin-status-section .status-label{
+  display:block;
+  margin-bottom:7px;
+  color:#7a8d9d;
+  font-size:.58rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.admin-status-section .status-value{
+  display:block;
+  color:#102638;
+  font-size:1.05rem;
+  line-height:1.25;
+}
+.admin-status-section .status-value.status-destaque{
+  color:#10a961;
+  font-size:1.25rem;
+}
+.admin-status-section .status-item:nth-child(n+5){
+  min-height:75px;
+}
+.admin-section:not(.admin-status-section){
+  border-radius:11px;
+  box-shadow:0 1px 2px rgba(15,23,42,.03);
+}
+.admin-section:not(.admin-status-section)>h2{
+  font-size:.88rem;
+}
+@media(max-width:1100px){
+  .admin-status-section .status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  .admin-status-section .status-grid{grid-template-columns:1fr 1fr}
+  .content-header{align-items:flex-start;flex-direction:column;gap:3px}
+}
+@media(max-width:480px){
+  .admin-status-section .status-grid{grid-template-columns:1fr}
+}
