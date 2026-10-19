@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pix-do-bingo-qr-tv-v16'; // Nova versão para forçar reset
+const CACHE_NAME = 'pix-do-bingo-tv-fixo-v17'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
