@@ -48,11 +48,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
     const esperaVencedoresListaEl = document.getElementById('espera-vencedores-lista');
 
+    // Tela final profissional da rodada
+    const resultadoFinalOverlay = document.getElementById('resultado-final-overlay');
+    const finaleWinnerName = document.getElementById('finale-winner-name');
+    const finalePrizeValue = document.getElementById('finale-prize-value');
+    const finaleRoundId = document.getElementById('finale-round-id');
+    const finaleCardId = document.getElementById('finale-card-id');
+    const finaleParticipants = document.getElementById('finale-participants');
+    const finaleLineWinner = document.getElementById('finale-line-winner');
+    const finaleLineValue = document.getElementById('finale-line-value');
+    const finaleLastNumbers = document.getElementById('finale-last-numbers');
+    const finaleCountdown = document.getElementById('finale-countdown');
+    const finaleFinishedAt = document.getElementById('finale-finished-at');
+
     let ultimoEstadoConhecido = null;
     let contadorPingFalhas = 0;
     let vencedoresCarousel = [];
     let indiceVencedorCarousel = 0;
     let timerVencedorCarousel = null;
+    let timerResultadoFinal = null;
+    let resultadoFinalVisivel = false;
 
     // --- Lógica de Voz ---
     let somAtivo = false; 
@@ -99,6 +114,94 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = Math.floor(tempo / 60);
         const s = tempo % 60;
         return `${m}:${s < 10 ? '0' + s : s}`;
+    }
+
+    function ocultarResultadoFinal() {
+        if (timerResultadoFinal) {
+            clearInterval(timerResultadoFinal);
+            timerResultadoFinal = null;
+        }
+        resultadoFinalVisivel = false;
+        if (resultadoFinalOverlay) {
+            resultadoFinalOverlay.classList.remove('is-visible');
+            resultadoFinalOverlay.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    function renderizarNumerosFinais(numeros) {
+        if (!finaleLastNumbers) return;
+        finaleLastNumbers.innerHTML = '';
+
+        const lista = Array.isArray(numeros)
+            ? numeros.map(n => Number(n)).filter(Number.isFinite).slice(-10)
+            : [];
+
+        if (lista.length === 0) {
+            const vazio = document.createElement('span');
+            vazio.textContent = 'Sem números disponíveis';
+            vazio.style.color = '#8aa1b3';
+            vazio.style.gridColumn = '1 / -1';
+            vazio.style.textAlign = 'center';
+            finaleLastNumbers.appendChild(vazio);
+            return;
+        }
+
+        lista.forEach(numero => {
+            const bolinha = document.createElement('b');
+            bolinha.className = 'finale-number';
+            bolinha.textContent = String(numero);
+            finaleLastNumbers.appendChild(bolinha);
+        });
+    }
+
+    function mostrarResultadoFinal(data, { anunciar = true } = {}) {
+        if (!data || !resultadoFinalOverlay) return;
+
+        const vencedor = data.vencedor || {};
+        const linha = data.vencedorLinha || {};
+
+        if (finaleWinnerName) finaleWinnerName.textContent = vencedor.nome || 'Ganhador';
+        if (finalePrizeValue) finalePrizeValue.textContent = formatarBRL(vencedor.valor);
+        if (finaleRoundId) finaleRoundId.textContent = `#${data.sorteioId ?? '---'}`;
+        if (finaleCardId) finaleCardId.textContent = vencedor.cartelaId || '---';
+        if (finaleParticipants) finaleParticipants.textContent = String(data.participantes ?? '--');
+        if (finaleLineWinner) finaleLineWinner.textContent = linha.nome || 'Não informado';
+        if (finaleLineValue) finaleLineValue.textContent = formatarBRL(linha.valor);
+        if (finaleFinishedAt) {
+            const d = data.encerradoEm ? new Date(data.encerradoEm) : new Date();
+            finaleFinishedAt.textContent = `Encerrado às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        renderizarNumerosFinais(data.numerosSorteados);
+
+        if (anuncioEsperaOverlay) anuncioEsperaOverlay.classList.add('oculto');
+        if (anuncioVencedorOverlay) anuncioVencedorOverlay.style.display = 'none';
+
+        resultadoFinalVisivel = true;
+        resultadoFinalOverlay.classList.add('is-visible');
+        resultadoFinalOverlay.setAttribute('aria-hidden', 'false');
+
+        if (timerResultadoFinal) clearInterval(timerResultadoFinal);
+
+        const fallbackMs = Math.max(1, Number(data.duracaoSegundos) || 25) * 1000;
+        const alvo = Number(data.exibirAte) || (Date.now() + fallbackMs);
+
+        const atualizarContador = () => {
+            const restante = Math.max(0, Math.ceil((alvo - Date.now()) / 1000));
+            if (finaleCountdown) finaleCountdown.textContent = String(restante);
+            if (restante <= 0) {
+                clearInterval(timerResultadoFinal);
+                timerResultadoFinal = null;
+                ocultarResultadoFinal();
+            }
+        };
+
+        atualizarContador();
+        timerResultadoFinal = setInterval(atualizarContador, 250);
+
+        if (anunciar && typeof falar === 'function') {
+            falar(`Bingo encerrado! Parabéns ${vencedor.nome || 'ao ganhador'}. Você ganhou a cartela cheia no valor de ${formatarBRL(vencedor.valor)}.`);
+        }
     }
 
     function configurarQrCompra() {
@@ -516,6 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('atualizarQuaseLa', (data) => processarQuaseLa(data));
 
     socket.on('iniciarJogo', () => {
+        ocultarResultadoFinal();
         gerarGlobo();
         numerosSorteadosAtuais = [];
         atualizarBolasRecentes([]);
