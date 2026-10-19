@@ -2077,3 +2077,247 @@ body.premium-dashboard{
   0%{transform:scale(.55);opacity:.9}
   100%{transform:scale(1.55);opacity:0}
 }
+
+
+/* ============================================================
+   AJUSTE FINAL — 75 NÚMEROS À DIREITA + ÚLTIMOS 5 NO PÉ DO GLOBO
+   ============================================================ */
+.premium-dashboard .dashboard-main-fullscreen.reference-tv-layout{
+  grid-template-rows:minmax(0,1fr) 126px!important;
+  gap:9px!important;
+}
+.premium-dashboard .reference-tv-stage{
+  grid-template-columns:210px minmax(0,1fr) 300px!important;
+  grid-template-rows:1fr!important;
+  min-height:0!important;
+  height:100%!important;
+  gap:9px!important;
+  overflow:hidden!important;
+}
+
+/* Globo ocupa o centro e reserva uma faixa própria para os cinco anteriores */
+.premium-dashboard .reference-tv-machine{
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  display:grid!important;
+  grid-template-rows:minmax(0,1fr) 42px!important;
+  place-items:stretch!important;
+  padding:3px!important;
+  overflow:hidden!important;
+}
+.premium-dashboard .tv-machine-art{
+  grid-row:1!important;
+  width:min(100%,650px)!important;
+  height:100%!important;
+  min-height:0!important;
+  margin:auto!important;
+}
+.premium-dashboard .tv-machine-caption{
+  left:10px!important;
+  bottom:46px!important;
+  font-size:.5rem!important;
+}
+
+/* Últimos cinco chamados ANTES da bola grande atual */
+.tv-recent-footer{
+  grid-row:2;
+  min-width:0;
+  height:38px;
+  margin:0 7px 1px;
+  padding:4px 8px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:9px;
+  border:1px solid #1a4058;
+  border-radius:9px;
+  background:linear-gradient(145deg,#081d30,#0b283d);
+  box-shadow:0 6px 15px rgba(0,0,0,.14);
+  z-index:10;
+}
+.recent-footer-label{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  color:#7791a5;
+  font-size:.48rem;
+  font-weight:900;
+  letter-spacing:.06em;
+}
+.recent-footer-label i{color:#2cdf8a}
+.recent-footer-balls{
+  min-width:0;
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;
+}
+.recent-footer-balls b{
+  min-width:0;
+  height:27px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  color:#061824;
+  font-size:.69rem;
+  font-weight:900;
+  border:2px solid rgba(255,255,255,.45);
+  box-shadow:0 4px 9px rgba(0,0,0,.20),inset -3px -4px 6px rgba(0,0,0,.12);
+}
+.recent-footer-balls b:nth-child(1){background:#ffd35b}
+.recent-footer-balls b:nth-child(2){background:#63c5fb}
+.recent-footer-balls b:nth-child(3){background:#ff7181}
+.recent-footer-balls b:nth-child(4){background:#a47cf4}
+.recent-footer-balls b:nth-child(5){background:#55e99c}
+.recent-footer-balls b.empty{
+  opacity:.22;
+  color:transparent;
+}
+
+/* Painel completo de 1 a 75 volta para a direita do globo */
+.premium-dashboard .right-called-numbers{
+  display:flex!important;
+  flex-direction:column!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  padding:10px!important;
+  overflow:hidden!important;
+  border:1px solid #173a53!important;
+  border-radius:13px!important;
+  background:linear-gradient(145deg,#071a2b,#0a2338)!important;
+}
+.premium-dashboard .right-called-numbers .tv-board-head{
+  flex:0 0 34px!important;
+  min-height:34px!important;
+  height:34px!important;
+  margin:0 0 6px!important;
+  padding:0 1px 6px!important;
+}
+.premium-dashboard .right-called-numbers .tv-board-head h3{
+  font-size:.72rem!important;
+}
+.premium-dashboard .right-called-numbers #dash-globo-numeros{
+  flex:1 1 auto!important;
+  width:100%!important;
+  height:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  grid-template-rows:repeat(15,minmax(0,1fr))!important;
+  gap:3px!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+}
+.premium-dashboard .right-called-numbers #dash-globo-numeros .dash-globo-numero{
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  aspect-ratio:auto!important;
+  margin:0!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid #173f5a!important;
+  border-radius:6px!important;
+  background:#0b2940!important;
+  color:#68869b!important;
+  font-size:clamp(.5rem,.62vw,.69rem)!important;
+  line-height:1!important;
+  transform:none!important;
+  box-shadow:none!important;
+}
+.premium-dashboard .right-called-numbers #dash-globo-numeros .dash-globo-numero.sorteado{
+  background:linear-gradient(145deg,#2be98f,#0fcf73)!important;
+  border-color:#62f3ac!important;
+  color:#062318!important;
+  font-weight:900!important;
+  box-shadow:0 0 8px rgba(30,231,139,.22)!important;
+}
+
+/* A faixa inferior volta a ser exclusivamente Quase Lá */
+.premium-dashboard .tv-support-rail.almost-only{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  width:100%!important;
+  height:126px!important;
+  min-height:126px!important;
+  max-height:126px!important;
+  overflow:hidden!important;
+}
+.premium-dashboard .tv-support-rail.almost-only .almost-side.compact{
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  padding:8px 10px!important;
+  overflow:hidden!important;
+}
+.premium-dashboard .tv-support-rail.almost-only .almost-side.compact>.tv-side-kicker{
+  display:block!important;
+  height:22px!important;
+  line-height:18px!important;
+  margin:0 0 5px!important;
+  text-align:center!important;
+  font-size:.6rem!important;
+}
+.premium-dashboard .tv-support-rail.almost-only .almost-side.compact #lista-quase-la{
+  width:100%!important;
+  height:88px!important;
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:1fr!important;
+  gap:7px!important;
+  overflow:hidden!important;
+}
+.premium-dashboard .tv-support-rail.almost-only .almost-side.compact #lista-quase-la>p{
+  grid-column:1/-1!important;
+  display:grid!important;
+  place-items:center!important;
+  margin:0!important;
+}
+
+/* Neutraliza o layout inferior experimental anterior */
+.tv-bottom-zone{display:none!important}
+.bottom-called-numbers{display:none!important}
+.bottom-almost{display:none!important}
+
+/* Telas menores continuam fixas, sem scroll */
+@media(max-width:1280px){
+  .premium-dashboard .reference-tv-stage{
+    grid-template-columns:195px minmax(0,1fr) 270px!important;
+  }
+  .premium-dashboard .reference-tv-machine{
+    grid-template-rows:minmax(0,1fr) 40px!important;
+  }
+  .tv-recent-footer{height:36px;margin-inline:5px}
+  .recent-footer-balls b{height:25px;font-size:.62rem}
+}
+@media(max-width:980px){
+  html,body.premium-dashboard{overflow:hidden!important}
+  .premium-dashboard .dashboard-main-fullscreen.reference-tv-layout{
+    height:calc(100vh - 70px)!important;
+    min-height:0!important;
+    overflow:hidden!important;
+    grid-template-rows:minmax(0,1fr) 118px!important;
+  }
+  .premium-dashboard .reference-tv-stage{
+    grid-template-columns:180px minmax(0,1fr) 245px!important;
+    grid-template-rows:1fr!important;
+  }
+  .premium-dashboard .right-called-numbers{min-height:0!important}
+  .premium-dashboard .tv-support-rail.almost-only{
+    height:118px!important;
+    min-height:118px!important;
+    max-height:118px!important;
+  }
+  .premium-dashboard .tv-support-rail.almost-only .almost-side.compact #lista-quase-la{
+    height:81px!important;
+  }
+  .recent-footer-label{font-size:.43rem}
+  .recent-footer-balls{gap:4px}
+  .recent-footer-balls b{height:24px;font-size:.58rem}
+}
