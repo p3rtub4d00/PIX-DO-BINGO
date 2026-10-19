@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const listaQuaseLaContainer = document.getElementById('lista-quase-la');
     const vencedorLinhaEl = document.getElementById('dash-vencedor-linha');
     const vencedorCheiaEl = document.getElementById('dash-vencedor-cheia');
-    const recentBallEls = [1,2,3,4,5].map(i => document.getElementById(`dash-recente-${i}`));
+    const tvMachineEl = document.getElementById('tv-machine');
+    const tvDynamicBallEl = document.getElementById('tv-dynamic-ball');
+    const tvDrawStatusEl = document.getElementById('tv-draw-status');
     const headlineAlertEl = document.getElementById('dash-headline-alert');
     const headlineSubEl = document.getElementById('dash-headline-sub');
     const tickerTextoEl = document.getElementById('dash-ticker-texto');
@@ -68,6 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let timerVencedorCarousel = null;
     let timerResultadoFinal = null;
     let resultadoFinalVisivel = false;
+    let numerosSorteadosAtuais = [];
+    let filaAnimacaoNumeros = [];
+    let animacaoNumeroEmAndamento = false;
+    let timerAnimacaoNumero = null;
 
     // --- Lógica de Voz ---
     let somAtivo = false; 
@@ -277,38 +283,90 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarVencedoresDaRodada(vencedores);
     }
 
-    function atualizarBolasRecentes(nums) {
-        numerosSorteadosAtuais = Array.isArray(nums)
-            ? nums.map(n => Number(n)).filter(n => Number.isFinite(n))
-            : [];
-
-        const anteriores = numerosSorteadosAtuais.slice(-6, -1);
-        const slots = Array(5 - anteriores.length).fill(null).concat(anteriores);
-
-        recentBallEls.forEach((el, index) => {
-            if (!el) return;
-            const valor = slots[index];
-            el.textContent = valor == null ? '•' : String(valor);
-            el.classList.toggle('empty', valor == null);
-        });
-    }
-
     function atualizarGloboSorteados(nums) {
         if (!globoContainer) return;
+
         document.querySelectorAll('.dash-globo-numero').forEach(el => el.classList.remove('sorteado'));
 
-        const lista = Array.isArray(nums) ? nums : [];
-        if (lista.length > 0) {
-            lista.forEach(n => {
-                const el = document.getElementById(`dash-globo-${n}`);
-                if (el) el.classList.add('sorteado');
-            });
-            if (ultimoNumeroEl) ultimoNumeroEl.textContent = lista[lista.length - 1];
-        } else if (ultimoNumeroEl) {
-            ultimoNumeroEl.textContent = '--';
+        numerosSorteadosAtuais = Array.isArray(nums)
+            ? nums.map(n => Number(n)).filter(Number.isFinite)
+            : [];
+
+        numerosSorteadosAtuais.forEach(n => {
+            const el = document.getElementById(`dash-globo-${n}`);
+            if (el) el.classList.add('sorteado');
+        });
+
+        if (numerosSorteadosAtuais.length > 0) {
+            const ultimo = numerosSorteadosAtuais[numerosSorteadosAtuais.length - 1];
+            if (ultimoNumeroEl) ultimoNumeroEl.textContent = String(ultimo);
+            if (tvDrawStatusEl) tvDrawStatusEl.textContent = 'ÚLTIMA BOLA SORTEADA';
+        } else {
+            if (ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
+            if (tvDrawStatusEl) tvDrawStatusEl.textContent = 'AGUARDANDO PRÓXIMA BOLA';
+        }
+    }
+
+    function finalizarAnimacaoNumero(numero) {
+        if (ultimoNumeroEl) {
+            ultimoNumeroEl.textContent = String(numero);
+            ultimoNumeroEl.classList.remove('novo-numero');
+            void ultimoNumeroEl.offsetWidth;
+            ultimoNumeroEl.classList.add('novo-numero');
         }
 
-        atualizarBolasRecentes(lista);
+        const el = document.getElementById(`dash-globo-${numero}`);
+        if (el) el.classList.add('sorteado');
+
+        if (tvMachineEl) {
+            tvMachineEl.classList.remove('is-shuffling');
+            tvMachineEl.classList.add('is-revealing');
+        }
+
+        if (tvDrawStatusEl) tvDrawStatusEl.textContent = `BOLA ${numero} SORTEADA!`;
+        if (tickerTextoEl) tickerTextoEl.textContent = `🎱 Saiu a pedra ${numero}`;
+
+        falar(`${numero}`);
+
+        setTimeout(() => {
+            if (tvMachineEl) tvMachineEl.classList.remove('is-revealing');
+            if (tvDrawStatusEl) tvDrawStatusEl.textContent = 'AGUARDANDO PRÓXIMA BOLA';
+        }, 900);
+    }
+
+    function processarFilaAnimacaoNumeros() {
+        if (animacaoNumeroEmAndamento || filaAnimacaoNumeros.length === 0) return;
+
+        const numero = filaAnimacaoNumeros.shift();
+        animacaoNumeroEmAndamento = true;
+
+        if (tvMachineEl) {
+            tvMachineEl.classList.remove('is-revealing');
+            tvMachineEl.classList.add('is-shuffling');
+        }
+        if (tvDrawStatusEl) tvDrawStatusEl.textContent = 'MISTURANDO AS BOLAS...';
+
+        if (timerAnimacaoNumero) clearTimeout(timerAnimacaoNumero);
+        timerAnimacaoNumero = setTimeout(() => {
+            finalizarAnimacaoNumero(numero);
+
+            setTimeout(() => {
+                animacaoNumeroEmAndamento = false;
+                processarFilaAnimacaoNumeros();
+            }, 950);
+        }, 1450);
+    }
+
+    function enfileirarNumeroSorteado(valor) {
+        const numero = Number(valor);
+        if (!Number.isFinite(numero)) return;
+
+        // Evita repetir uma bola recebida novamente durante reconexão.
+        if (numerosSorteadosAtuais.includes(numero)) return;
+
+        numerosSorteadosAtuais.push(numero);
+        filaAnimacaoNumeros.push(numero);
+        processarFilaAnimacaoNumeros();
     }
 
     // --- CORREÇÃO DO STATUS (LINHA -> CHEIA) ---
@@ -587,29 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('novoNumeroSorteado', (n) => {
-        const numero = Number(n);
-
-        if (ultimoNumeroEl) {
-            ultimoNumeroEl.textContent = Number.isFinite(numero) ? numero : n;
-            ultimoNumeroEl.classList.remove('novo-numero');
-            void ultimoNumeroEl.offsetWidth;
-            ultimoNumeroEl.classList.add('novo-numero');
-        }
-
-        const el = document.getElementById(`dash-globo-${n}`);
-        if (el) el.classList.add('sorteado');
-
-        if (Number.isFinite(numero)) {
-            // O servidor envia cada pedra uma vez. Mantemos o histórico local
-            // para que as cinco bolas menores sejam sempre os chamados anteriores.
-            if (!numerosSorteadosAtuais.includes(numero)) {
-                numerosSorteadosAtuais.push(numero);
-            }
-            atualizarBolasRecentes(numerosSorteadosAtuais);
-        }
-
-        falar(`${n}`);
-        if (tickerTextoEl) tickerTextoEl.textContent = `🎱 Saiu a pedra ${n}`;
+        enfileirarNumeroSorteado(n);
     });
 
     socket.on('contagemJogadores', (d) => { if(jogadoresTotalEl) jogadoresTotalEl.textContent = d.total; });
@@ -632,10 +668,19 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('iniciarJogo', () => {
         ocultarResultadoFinal();
         gerarGlobo();
-        numerosSorteadosAtuais = [];
-        atualizarBolasRecentes([]);
 
+        if (timerAnimacaoNumero) {
+            clearTimeout(timerAnimacaoNumero);
+            timerAnimacaoNumero = null;
+        }
+
+        numerosSorteadosAtuais = [];
+        filaAnimacaoNumeros = [];
+        animacaoNumeroEmAndamento = false;
+
+        if (tvMachineEl) tvMachineEl.classList.remove('is-shuffling', 'is-revealing');
         if (ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
+        if (tvDrawStatusEl) tvDrawStatusEl.textContent = 'AGUARDANDO PRÓXIMA BOLA';
         if (vencedorLinhaEl) vencedorLinhaEl.textContent = 'Aguardando...';
         if (vencedorCheiaEl) vencedorCheiaEl.textContent = 'Aguardando...';
 
