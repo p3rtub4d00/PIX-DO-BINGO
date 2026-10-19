@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pix-do-bingo-telao-fix-v14'; // Nova versão para forçar reset
+const CACHE_NAME = 'pix-do-bingo-telao-dinamico-v15'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
