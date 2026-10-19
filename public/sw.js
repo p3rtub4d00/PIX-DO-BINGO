@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pix-do-bingo-finale-v18'; // Nova versão para forçar reset
+const CACHE_NAME = 'pix-do-bingo-cartelas-fix-v19'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
