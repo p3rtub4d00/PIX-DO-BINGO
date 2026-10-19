@@ -1,88 +1,58 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seja um Revendedor - Bingo do Pix</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#00C853">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <link rel="stylesheet" href="style.css"> 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parceiro Revendedor | Pix do Bingo</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#061626">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{margin:0;font-family:Inter,sans-serif;background:#f5f7f9;color:#132238}
+    .partner-hero{background:radial-gradient(circle at 75% 30%,rgba(37,215,127,.15),transparent 30%),#061626;color:#fff;padding:28px 20px 70px}
+    .partner-nav{max-width:1080px;margin:auto;display:flex;justify-content:space-between;align-items:center}
+    .partner-brand{font-weight:900;font-size:1.2rem}.partner-brand span{color:#25d77f}
+    .partner-back{color:#a8bac8;text-decoration:none;font-size:.8rem}
+    .partner-copy{max-width:1080px;margin:70px auto 0;display:grid;grid-template-columns:1fr .8fr;gap:40px;align-items:center}
+    .partner-copy h1{font-size:3.5rem;line-height:.98;margin:0 0 16px}.partner-copy h1 span{color:#25d77f}
+    .partner-copy p{color:#9bb0c0;line-height:1.6}
+    .partner-stat{border:1px solid #173a50;background:#0b2135;border-radius:18px;padding:26px}
+    .partner-stat strong{font-size:2.4rem;color:#25d77f}.partner-stat small{display:block;color:#8fa5b6;margin-top:4px}
+    .partner-main{max-width:1080px;margin:-36px auto 50px;padding:0 18px}
+    .partner-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .partner-card{background:#fff;border:1px solid #e1e8ed;border-radius:16px;padding:22px}.partner-card i{color:#18b96d;font-size:1.35rem}.partner-card h3{font-size:1rem}.partner-card p{font-size:.75rem;color:#718598;line-height:1.55}
+    .partner-login{margin-top:14px;background:#0a2237;color:#fff;border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+    .partner-login p{color:#8fa5b6;font-size:.78rem}.partner-btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:#25d77f;color:#062619;padding:12px 16px;border-radius:10px;font-weight:900;font-size:.78rem}
+    @media(max-width:700px){.partner-copy{grid-template-columns:1fr;margin-top:42px}.partner-copy h1{font-size:2.5rem}.partner-grid{grid-template-columns:1fr}.partner-login{align-items:flex-start;flex-direction:column}}
+  </style>
 </head>
 <body>
-
-    <header class="hero-header">
-        <div class="top-bar">
-            <div class="logo-area">
-                <i class="fa-solid fa-gem logo-icon"></i> BINGO<span class="highlight">PIX</span>
-            </div>
-            <a href="/" class="btn-revendedor-outline">
-                <i class="fa-solid fa-house"></i> Voltar ao Início
-            </a>
-        </div>
-        
-        <div class="hero-content">
-            <h1 class="main-title">PARCEIRO <br>REVENDEDOR</h1>
-            <p class="subtitle">Lucre alto vendendo cartelas na sua região.</p>
-        </div>
-    </header>
-
-    <main class="container">
-
-        <section class="card animate-up">
-            <h2 class="section-title" style="text-align: center; border: none; margin-bottom: 5px;">Já é parceiro?</h2>
-            <p style="color: #64748b; margin-bottom: 20px;">Acesse seu painel para vender e imprimir cartelas.</p>
-            
-            <a href="/cambista/login.html" class="btn-action btn-green pulse" style="display: block; text-decoration: none; line-height: 1.5;">
-                <i class="fa-solid fa-right-to-bracket"></i> ACESSAR PAINEL DO CAMBISTA
-            </a>
-        </section>
-
-        <section class="card animate-up delay-1">
-            <h2 class="section-title">Por que revender?</h2>
-            
-            <div class="premios-grid">
-                <div class="premio-card">
-                    <div class="icon-trophy" style="color: #00C853; font-size: 2rem; margin-bottom: 10px;"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-                    <span class="label">Alta Lucratividade</span>
-                    <p class="sub" style="margin-top: 5px;">Ganhe comissão por cada cartela vendida.</p>
-                </div>
-                
-                <div class="premio-card">
-                    <div class="icon-medal" style="color: #2962FF; font-size: 2rem; margin-bottom: 10px;"><i class="fa-solid fa-print"></i></div>
-                    <span class="label">Sistema Fácil</span>
-                    <p class="sub" style="margin-top: 5px;">Imprima cartelas na hora ou envie pelo Zap.</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="card animate-up delay-2">
-            <h2 class="section-title">Como Funciona?</h2>
-            <div class="regras-conteudo" style="padding: 0;">
-                <p><strong>1. Cadastro:</strong> Entre em contato com a administração para criar seu cadastro.</p>
-                <p><strong>2. Créditos:</strong> Adquira créditos pré-pagos com desconto.</p>
-                <p><strong>3. Venda:</strong> Venda as cartelas pelo preço cheio e fique com o lucro na hora!</p>
-                <p><strong>4. Impressão:</strong> Use o painel para imprimir cartelas em impressoras térmicas ou A4.</p>
-            </div>
-            
-            <a href="https://wa.me/5569999083361" target="_blank" class="btn-outline" style="display: block; text-decoration: none; margin-top: 20px; text-align: center;">
-                <i class="fa-brands fa-whatsapp"></i> Falar com Admin
-            </a>
-        </section>
-
-    </main>
-
-    <footer>
-        <div class="footer-content">
-            <p>&copy; 2024 Bingo do Pix.</p>
-            <div class="legal-box">
-                <p class="legal-sub">Área restrita para parceiros comerciais.</p>
-            </div>
-        </div>
-    </footer>
-
+  <section class="partner-hero">
+    <div class="partner-nav">
+      <div class="partner-brand">PIX <span>DO</span> BINGO</div>
+      <a href="/" class="partner-back"><i class="fa-solid fa-arrow-left"></i> Voltar ao início</a>
+    </div>
+    <div class="partner-copy">
+      <div>
+        <span class="live-chip"><span></span> PARCEIROS PIX DO BINGO</span>
+        <h1>Venda cartelas.<br><span>Aumente sua renda.</span></h1>
+        <p>Use o painel de cambista para registrar vendas físicas, imprimir cartelas e acompanhar suas comissões online.</p>
+      </div>
+      <div class="partner-stat"><small>MODELO DE PARCERIA</small><strong>Venda + comissão</strong><small>Operação simples pelo celular ou computador.</small></div>
+    </div>
+  </section>
+  <main class="partner-main">
+    <div class="partner-grid">
+      <article class="partner-card"><i class="fa-solid fa-hand-holding-dollar"></i><h3>Ganhe por venda</h3><p>Venda cartelas e acompanhe seus créditos e comissões dentro do próprio painel.</p></article>
+      <article class="partner-card"><i class="fa-solid fa-print"></i><h3>Impressão rápida</h3><p>Gere cartelas físicas para impressora térmica ou A4 diretamente no sistema.</p></article>
+      <article class="partner-card"><i class="fa-solid fa-link"></i><h3>Link de afiliado</h3><p>Compartilhe seu link e receba comissão sobre as compras online vinculadas ao seu cadastro.</p></article>
+    </div>
+    <section class="partner-login">
+      <div><h2>Já é parceiro?</h2><p>Acesse seu painel para vender, consultar saldo e imprimir cartelas.</p></div>
+      <a href="/cambista/login.html" class="partner-btn"><i class="fa-solid fa-right-to-bracket"></i> Acessar painel</a>
+    </section>
+  </main>
 </body>
 </html>
