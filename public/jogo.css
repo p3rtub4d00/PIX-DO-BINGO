@@ -49,3 +49,107 @@ body{font-family:'Inter',sans-serif}
   #globo-numeros{grid-template-columns:repeat(10,1fr);gap:4px}.globo-numero{font-size:.68rem}
   .section-head-game{align-items:flex-start;flex-direction:column}.auto-mark{display:none}
 }
+
+
+/* ============================================================
+   FIDELIDADE À TELA MOBILE/TABLET DO FLYER
+   ============================================================ */
+.premium-game{
+  background:
+    radial-gradient(circle at 50% 0%,rgba(35,230,136,.10),transparent 30%),
+    linear-gradient(180deg,#061522,#071b2b);
+  color:#fff;
+}
+.premium-game .game-shell{max-width:1050px}
+.premium-game .game-live-card,
+.premium-game .draw-history-card,
+.premium-game .premium-cards-wrap{
+  border-color:#173a52;
+  background:linear-gradient(145deg,#081c2e,#0b2438);
+  box-shadow:0 14px 36px rgba(0,0,0,.16);
+  color:#fff;
+}
+.premium-game .game-live-card{
+  min-height:210px;
+  background:
+    radial-gradient(circle at 88% 22%,rgba(36,226,136,.10),transparent 25%),
+    linear-gradient(145deg,#081c2e,#0a263a);
+}
+.premium-game .section-head-game h2{color:#fff}
+.premium-game .section-head-game .game-kicker{color:#48e99e}
+.premium-game .auto-mark,
+.premium-game .card-status{
+  background:#0c3a2c;
+  border:1px solid #166a49;
+  color:#71efb0;
+}
+.premium-game #globo-numeros{
+  grid-template-columns:repeat(15,1fr);
+}
+.premium-game .globo-numero{
+  background:#0c2940;
+  border-color:#1b405c;
+  color:#7690a5;
+}
+.premium-game .globo-numero.sorteado{
+  background:linear-gradient(145deg,#25e188,#12ad63);
+  color:#062518;
+  border-color:#35ec96;
+}
+.premium-game .cartela-controls{
+  justify-content:flex-start;
+  margin:4px 0 12px;
+}
+.premium-game .btn-nav{
+  background:#0a2b42;
+  border-color:#1a405d;
+  color:#d9e6ef;
+}
+.premium-game .paginacao-txt{color:#5ceba4}
+.premium-game #cartelas-container{
+  align-items:flex-start;
+}
+.premium-game .cartela-jogador{
+  max-width:none;
+  width:min(540px,100%);
+  border:1px solid #25db82;
+  border-radius:11px;
+  padding:7px;
+  box-shadow:0 12px 30px rgba(0,0,0,.22);
+}
+.premium-game .cartela-header{
+  border-radius:5px;
+  background:#0b6e4c;
+  color:#fff;
+  font-size:.84rem;
+}
+.premium-game .cartela-numero{
+  border-radius:5px;
+  background:#fff;
+  border-color:#dbe4ea;
+  color:#102335;
+}
+.premium-game .cartela-numero.free{
+  background:#dff7e9;
+  color:#087d49;
+}
+.premium-game .cartela-hash{color:#688298}
+@media(min-width:760px){
+  .premium-game .premium-cards-wrap{
+    padding:18px;
+  }
+  .premium-game #cartelas-container{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .premium-game .cartela-jogador{
+    width:100%;
+    max-width:none;
+  }
+}
+@media(max-width:650px){
+  .premium-game{background:#061522}
+  .premium-game .game-live-card{min-height:auto}
+  .premium-game #globo-numeros{grid-template-columns:repeat(10,1fr)}
+}
