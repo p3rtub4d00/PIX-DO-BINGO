@@ -473,14 +473,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('novoNumeroSorteado', (n) => {
-        if(ultimoNumeroEl) ultimoNumeroEl.textContent = n;
+        const numero = Number(n);
+
         if (ultimoNumeroEl) {
+            ultimoNumeroEl.textContent = Number.isFinite(numero) ? numero : n;
             ultimoNumeroEl.classList.remove('novo-numero');
             void ultimoNumeroEl.offsetWidth;
             ultimoNumeroEl.classList.add('novo-numero');
         }
+
         const el = document.getElementById(`dash-globo-${n}`);
-        if(el) el.classList.add('sorteado');
+        if (el) el.classList.add('sorteado');
+
+        if (Number.isFinite(numero)) {
+            // O servidor envia cada pedra uma vez. Mantemos o histórico local
+            // para que as cinco bolas menores sejam sempre os chamados anteriores.
+            if (!numerosSorteadosAtuais.includes(numero)) {
+                numerosSorteadosAtuais.push(numero);
+            }
+            atualizarBolasRecentes(numerosSorteadosAtuais);
+        }
+
         falar(`${n}`);
         if (tickerTextoEl) tickerTextoEl.textContent = `🎱 Saiu a pedra ${n}`;
     });
@@ -504,10 +517,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('iniciarJogo', () => {
         gerarGlobo();
-        if(ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
+        numerosSorteadosAtuais = [];
+        atualizarBolasRecentes([]);
+
+        if (ultimoNumeroEl) ultimoNumeroEl.textContent = '--';
+        if (vencedorLinhaEl) vencedorLinhaEl.textContent = 'Aguardando...';
+        if (vencedorCheiaEl) vencedorCheiaEl.textContent = 'Aguardando...';
+
         anuncioEsperaOverlay.classList.add('oculto');
         atualizarEstadoVisual('JOGANDO_LINHA');
-        if(listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Iniciando...</p>';
+
+        if (listaQuaseLaContainer) listaQuaseLaContainer.innerHTML = '<p>Iniciando...</p>';
         if (tickerTextoEl) tickerTextoEl.textContent = '🚀 Jogo iniciado! Boa sorte a todos!';
     });
 
