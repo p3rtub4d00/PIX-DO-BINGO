@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bingo-pix-V11-DASHBOARD-PWA'; // Nova versão para forçar reset
+const CACHE_NAME = 'pix-do-bingo-redesign-v12'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
