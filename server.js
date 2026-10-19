@@ -374,7 +374,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
     }
 });
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '12mb' }));
 
 // --- VARIÁVEIS GLOBAIS DE MEMÓRIA ---
 let PREMIO_LINHA = '100.00', PREMIO_CHEIA = '500.00', PRECO_CARTELA = '5.00';
@@ -434,6 +434,7 @@ async function salvarEstadoJogo() {
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/dashboard-real', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+app.get('/anuncie', (req, res) => res.sendFile(path.join(__dirname, 'public', 'anuncie.html')));
 app.get('/ping', (req, res) => res.send('pong'));
 
 function lerCartelasDaVenda(venda) {
