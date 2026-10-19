@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Telão | Pix do Bingo</title>
   <meta name="theme-color" content="#061626">
-<link rel="stylesheet" href="dashboard.css?v=telao-dinamico-20261019">
+<link rel="stylesheet" href="dashboard.css?v=qr-visivel-20261019">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -89,6 +89,18 @@
           <strong id="dash-vencedor-cheia">Aguardando...</strong>
         </div>
       </div>
+
+      <section id="acesso-mobile" class="tv-qr-primary">
+        <div class="tv-qr-copy">
+          <span class="tv-side-kicker"><i class="fa-solid fa-qrcode"></i> JOGUE PELO CELULAR</span>
+          <h3>Escaneie para comprar</h3>
+          <p>Compre suas cartelas pelo celular.</p>
+          <small id="dashboard-qr-url">Carregando link...</small>
+        </div>
+        <a id="dashboard-qr-link" href="/" target="_blank" rel="noopener noreferrer" class="tv-qr-link">
+          <img id="dashboard-qr-img" alt="QR Code para compra de cartelas" loading="lazy">
+        </a>
+      </section>
     </aside>
 
     <section class="reference-tv-machine">
@@ -110,11 +122,8 @@
     </section>
   </section>
 
-  <section class="tv-support-rail">
-    <section id="acesso-mobile" class="tv-side-card qr-side compact">
-      <div><span class="tv-side-kicker">JOGUE PELO CELULAR</span><h2>Escaneie e compre suas cartelas</h2><small id="dashboard-qr-url">Carregando link...</small></div>
-      <a id="dashboard-qr-link" href="/" target="_blank" rel="noopener noreferrer"><img id="dashboard-qr-img" alt="QR Code para compra de cartelas" loading="lazy"></a>
-    </section>
+  <section class="tv-support-rail almost-only">
+
     <section id="quase-la" class="tv-side-card almost-side compact">
       <span class="tv-side-kicker">QUASE LÁ</span>
       <div id="lista-quase-la"><p>Aguardando...</p></div>
@@ -123,6 +132,6 @@
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="dashboard.js?v=telao-dinamico-20261019"></script>
+<script src="dashboard.js?v=qr-visivel-20261019"></script>
 </body>
 </html>
