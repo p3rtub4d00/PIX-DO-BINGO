@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Anuncie no Pix do Bingo</title>
+  <meta name="theme-color" content="#061626">
+  <link rel="stylesheet" href="/anuncie.css?v=20261019">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header class="ad-header">
+    <a href="/" class="ad-brand">
+      <span class="ad-brand-mark"><i></i><i></i><i></i><i></i></span>
+      <span><b>PIX <em>DO</em></b><strong>BINGO</strong></span>
+    </a>
+    <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+  </header>
+
+  <main>
+    <section class="ad-hero">
+      <div class="ad-hero-copy">
+        <span class="eyebrow"><i class="fa-solid fa-bullhorn"></i> PUBLICIDADE NO TELÃO</span>
+        <h1>Coloque sua marca em <span>destaque</span> durante os sorteios.</h1>
+        <p>Escolha o período, pague por PIX, envie sua arte e acompanhe o status. O anúncio entra na rotação do telão depois da aprovação.</p>
+        <div class="trust-row">
+          <span><i class="fa-brands fa-pix"></i> Pagamento por PIX</span>
+          <span><i class="fa-solid fa-display"></i> Exibição no telão</span>
+          <span><i class="fa-solid fa-shield-halved"></i> Aprovação antes de publicar</span>
+        </div>
+      </div>
+      <div class="screen-preview">
+        <div class="screen-top">PRÓXIMO SORTEIO</div>
+        <div class="screen-ad">
+          <div class="screen-ad-copy">
+            <small>SUA MARCA AQUI</small>
+            <strong>Publicidade em destaque</strong>
+            <span>alcance o público que acompanha o bingo</span>
+          </div>
+          <i class="fa-solid fa-bullhorn"></i>
+        </div>
+        <div class="screen-bottom">
+          <span>ÚLTIMO GANHADOR</span><span>QR CODE</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="steps">
+      <div><b>1</b><span>Escolha o plano</span></div>
+      <div><b>2</b><span>Pague por PIX</span></div>
+      <div><b>3</b><span>Envie sua arte</span></div>
+      <div><b>4</b><span>Aguarde aprovação</span></div>
+    </section>
+
+    <section class="plans-section" id="planos">
+      <div class="section-head">
+        <div><span>PLANOS</span><h2>Escolha por quanto tempo sua marca ficará no ar</h2></div>
+        <p>Valores e períodos são definidos pelo administrador.</p>
+      </div>
+      <div id="plans-grid" class="plans-grid"><div class="loading-card">Carregando planos...</div></div>
+    </section>
+
+    <section id="checkout-section" class="checkout-section hidden">
+      <div class="checkout-card">
+        <div class="checkout-title"><span>SEUS DADOS</span><h2>Finalizar contratação</h2></div>
+        <div id="selected-plan" class="selected-plan"></div>
+        <form id="ad-form">
+          <label>Empresa / marca<input id="empresa" required maxlength="120" placeholder="Ex.: Conteiner Beer"></label>
+          <label>Responsável<input id="responsavel" required maxlength="120" placeholder="Seu nome"></label>
+          <label>WhatsApp<input id="whatsapp" required inputmode="tel" placeholder="(69) 99999-9999"></label>
+          <label>E-mail<input id="email" required type="email" placeholder="contato@empresa.com"></label>
+          <button id="btn-generate-pix" type="submit">GERAR PIX <i class="fa-brands fa-pix"></i></button>
+        </form>
+      </div>
+    </section>
+
+    <section id="pix-section" class="payment-section hidden">
+      <div class="payment-card">
+        <span class="payment-kicker">PAGAMENTO</span>
+        <h2>Escaneie o QR Code PIX</h2>
+        <img id="pix-image" class="pix-image" alt="QR Code PIX">
+        <div class="copy-row"><input id="pix-code" readonly><button id="copy-pix">Copiar</button></div>
+        <div class="payment-wait"><i class="fa-solid fa-circle-notch fa-spin"></i><span id="payment-status">Aguardando pagamento...</span></div>
+      </div>
+    </section>
+
+    <section id="upload-section" class="upload-section hidden">
+      <div class="upload-card">
+        <span class="payment-kicker">MATERIAL DO ANÚNCIO</span>
+        <h2>Pagamento aprovado. Envie sua arte.</h2>
+        <p id="upload-limit-text">Envie JPG, PNG ou WebP.</p>
+        <label class="drop-zone" for="ad-images">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <strong>Selecionar imagem(ns)</strong>
+          <small>Recomendado: 16:9 • máximo de 2,5 MB por imagem</small>
+          <input id="ad-images" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+        </label>
+        <div id="preview-grid" class="preview-grid"></div>
+        <button id="btn-upload" class="upload-btn" type="button">ENVIAR PARA APROVAÇÃO</button>
+      </div>
+    </section>
+
+    <section id="done-section" class="done-section hidden">
+      <div class="done-card">
+        <i class="fa-solid fa-circle-check"></i>
+        <h2>Material recebido!</h2>
+        <p>Seu anúncio está aguardando aprovação. O período contratado começa somente quando ele for aprovado e ativado.</p>
+        <span id="done-status">Status: aguardando aprovação</span>
+      </div>
+    </section>
+
+    <section class="rules">
+      <h2>Como funciona</h2>
+      <div class="rules-grid">
+        <article><i class="fa-solid fa-image"></i><b>Arte legível</b><p>Use pouco texto, bom contraste e formato horizontal para aproveitar melhor o telão.</p></article>
+        <article><i class="fa-solid fa-user-shield"></i><b>Revisão manual</b><p>Todo material é revisado antes de aparecer. Conteúdo inadequado pode ser rejeitado.</p></article>
+        <article><i class="fa-solid fa-calendar-check"></i><b>Prazo automático</b><p>Depois da aprovação, o sistema conta os dias contratados e retira o banner ao expirar.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <script src="/anuncie.js?v=20261019"></script>
+</body>
+</html>
