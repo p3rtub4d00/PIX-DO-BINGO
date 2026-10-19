@@ -116,6 +116,56 @@ const PagamentoPendenteSchema = new mongoose.Schema({
 });
 const PagamentoPendente = mongoose.model('PagamentoPendente', PagamentoPendenteSchema);
 
+// Planos de publicidade
+const AdPlanSchema = new mongoose.Schema({
+    nome: { type: String, required: true },
+    dias: { type: Number, required: true, min: 1 },
+    preco: { type: Number, required: true, min: 0 },
+    segundos_exibicao: { type: Number, default: 10, min: 3, max: 60 },
+    max_imagens: { type: Number, default: 1, min: 1, max: 3 },
+    ativo: { type: Boolean, default: true },
+    ordem: { type: Number, default: 0 },
+    timestamp: { type: Date, default: Date.now }
+});
+const AdPlan = mongoose.model('AdPlan', AdPlanSchema);
+
+const AdvertisementSchema = new mongoose.Schema({
+    empresa: { type: String, required: true },
+    responsavel: String,
+    whatsapp: String,
+    email: String,
+    plano_id: { type: mongoose.Schema.Types.ObjectId, ref: 'AdPlan' },
+    plano_nome: String,
+    duracao_dias: { type: Number, required: true, min: 1 },
+    valor_pago: { type: Number, default: 0 },
+    segundos_exibicao: { type: Number, default: 10 },
+    max_imagens: { type: Number, default: 1 },
+    imagens: [{
+        nome: String,
+        mime: String,
+        data: String
+    }],
+    status: {
+        type: String,
+        enum: ['pending_payment','awaiting_upload','pending_approval','active','paused','expired','rejected'],
+        default: 'pending_payment'
+    },
+    payment_id: { type: String, index: true },
+    payment_status: { type: String, default: 'pending' },
+    origem: { type: String, enum: ['self_service','manual'], default: 'self_service' },
+    data_inicio: Date,
+    data_fim: Date,
+    aprovado_em: Date,
+    rejeitado_motivo: String,
+    impressoes: { type: Number, default: 0 },
+    ultima_impressao_em: Date,
+    timestamp: { type: Date, default: Date.now }
+});
+AdvertisementSchema.virtual('id').get(function(){ return this._id.toHexString(); });
+AdvertisementSchema.set('toJSON', { virtuals: true });
+const Advertisement = mongoose.model('Advertisement', AdvertisementSchema);
+
+
 // --- NOVO SCHEMA: ESTADO DO JOGO (PERSISTÊNCIA) ---
 const GameStateSchema = new mongoose.Schema({
     chave: { type: String, default: 'estado_atual', unique: true },
@@ -186,6 +236,16 @@ async function inicializarDados() {
                 await Config.create(conf);
             }
         }
+        const adPlanCount = await AdPlan.countDocuments();
+        if (adPlanCount === 0) {
+            await AdPlan.insertMany([
+                { nome: '30 dias', dias: 30, preco: 99, segundos_exibicao: 10, max_imagens: 1, ativo: true, ordem: 1 },
+                { nome: '60 dias', dias: 60, preco: 179, segundos_exibicao: 10, max_imagens: 2, ativo: true, ordem: 2 },
+                { nome: '90 dias', dias: 90, preco: 249, segundos_exibicao: 12, max_imagens: 3, ativo: true, ordem: 3 }
+            ]);
+            console.log('Planos padrão de publicidade criados.');
+        }
+
         console.log('Dados iniciais verificados.');
     } catch (e) {
         console.error('Erro na inicialização:', e);
@@ -292,6 +352,15 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
                         }
 
                         await PagamentoPendente.deleteOne({ _id: pendente._id });
+                    } else {
+                        const anuncio = await Advertisement.findOne({ payment_id: String(paymentId) });
+                        if (anuncio && anuncio.payment_status !== 'approved') {
+                            anuncio.payment_status = 'approved';
+                            anuncio.status = anuncio.imagens?.length ? 'pending_approval' : 'awaiting_upload';
+                            anuncio.valor_pago = Number(pag.transaction_amount || anuncio.valor_pago || 0);
+                            await anuncio.save();
+                            console.log(`Pagamento do anúncio #${anuncio._id} aprovado.`);
+                        }
                     }
                 }
             } catch(errPayment) {
@@ -305,7 +374,7 @@ app.post('/webhook-mercadopago', express.raw({ type: 'application/json' }), asyn
     }
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // --- VARIÁVEIS GLOBAIS DE MEMÓRIA ---
 let PREMIO_LINHA = '100.00', PREMIO_CHEIA = '500.00', PRECO_CARTELA = '5.00';
@@ -416,6 +485,347 @@ app.get('/api/minhas-cartelas/:vendaId', async (req, res) => {
 
 
 
+
+// --- PUBLICIDADE / AUTOATENDIMENTO ---
+function sanitizeImagePayload(image) {
+    if (!image || typeof image.data !== 'string') throw new Error('Imagem inválida.');
+    const match = image.data.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    if (!match) throw new Error('Formato inválido. Use JPG, PNG ou WebP.');
+
+    const mime = match[1];
+    const base64 = match[2];
+    const bytes = Buffer.byteLength(base64, 'base64');
+    if (bytes > 2.5 * 1024 * 1024) throw new Error('Cada imagem deve ter no máximo 2,5 MB.');
+
+    return {
+        nome: String(image.nome || 'anuncio').slice(0, 120),
+        mime,
+        data: `data:${mime};base64,${base64}`
+    };
+}
+
+async function expirarAnuncios() {
+    const agora = new Date();
+    await Advertisement.updateMany(
+        { status: 'active', data_fim: { $lte: agora } },
+        { $set: { status: 'expired' } }
+    );
+}
+
+async function sincronizarPagamentoAnuncio(anuncio) {
+    if (!anuncio?.payment_id || anuncio.payment_status === 'approved') return anuncio;
+    try {
+        const payment = new Payment(mpClient);
+        const pag = await payment.get({ id: anuncio.payment_id });
+        anuncio.payment_status = pag.status || anuncio.payment_status;
+        if (pag.status === 'approved') {
+            anuncio.valor_pago = Number(pag.transaction_amount || anuncio.valor_pago || 0);
+            anuncio.status = anuncio.imagens?.length ? 'pending_approval' : 'awaiting_upload';
+        }
+        await anuncio.save();
+    } catch (e) {
+        console.error('Falha ao sincronizar pagamento de anúncio:', e.message);
+    }
+    return anuncio;
+}
+
+app.get('/api/ads/plans', async (req, res) => {
+    try {
+        const plans = await AdPlan.find({ ativo: true }).sort({ ordem: 1, dias: 1 }).lean();
+        res.set('Cache-Control', 'no-store');
+        res.json({ success: true, plans });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Erro ao carregar planos.' });
+    }
+});
+
+app.post('/api/ads/create-payment', async (req, res) => {
+    try {
+        const { planId, empresa, responsavel, whatsapp, email } = req.body || {};
+        if (!mongoose.isValidObjectId(planId)) return res.status(400).json({ success:false, message:'Plano inválido.' });
+        if (!empresa || !responsavel || !whatsapp || !email) {
+            return res.status(400).json({ success:false, message:'Preencha empresa, responsável, WhatsApp e e-mail.' });
+        }
+        if (!process.env.BASE_URL) return res.status(500).json({ success:false, message:'BASE_URL não configurada.' });
+
+        const plano = await AdPlan.findOne({ _id: planId, ativo: true });
+        if (!plano) return res.status(404).json({ success:false, message:'Plano não encontrado.' });
+
+        const anuncio = await Advertisement.create({
+            empresa: String(empresa).trim().slice(0,120),
+            responsavel: String(responsavel).trim().slice(0,120),
+            whatsapp: String(whatsapp).replace(/\D/g,'').slice(0,20),
+            email: String(email).trim().toLowerCase().slice(0,160),
+            plano_id: plano._id,
+            plano_nome: plano.nome,
+            duracao_dias: plano.dias,
+            valor_pago: plano.preco,
+            segundos_exibicao: plano.segundos_exibicao,
+            max_imagens: plano.max_imagens,
+            status: 'pending_payment',
+            payment_status: 'pending',
+            origem: 'self_service'
+        });
+
+        const payment = new Payment(mpClient);
+        const body = {
+            transaction_amount: Number(plano.preco),
+            description: `Publicidade Pix do Bingo - ${plano.nome}`,
+            payment_method_id: 'pix',
+            notification_url: `${process.env.BASE_URL}/webhook-mercadopago`,
+            external_reference: `ad:${anuncio._id}`,
+            payer: {
+                email: anuncio.email,
+                first_name: anuncio.responsavel
+            }
+        };
+        const response = await payment.create({ body });
+
+        anuncio.payment_id = String(response.id);
+        await anuncio.save();
+
+        res.json({
+            success: true,
+            adId: String(anuncio._id),
+            paymentId: String(response.id),
+            qrCodeBase64: response.point_of_interaction?.transaction_data?.qr_code_base64 || '',
+            qrCodeCopiaCola: response.point_of_interaction?.transaction_data?.qr_code || '',
+            plan: { nome: plano.nome, dias: plano.dias, preco: plano.preco, maxImagens: plano.max_imagens }
+        });
+    } catch (e) {
+        console.error('Erro ao criar pagamento de anúncio:', e);
+        res.status(500).json({ success:false, message:'Não foi possível gerar o PIX do anúncio.' });
+    }
+});
+
+app.get('/api/ads/:id/status', async (req, res) => {
+    try {
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({success:false});
+        let anuncio = await Advertisement.findById(req.params.id);
+        if (!anuncio) return res.status(404).json({success:false, message:'Anúncio não encontrado.'});
+
+        anuncio = await sincronizarPagamentoAnuncio(anuncio);
+        res.set('Cache-Control', 'no-store');
+        res.json({
+            success: true,
+            status: anuncio.status,
+            paymentStatus: anuncio.payment_status,
+            maxImages: anuncio.max_imagens,
+            empresa: anuncio.empresa,
+            dataInicio: anuncio.data_inicio,
+            dataFim: anuncio.data_fim,
+            rejeitadoMotivo: anuncio.rejeitado_motivo || ''
+        });
+    } catch (e) {
+        res.status(500).json({success:false});
+    }
+});
+
+app.post('/api/ads/:id/upload', async (req, res) => {
+    try {
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({success:false, message:'Anúncio inválido.'});
+        let anuncio = await Advertisement.findById(req.params.id);
+        if (!anuncio) return res.status(404).json({success:false, message:'Anúncio não encontrado.'});
+
+        anuncio = await sincronizarPagamentoAnuncio(anuncio);
+        if (anuncio.payment_status !== 'approved') {
+            return res.status(409).json({success:false, message:'O pagamento ainda não foi aprovado.'});
+        }
+
+        const imagensRecebidas = Array.isArray(req.body?.images) ? req.body.images : [];
+        if (imagensRecebidas.length < 1) return res.status(400).json({success:false, message:'Envie pelo menos uma imagem.'});
+        if (imagensRecebidas.length > anuncio.max_imagens) {
+            return res.status(400).json({success:false, message:`Seu plano permite até ${anuncio.max_imagens} imagem(ns).`});
+        }
+
+        const imagens = imagensRecebidas.map(sanitizeImagePayload);
+        anuncio.imagens = imagens;
+        anuncio.status = 'pending_approval';
+        await anuncio.save();
+
+        res.json({success:true, status:anuncio.status, message:'Material enviado. Agora ele aguarda aprovação do administrador.'});
+    } catch (e) {
+        res.status(400).json({success:false, message:e.message || 'Erro ao enviar material.'});
+    }
+});
+
+app.get('/api/ads/active/list', async (req, res) => {
+    try {
+        await expirarAnuncios();
+        const anuncios = await Advertisement.find({
+            status: 'active',
+            data_inicio: { $lte: new Date() },
+            data_fim: { $gt: new Date() },
+            'imagens.0': { $exists: true }
+        }).sort({ aprovado_em: -1 }).limit(20).lean();
+
+        res.set('Cache-Control', 'no-store');
+        res.json({
+            success: true,
+            ads: anuncios.map(a => ({
+                id: String(a._id),
+                empresa: a.empresa,
+                segundosExibicao: a.segundos_exibicao || 10,
+                images: (a.imagens || []).map(img => ({ data: img.data, mime: img.mime, nome: img.nome }))
+            }))
+        });
+    } catch (e) {
+        res.status(500).json({success:false, ads:[]});
+    }
+});
+
+app.post('/api/ads/:id/impression', async (req, res) => {
+    try {
+        if (mongoose.isValidObjectId(req.params.id)) {
+            await Advertisement.updateOne(
+                { _id:req.params.id, status:'active' },
+                { $inc:{ impressoes:1 }, $set:{ ultima_impressao_em:new Date() } }
+            );
+        }
+        res.json({success:true});
+    } catch (e) {
+        res.json({success:false});
+    }
+});
+
+// --- ADMIN PUBLICIDADE ---
+app.get('/admin/ads/plans', checkAdmin, async (req, res) => {
+    const plans = await AdPlan.find({}).sort({ ordem:1, dias:1 }).lean();
+    res.json({success:true, plans});
+});
+
+app.post('/admin/ads/plans', checkAdmin, async (req, res) => {
+    try {
+        const { id, nome, dias, preco, segundosExibicao, maxImagens, ativo, ordem } = req.body || {};
+        const payload = {
+            nome: String(nome || '').trim(),
+            dias: Math.max(1, Number(dias) || 1),
+            preco: Math.max(0, Number(preco) || 0),
+            segundos_exibicao: Math.min(60, Math.max(3, Number(segundosExibicao) || 10)),
+            max_imagens: Math.min(3, Math.max(1, Number(maxImagens) || 1)),
+            ativo: ativo !== false,
+            ordem: Number(ordem) || 0
+        };
+        if (!payload.nome) return res.status(400).json({success:false,message:'Nome obrigatório.'});
+
+        let plan;
+        if (id && mongoose.isValidObjectId(id)) {
+            plan = await AdPlan.findByIdAndUpdate(id, payload, {new:true});
+        } else {
+            plan = await AdPlan.create(payload);
+        }
+        res.json({success:true, plan});
+    } catch (e) {
+        res.status(500).json({success:false,message:e.message});
+    }
+});
+
+app.get('/admin/ads/list', checkAdmin, async (req, res) => {
+    try {
+        await expirarAnuncios();
+        const ads = await Advertisement.find({}).sort({ timestamp:-1 }).limit(100).lean();
+        res.json({success:true, ads});
+    } catch (e) {
+        res.status(500).json({success:false, ads:[]});
+    }
+});
+
+app.post('/admin/ads/:id/status', checkAdmin, async (req, res) => {
+    try {
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({success:false});
+        const anuncio = await Advertisement.findById(req.params.id);
+        if (!anuncio) return res.status(404).json({success:false,message:'Anúncio não encontrado.'});
+
+        const action = String(req.body?.action || '');
+        if (action === 'approve') {
+            if (!anuncio.imagens?.length) return res.status(400).json({success:false,message:'O anúncio não possui imagem.'});
+            const inicio = new Date();
+            const fim = new Date(inicio.getTime() + anuncio.duracao_dias * 86400000);
+            anuncio.status = 'active';
+            anuncio.data_inicio = inicio;
+            anuncio.data_fim = fim;
+            anuncio.aprovado_em = inicio;
+            anuncio.rejeitado_motivo = '';
+        } else if (action === 'pause') {
+            anuncio.status = 'paused';
+        } else if (action === 'resume') {
+            if (anuncio.data_fim && anuncio.data_fim <= new Date()) return res.status(409).json({success:false,message:'Anúncio expirado. Prorrogue antes de reativar.'});
+            anuncio.status = 'active';
+        } else if (action === 'reject') {
+            anuncio.status = 'rejected';
+            anuncio.rejeitado_motivo = String(req.body?.reason || 'Material não aprovado.').slice(0,300);
+        } else {
+            return res.status(400).json({success:false,message:'Ação inválida.'});
+        }
+        await anuncio.save();
+        res.json({success:true, ad:anuncio});
+    } catch (e) {
+        res.status(500).json({success:false,message:e.message});
+    }
+});
+
+app.post('/admin/ads/:id/extend', checkAdmin, async (req, res) => {
+    try {
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({success:false});
+        const dias = Math.max(1, Number(req.body?.days) || 0);
+        const anuncio = await Advertisement.findById(req.params.id);
+        if (!anuncio) return res.status(404).json({success:false});
+
+        const base = anuncio.data_fim && anuncio.data_fim > new Date() ? anuncio.data_fim : new Date();
+        anuncio.data_fim = new Date(base.getTime() + dias * 86400000);
+        if (anuncio.status === 'expired' && anuncio.imagens?.length) anuncio.status = 'active';
+        await anuncio.save();
+        res.json({success:true, ad:anuncio});
+    } catch (e) {
+        res.status(500).json({success:false,message:e.message});
+    }
+});
+
+app.post('/admin/ads/manual', checkAdmin, async (req, res) => {
+    try {
+        const { empresa, responsavel, whatsapp, email, dias, segundosExibicao, images } = req.body || {};
+        if (!empresa) return res.status(400).json({success:false,message:'Informe a empresa.'});
+        const imagensRecebidas = Array.isArray(images) ? images : [];
+        if (!imagensRecebidas.length) return res.status(400).json({success:false,message:'Envie uma imagem.'});
+        if (imagensRecebidas.length > 3) return res.status(400).json({success:false,message:'Máximo de 3 imagens.'});
+
+        const imagens = imagensRecebidas.map(sanitizeImagePayload);
+        const inicio = new Date();
+        const duracao = Math.max(1, Number(dias) || 30);
+        const anuncio = await Advertisement.create({
+            empresa:String(empresa).trim().slice(0,120),
+            responsavel:String(responsavel || 'Admin').trim().slice(0,120),
+            whatsapp:String(whatsapp || '').replace(/\D/g,'').slice(0,20),
+            email:String(email || '').trim().toLowerCase().slice(0,160),
+            plano_nome:'Cadastro manual',
+            duracao_dias:duracao,
+            valor_pago:0,
+            segundos_exibicao:Math.min(60,Math.max(3,Number(segundosExibicao)||10)),
+            max_imagens:3,
+            imagens,
+            status:'active',
+            payment_status:'manual',
+            origem:'manual',
+            data_inicio:inicio,
+            data_fim:new Date(inicio.getTime()+duracao*86400000),
+            aprovado_em:inicio
+        });
+        res.json({success:true, ad:anuncio});
+    } catch (e) {
+        res.status(400).json({success:false,message:e.message});
+    }
+});
+
+app.delete('/admin/ads/:id', checkAdmin, async (req, res) => {
+    try {
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({success:false});
+        await Advertisement.deleteOne({_id:req.params.id});
+        res.json({success:true});
+    } catch (e) {
+        res.status(500).json({success:false});
+    }
+});
+
 // --- ROTAS ADMIN ---
 app.post('/admin/login', async (req, res) => {
     const { usuario, senha } = req.body;
@@ -452,6 +862,8 @@ app.post('/admin/premios-e-preco', checkAdmin, async (req, res) => {
             await Config.findOneAndUpdate({ chave }, { valor: String(valor) }, { upsert: true });
         }
         await carregarConfiguracoes();
+    await expirarAnuncios();
+    setInterval(() => expirarAnuncios().catch(() => {}), 60000);
         
         const novasConfigs = await Config.find({});
         const map = {};
