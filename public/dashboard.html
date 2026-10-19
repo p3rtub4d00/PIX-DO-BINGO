@@ -5,32 +5,77 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Telão | Pix do Bingo</title>
   <meta name="theme-color" content="#061626">
-<link rel="stylesheet" href="dashboard.css?v=bolas-redondas-20261019">
+<link rel="stylesheet" href="dashboard.css?v=ads-marketplace-20261019">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="dashboard-body premium-dashboard">
 
 <div id="anuncio-espera-overlay" class="anuncio-espera-overlay">
-  <div class="anuncio-espera-container">
-    <div class="tv-brand large">
-      <span class="tv-brand-mark"><i></i><i></i><i></i><i></i></span>
-      <span><b>PIX <em>DO</em></b><strong>BINGO</strong></span>
-    </div>
-    <h1>PRÓXIMO SORTEIO</h1>
-    <p class="wait-tv-sub">O show vai começar em:</p>
-    <div id="espera-cronometro-display">--:--</div>
-    <div class="waiting-layout">
-      <div class="anuncio-area-espera">
-        <div class="anuncio-slider"><div class="slide ativo"><img src="/imagens/seu-anuncio-espera.gif" alt="Aguarde o Sorteio"></div></div>
+  <div class="anuncio-espera-container commercial-wait">
+    <div class="commercial-wait-head">
+      <div class="tv-brand large">
+        <span class="tv-brand-mark"><i></i><i></i><i></i><i></i></span>
+        <span><b>PIX <em>DO</em></b><strong>BINGO</strong></span>
       </div>
-      <div id="overlay-promo-pack">
-        <div id="espera-especial-card" class="overlay-card oculto"><h3>PRÓXIMO SORTEIO ESPECIAL</h3><p id="espera-especial-data">Data: --</p><p id="espera-especial-valor">Prêmio: R$ --</p></div>
-        <div id="espera-vencedores-carousel" class="overlay-card"><h3>ÚLTIMO GANHADOR</h3><p id="espera-vencedor-atual">Aguardando vencedor...</p></div>
-        <div id="espera-cta-qr" class="overlay-card"><h3>COMPRE NO CELULAR</h3><a id="espera-qr-link" href="/" target="_blank" rel="noopener noreferrer"><img id="espera-qr-img" alt="QR para compra de cartelas"></a><p id="espera-qr-url">Carregando link...</p></div>
+      <div class="commercial-countdown">
+        <span>PRÓXIMO SORTEIO</span>
+        <strong id="espera-cronometro-display">--:--</strong>
+        <small>O show vai começar em breve</small>
+      </div>
+      <div id="espera-especial-card" class="commercial-special oculto">
+        <span>ESPECIAL</span>
+        <strong id="espera-especial-valor">Prêmio: R$ --</strong>
+        <small id="espera-especial-data">Data: --</small>
       </div>
     </div>
-    <div id="espera-vencedores-box"><h3>Últimos vencedores</h3><div id="espera-vencedores-lista"><p>Nenhum ganhador ainda.</p></div></div>
+
+    <div class="commercial-main">
+      <section class="commercial-ad-stage" id="dashboard-ad-stage">
+        <div id="dashboard-ad-empty" class="commercial-ad-empty">
+          <span class="ad-space-label">ESPAÇO PUBLICITÁRIO</span>
+          <i class="fa-solid fa-bullhorn"></i>
+          <h2>Sua marca pode estar aqui.</h2>
+          <p>Anuncie no telão do Pix do Bingo e alcance quem acompanha cada sorteio.</p>
+        </div>
+        <img id="dashboard-ad-image" class="commercial-ad-image" alt="Anúncio patrocinado">
+        <div class="commercial-ad-caption">
+          <span>PATROCINADO</span>
+          <strong id="dashboard-ad-company">Anuncie no Pix do Bingo</strong>
+        </div>
+      </section>
+
+      <aside class="commercial-ad-cta">
+        <span class="cta-kicker"><i class="fa-solid fa-bullhorn"></i> ANUNCIE AQUI</span>
+        <h2>Coloque sua marca no telão.</h2>
+        <p>Escolha o plano, pague por PIX e envie sua arte pelo celular.</p>
+        <a id="advertise-qr-link" href="/anuncie" target="_blank" rel="noopener noreferrer">
+          <img id="advertise-qr-img" alt="QR Code para anunciar no Pix do Bingo">
+        </a>
+        <strong>Escaneie e veja os planos</strong>
+        <small id="advertise-url">pix-do-bingo.onrender.com/anuncie</small>
+      </aside>
+    </div>
+
+    <div class="commercial-bottom">
+      <div id="espera-vencedores-carousel" class="commercial-info-card winner">
+        <span>ÚLTIMO GANHADOR</span>
+        <strong id="espera-vencedor-atual">Aguardando vencedor...</strong>
+      </div>
+
+      <div id="espera-cta-qr" class="commercial-info-card buy">
+        <div>
+          <span>JOGUE PELO CELULAR</span>
+          <strong>Compre suas cartelas</strong>
+          <small id="espera-qr-url">Carregando link...</small>
+        </div>
+        <a id="espera-qr-link" href="/" target="_blank" rel="noopener noreferrer"><img id="espera-qr-img" alt="QR para compra de cartelas"></a>
+      </div>
+    </div>
+
+    <div id="espera-vencedores-box" class="commercial-hidden-history">
+      <h3>Últimos vencedores</h3><div id="espera-vencedores-lista"><p>Nenhum ganhador ainda.</p></div>
+    </div>
   </div>
 </div>
 
@@ -205,6 +250,6 @@
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="dashboard.js?v=bolas-redondas-20261019"></script>
+<script src="dashboard.js?v=ads-marketplace-20261019"></script>
 </body>
 </html>
