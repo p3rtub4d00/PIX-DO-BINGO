@@ -549,6 +549,11 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarCardSorteioEspecial(data.configuracoes);
         atualizarVencedoresCarousel(data.ultimosVencedores);
         atualizarFaixaPromocional(data.configuracoes);
+        if (data.resultadoFinal) {
+            mostrarResultadoFinal(data.resultadoFinal, { anunciar: false });
+        } else {
+            ocultarResultadoFinal();
+        }
         
         // Se já tiver lista de quase lá no estado inicial
         if(data.quaseLa) processarQuaseLa(data.quaseLa);
@@ -573,6 +578,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.sorteioId) sorteioAtualId = data.sorteioId;
         if(data.sorteioId && sorteioIdHeaderEl) sorteioIdHeaderEl.textContent = `BINGO DO PIX - SORTEIO #${data.sorteioId}`;
         atualizarEstadoVisual(data.estado);
+        if (data.estado === 'ESPERANDO') ocultarResultadoFinal();
+    });
+
+    socket.on('resultadoFinalRodada', (data) => {
+        console.log('Resultado final da rodada:', data);
+        mostrarResultadoFinal(data, { anunciar: true });
     });
 
     socket.on('novoNumeroSorteado', (n) => {
