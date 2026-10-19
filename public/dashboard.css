@@ -2461,3 +2461,185 @@ body.premium-dashboard{
   .commercial-main{grid-template-columns:minmax(0,1.7fr) 250px}.commercial-ad-cta{padding:12px}.commercial-ad-cta>a{width:125px;height:125px}
   .commercial-info-card{height:96px;padding:10px}.commercial-info-card.buy{grid-template-columns:1fr 68px}.commercial-info-card.buy a{width:68px;height:68px}
 }
+
+
+/* ============================================================
+   AJUSTE COMERCIAL — MAIS ÁREA PARA A PROPAGANDA
+   ============================================================ */
+.premium-dashboard .anuncio-espera-overlay{
+  padding:8px!important;
+}
+.premium-dashboard .commercial-wait{
+  width:min(1540px,99vw)!important;
+  height:min(850px,97vh)!important;
+  max-width:1540px!important;
+  grid-template-rows:86px minmax(0,1fr) 88px!important;
+  gap:8px!important;
+}
+.commercial-wait-head{
+  grid-template-columns:200px minmax(0,1fr) 230px!important;
+  gap:8px!important;
+}
+.commercial-countdown>span{
+  font-size:.62rem!important;
+}
+.commercial-countdown>strong{
+  font-size:3.45rem!important;
+  line-height:.88!important;
+}
+.commercial-countdown>small{
+  margin-top:2px!important;
+  font-size:.54rem!important;
+}
+.commercial-special{
+  padding:8px 10px!important;
+  border-radius:10px!important;
+}
+.commercial-special>strong{
+  font-size:.72rem!important;
+}
+
+/* A propaganda passa a ser a área dominante da tela */
+.commercial-main{
+  grid-template-columns:minmax(0,2.35fr) minmax(235px,.52fr)!important;
+  gap:8px!important;
+}
+.commercial-ad-stage{
+  border-radius:15px!important;
+}
+.commercial-ad-backdrop{
+  position:absolute;
+  inset:-7%;
+  width:114%;
+  height:114%;
+  object-fit:cover;
+  filter:blur(24px) brightness(.34) saturate(.95);
+  transform:scale(1.04);
+  opacity:0;
+  transition:opacity .35s ease;
+  z-index:0;
+}
+.commercial-ad-stage.has-ad .commercial-ad-backdrop{
+  opacity:.95;
+}
+.commercial-ad-stage.has-ad:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,rgba(4,16,27,.24),rgba(4,16,27,.06) 50%,rgba(4,16,27,.24));
+  z-index:1;
+  pointer-events:none;
+}
+.commercial-ad-image{
+  z-index:2!important;
+  background:transparent!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  padding:0!important;
+}
+.commercial-ad-empty{
+  z-index:2!important;
+}
+.commercial-ad-caption{
+  z-index:4!important;
+  left:10px!important;
+  right:10px!important;
+  bottom:9px!important;
+  padding:6px 8px!important;
+}
+.commercial-ad-caption span{
+  font-size:.42rem!important;
+}
+.commercial-ad-caption strong{
+  font-size:.62rem!important;
+}
+
+/* Card "Anuncie aqui" mais enxuto para liberar espaço do patrocinador */
+.commercial-ad-cta{
+  padding:13px!important;
+  border-radius:15px!important;
+}
+.commercial-ad-cta h2{
+  margin:6px 0 5px!important;
+  font-size:1.05rem!important;
+}
+.commercial-ad-cta p{
+  margin-bottom:8px!important;
+  font-size:.58rem!important;
+}
+.commercial-ad-cta>a{
+  width:132px!important;
+  height:132px!important;
+  padding:6px!important;
+  border-radius:11px!important;
+}
+.commercial-ad-cta>strong{
+  margin-top:7px!important;
+  font-size:.64rem!important;
+}
+.commercial-ad-cta>small{
+  display:none!important;
+}
+
+/* Rodapé mais compacto; QR de compra limpo e maior */
+.commercial-bottom{
+  grid-template-columns:1.25fr .75fr!important;
+  gap:8px!important;
+}
+.commercial-info-card{
+  height:88px!important;
+  padding:10px 12px!important;
+}
+.commercial-info-card.winner strong{
+  margin-top:5px!important;
+  font-size:.9rem!important;
+}
+.commercial-info-card.buy{
+  grid-template-columns:minmax(0,1fr) 72px!important;
+  gap:8px!important;
+}
+.commercial-info-card.buy div>span{
+  font-size:.5rem!important;
+}
+.commercial-info-card.buy div>strong{
+  margin:3px 0!important;
+  font-size:.76rem!important;
+}
+.commercial-info-card.buy a{
+  width:72px!important;
+  height:72px!important;
+  padding:3px!important;
+}
+.commercial-hidden-url{
+  display:none!important;
+}
+
+/* TV/Notebook 1366-1600: ocupa mais a viewport sem criar rolagem */
+@media(max-width:1400px){
+  .premium-dashboard .commercial-wait{
+    grid-template-rows:78px minmax(0,1fr) 82px!important;
+  }
+  .commercial-wait-head{
+    grid-template-columns:180px minmax(0,1fr) 210px!important;
+  }
+  .commercial-countdown>strong{
+    font-size:3rem!important;
+  }
+  .commercial-main{
+    grid-template-columns:minmax(0,2.45fr) 225px!important;
+  }
+  .commercial-ad-cta>a{
+    width:118px!important;
+    height:118px!important;
+  }
+  .commercial-info-card{
+    height:82px!important;
+  }
+  .commercial-info-card.buy{
+    grid-template-columns:minmax(0,1fr) 66px!important;
+  }
+  .commercial-info-card.buy a{
+    width:66px!important;
+    height:66px!important;
+  }
+}
