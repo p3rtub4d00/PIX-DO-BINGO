@@ -1,46 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Master Login</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#0f172a; color:#fff; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
-    .box { width: 100%; max-width: 360px; background:#1e293b; padding:24px; border-radius:12px; }
-    input, button { width:100%; padding:10px; margin-top:10px; border-radius:8px; border:1px solid #334155; }
-    button { background:#22c55e; color:#fff; border:none; cursor:pointer; }
-    .erro { color:#fca5a5; min-height:20px; margin-top:8px; font-size:14px; }
-  </style>
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Master | Pix do Bingo</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 50% 0%,rgba(37,215,127,.12),transparent 30%),#061626;font-family:Arial,sans-serif;color:#fff;padding:20px}.box{width:100%;max-width:380px;background:#0a2033;padding:28px;border:1px solid #1a3c54;border-radius:18px;box-shadow:0 25px 70px rgba(0,0,0,.3)}.brand{font-weight:900;font-size:1.1rem}.brand span{color:#25d77f}.box h2{font-size:1.1rem;margin:22px 0 12px}.box input,.box button{width:100%;height:44px;padding:0 12px;margin-top:9px;border-radius:9px}.box input{border:1px solid #29485f;background:#071927;color:#fff}.box button{border:0;background:#25d77f;color:#062619;font-weight:800;cursor:pointer}.erro{color:#ff9ca6;min-height:20px;margin-top:8px;font-size:13px}
+</style></head>
 <body>
-  <form class="box" id="form-master-login">
-    <h2>Painel Master SaaS</h2>
-    <input type="text" id="usuario" placeholder="Usuário master" required />
-    <input type="password" id="senha" placeholder="Senha master" required />
-    <button type="submit">Entrar</button>
-    <div class="erro" id="erro"></div>
-  </form>
-
-  <script>
-    document.getElementById('form-master-login').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const usuario = document.getElementById('usuario').value.trim();
-      const senha = document.getElementById('senha').value;
-      const erro = document.getElementById('erro');
-      erro.textContent = '';
-
-      const resp = await fetch('/master/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario, senha })
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (resp.ok && data.success) {
-        window.location.href = '/master/painel.html';
-      } else {
-        erro.textContent = data.message || 'Falha no login.';
-      }
-    });
-  </script>
-</body>
-</html>
+<form class="box" id="form-master-login"><div class="brand">PIX <span>DO</span> BINGO</div><h2>Painel Master SaaS</h2><input type="text" id="usuario" placeholder="Usuário master" required><input type="password" id="senha" placeholder="Senha master" required><button type="submit">Entrar</button><div class="erro" id="erro"></div></form>
+<script>
+document.getElementById('form-master-login').addEventListener('submit',async(e)=>{e.preventDefault();const usuario=document.getElementById('usuario').value.trim();const senha=document.getElementById('senha').value;const erro=document.getElementById('erro');erro.textContent='';const resp=await fetch('/master/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario,senha})});const data=await resp.json().catch(()=>({}));if(resp.ok&&data.success){window.location.href='/master/painel.html'}else{erro.textContent=data.message||'Falha no login.'}});
+</script>
+</body></html>
