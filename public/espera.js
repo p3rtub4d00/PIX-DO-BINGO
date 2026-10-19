@@ -1,182 +1,232 @@
 document.addEventListener('DOMContentLoaded', () => {
-
-    // --- INÍCIO DA ATUALIZAÇÃO (Pega Venda ID da URL) ---
     const urlParams = new URLSearchParams(window.location.search);
     const vendaId = urlParams.get('venda');
-    const nomeJogador = sessionStorage.getItem('bingo_usuario_nome');
-    const telefoneJogador = sessionStorage.getItem('bingo_usuario_telefone');
-    
-    if (!vendaId || !nomeJogador) {
-        alert("Erro: ID da sua compra ou nome de usuário não encontrado.\n\nRedirecionando para a página inicial.");
+
+    let nomeJogador = sessionStorage.getItem('bingo_usuario_nome') || '';
+    let telefoneJogador = sessionStorage.getItem('bingo_usuario_telefone') || '';
+
+    if (!vendaId) {
+        alert('Erro: ID da compra não encontrado. Redirecionando para a página inicial.');
         window.location.href = 'index.html';
         return;
     }
-    console.log(`Sala de espera para Venda ID: ${vendaId} | Jogador: ${nomeJogador}`);
-    // --- FIM DA ATUALIZAÇÃO ---
 
     const cronometroElemento = document.getElementById('cronometro');
     const sorteioIdElemento = document.getElementById('sorteio-id-display');
-    
     const cartelasContainer = document.getElementById('cartelas-container');
     const btnCartelaAnterior = document.getElementById('btn-cartela-anterior');
     const btnCartelaProxima = document.getElementById('btn-cartela-proxima');
     const tituloCartelaAtualEl = document.getElementById('cartela-titulo-atual');
     const cartelaIdDisplay = document.getElementById('cartela-id-display');
+    const cartelaSwitcher = document.getElementById('cartela-switcher');
 
-    let cartelasGeradasEl = []; 
+    let cartelasSalvas = [];
     let cartelaAtualIndex = 0;
     let totalDeCartelas = 0;
-    // let cartelasSalvas = []; // Não precisamos mais disso globalmente aqui
+    let cartelasCarregadas = false;
+    let carregamentoHttpFinalizado = false;
+    let jogoJaIniciado = false;
 
     const socket = io();
-    console.log("Conectando ao servidor...");
 
-    socket.on('cronometroUpdate', (data) => {
-        const { tempo, sorteioId } = data; 
-        const minutos = Math.floor(tempo / 60);
-        let segundos = tempo % 60;
-        segundos = segundos < 10 ? '0' + segundos : segundos;
-        cronometroElemento.textContent = `${minutos}:${segundos}`;
-        if (totalDeCartelas === 0) {
-            sorteioIdElemento.textContent = `Sorteio #${sorteioId}`;
+    function normalizarDadosJogador(meta = {}) {
+        if (meta.nome) {
+            nomeJogador = String(meta.nome);
+            sessionStorage.setItem('bingo_usuario_nome', nomeJogador);
         }
-        console.log(`Servidor atualizou: Sorteio #${sorteioId} | Tempo: ${minutos}:${segundos}`);
-    });
-
-
-    socket.on('estadoInicial', (data) => {
-        if (data && data.sorteioId && totalDeCartelas === 0) {
-            sorteioIdElemento.textContent = `Sorteio #${data.sorteioId}`;
+        if (meta.telefone) {
+            telefoneJogador = String(meta.telefone);
+            sessionStorage.setItem('bingo_usuario_telefone', telefoneJogador);
         }
-    });
+    }
 
-    // --- INÍCIO DA ATUALIZAÇÃO (Redireciona com Venda ID) ---
-    socket.on('iniciarJogo', () => {
-        console.log("Servidor mandou iniciar o jogo! Redirecionando...");
-        // Passa o ID da Venda para a página do jogo
-        window.location.href = `jogo.html?venda=${vendaId}`; 
-    });
-    // --- FIM DA ATUALIZAÇÃO ---
-
-    socket.on('connect', () => {
-        console.log(`Conectado ao servidor com o ID: ${socket.id}`);
-        // *** INÍCIO DA ATUALIZAÇÃO (Pede as cartelas) ***
-        // Assim que conectar, pede as cartelas ao servidor
-        console.log(`Pedindo cartelas para Venda ID: ${vendaId}`);
-        socket.emit('buscarMinhasCartelas', { vendaId: vendaId, nome: nomeJogador, telefone: telefoneJogador });
-        // *** FIM DA ATUALIZAÇÃO ***
-    });
-    
-    // *** INÍCIO DA ATUALIZAÇÃO (Ouvintes para buscar cartelas) ***
-    socket.on('cartelasEncontradas', (data) => {
-        const { cartelas } = data; // cartelas é um array
-        console.log(`Recebidas ${cartelas.length} cartelas do servidor.`);
-        // Agora que temos as cartelas, podemos renderizar
-        inicializarVisualizacaoCartelas(cartelas, nomeJogador);
-    });
-
-    socket.on('cartelasNaoEncontradas', () => {
-        alert("Erro: Suas cartelas não foram encontradas no servidor.\n\nIsso pode acontecer se o nome salvo não bater com o da compra. Redirecionando.");
-        window.location.href = 'index.html';
-    });
-    // *** FIM DA ATUALIZAÇÃO ***
-
-
-    // --- 1. Gerar a Cartela VISUAL ---
-    function criarElementoCartela(cartelaData) { // cartelaData é {c_id, s_id, data}
+    function criarElementoCartela(cartelaData) {
         const cartelaEl = document.createElement('div');
-        cartelaEl.classList.add('cartela-jogador'); 
-        
-        cartelaEl.dataset.cartelaId = cartelaData.c_id;
-        cartelaEl.dataset.sorteioId = cartelaData.s_id;
+        cartelaEl.className = 'cartela-jogador ativa';
+        cartelaEl.dataset.cartelaId = cartelaData?.c_id || '';
+        cartelaEl.dataset.sorteioId = cartelaData?.s_id || '';
 
-        const letrasBingo = ['B', 'I', 'N', 'G', 'O'];
-        letrasBingo.forEach(letra => {
+        ['B', 'I', 'N', 'G', 'O'].forEach(letra => {
             const headerEl = document.createElement('div');
-            headerEl.classList.add('cartela-numero', 'cartela-header'); 
+            headerEl.classList.add('cartela-numero', 'cartela-header');
             headerEl.textContent = letra;
             cartelaEl.appendChild(headerEl);
         });
 
-        const matrizCartela = cartelaData.data; // Pega a matriz
+        const matriz = Array.isArray(cartelaData?.data) ? cartelaData.data : [];
+
         for (let linha = 0; linha < 5; linha++) {
             for (let coluna = 0; coluna < 5; coluna++) {
-                const numeroBingo = matrizCartela[linha][coluna];
+                const numero = matriz?.[linha]?.[coluna] ?? '?';
                 const numeroEl = document.createElement('div');
                 numeroEl.classList.add('cartela-numero');
-                if (numeroBingo === "FREE") {
-                    numeroEl.textContent = "FREE";
+
+                if (numero === 'FREE') {
+                    numeroEl.textContent = 'FREE';
                     numeroEl.classList.add('free');
                 } else {
-                    numeroEl.textContent = numeroBingo;
-                    numeroEl.dataset.valor = numeroBingo; 
+                    numeroEl.textContent = numero;
+                    numeroEl.dataset.valor = numero;
                 }
                 cartelaEl.appendChild(numeroEl);
             }
         }
-        
-        cartelasContainer.appendChild(cartelaEl); 
-        return cartelaEl; 
+
+        return cartelaEl;
     }
-    
-    // --- 2. Lógica do Carrossel ---
-    function atualizarVisibilidadeCartela() {
-        cartelasGeradasEl.forEach(cartela => {
-            cartela.classList.remove('ativa');
-        });
-        
-        const cartelaAtiva = cartelasGeradasEl[cartelaAtualIndex];
-        if (cartelaAtiva) {
-            cartelaAtiva.classList.add('ativa');
-            
-            // Atualiza os IDs no display
-            tituloCartelaAtualEl.textContent = `Cartela ${cartelaAtualIndex + 1} de ${totalDeCartelas}`;
-            cartelaIdDisplay.textContent = `ID: ${cartelaAtiva.dataset.cartelaId}`;
-            
-            // Atualiza o TÍTULO PRINCIPAL da página de espera
-            sorteioIdElemento.textContent = `Sorteio #${cartelaAtiva.dataset.sorteioId}`;
+
+    function renderizarCartelaAtual() {
+        if (!cartelasCarregadas || totalDeCartelas === 0) return;
+
+        const dados = cartelasSalvas[cartelaAtualIndex];
+        const elemento = criarElementoCartela(dados);
+
+        cartelasContainer.replaceChildren(elemento);
+
+        tituloCartelaAtualEl.textContent = `Cartela ${cartelaAtualIndex + 1} de ${totalDeCartelas}`;
+        cartelaIdDisplay.textContent = `ID: ${dados?.c_id || '---'}`;
+
+        if (dados?.s_id != null) {
+            sorteioIdElemento.textContent = `Sorteio #${dados.s_id}`;
         }
 
-        btnCartelaAnterior.disabled = (cartelaAtualIndex === 0);
-        btnCartelaProxima.disabled = (cartelaAtualIndex === totalDeCartelas - 1);
+        btnCartelaAnterior.disabled = cartelaAtualIndex <= 0;
+        btnCartelaProxima.disabled = cartelaAtualIndex >= totalDeCartelas - 1;
     }
+
+    function aplicarCartelas(cartelas, meta = {}) {
+        if (cartelasCarregadas) return true;
+        if (!Array.isArray(cartelas) || cartelas.length === 0) return false;
+
+        normalizarDadosJogador(meta);
+
+        cartelasSalvas = cartelas;
+        totalDeCartelas = cartelas.length;
+        cartelaAtualIndex = 0;
+        cartelasCarregadas = true;
+
+        if (cartelaSwitcher) cartelaSwitcher.style.display = 'flex';
+
+        renderizarCartelaAtual();
+
+        console.log(`Sala de espera carregou ${totalDeCartelas} cartela(s) da venda ${vendaId}.`);
+        return true;
+    }
+
+    async function carregarCartelasViaHttp() {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+
+            const response = await fetch(`/api/minhas-cartelas/${encodeURIComponent(vendaId)}?t=${Date.now()}`, {
+                method: 'GET',
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            const data = await response.json().catch(() => ({}));
+            carregamentoHttpFinalizado = true;
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || `Erro ${response.status}`);
+            }
+
+            aplicarCartelas(data.cartelas, {
+                nome: data.nome,
+                telefone: data.telefone
+            });
+        } catch (error) {
+            carregamentoHttpFinalizado = true;
+            console.error('Falha no carregamento HTTP das cartelas:', error);
+
+            // O Socket.IO continua como segundo caminho. Só mostra erro se ambos falharem.
+            setTimeout(() => {
+                if (!cartelasCarregadas) {
+                    tituloCartelaAtualEl.textContent = 'Não foi possível carregar';
+                    cartelasContainer.innerHTML =
+                        '<p class="aviso">Não conseguimos carregar suas cartelas. Atualize a página ou volte para “Meus jogos”.</p>';
+                }
+            }, 1800);
+        }
+    }
+
     btnCartelaProxima.addEventListener('click', () => {
         if (cartelaAtualIndex < totalDeCartelas - 1) {
-            cartelaAtualIndex++;
-            atualizarVisibilidadeCartela();
+            cartelaAtualIndex += 1;
+            renderizarCartelaAtual();
         }
     });
+
     btnCartelaAnterior.addEventListener('click', () => {
         if (cartelaAtualIndex > 0) {
-            cartelaAtualIndex--;
-            atualizarVisibilidadeCartela();
+            cartelaAtualIndex -= 1;
+            renderizarCartelaAtual();
         }
     });
 
-    // --- 3. INICIALIZAÇÃO das Cartelas (AGORA É UMA FUNÇÃO) ---
-    // Esta função é chamada pelo ouvinte 'cartelasEncontradas'
-    function inicializarVisualizacaoCartelas(cartelasSalvas, nomeJogador) {
-        if (!cartelasSalvas || !nomeJogador || cartelasSalvas.length === 0) {
-            console.warn("Nenhuma cartela ou nome de jogador no sessionStorage.");
-            document.getElementById('cartela-switcher').style.display = 'none';
-            document.getElementById('cartelas-container').innerHTML = '<p class="aviso">Você será redirecionado em breve.</p>';
-        } else {
-            // Se achou, renderiza
-            totalDeCartelas = cartelasSalvas.length;
-            console.log(`Renderizando ${totalDeCartelas} cartela(s) para a sala de espera.`);
+    socket.on('cronometroUpdate', data => {
+        const tempo = Number(data?.tempo) || 0;
+        const minutos = Math.floor(tempo / 60);
+        const segundos = String(tempo % 60).padStart(2, '0');
 
-            cartelasContainer.innerHTML = ''; 
-            cartelasGeradasEl = []; 
-            
-            for (let i = 0; i < totalDeCartelas; i++) {
-                const dadosCartela = cartelasSalvas[i]; 
-                const elementoCartela = criarElementoCartela(dadosCartela);
-                elementoCartela.id = `cartela-indice-${i}`;
-                cartelasGeradasEl.push(elementoCartela); 
-            }
-            
-            cartelaAtualIndex = 0; 
-            atualizarVisibilidadeCartela(); 
+        if (cronometroElemento) cronometroElemento.textContent = `${minutos}:${segundos}`;
+
+        if (!cartelasCarregadas && data?.sorteioId != null && sorteioIdElemento) {
+            sorteioIdElemento.textContent = `Sorteio #${data.sorteioId}`;
         }
-    }
+    });
+
+    socket.on('estadoInicial', data => {
+        if (!data) return;
+
+        if (!cartelasCarregadas && data.sorteioId != null && sorteioIdElemento) {
+            sorteioIdElemento.textContent = `Sorteio #${data.sorteioId}`;
+        }
+
+        const estado = String(data.estado || '');
+        jogoJaIniciado = estado.startsWith('JOGANDO') || estado === 'ANUNCIANDO_VENCEDOR';
+
+        if (jogoJaIniciado && cartelasCarregadas) {
+            window.location.href = `jogo.html?venda=${encodeURIComponent(vendaId)}`;
+        }
+    });
+
+    socket.on('iniciarJogo', () => {
+        window.location.href = `jogo.html?venda=${encodeURIComponent(vendaId)}`;
+    });
+
+    socket.on('connect', () => {
+        console.log(`Conectado ao servidor. Buscando cartelas da venda ${vendaId}.`);
+
+        socket.emit('buscarMinhasCartelas', {
+            vendaId,
+            nome: nomeJogador,
+            telefone: telefoneJogador
+        });
+    });
+
+    socket.on('cartelasEncontradas', data => {
+        const carregou = aplicarCartelas(data?.cartelas, {
+            nome: data?.nome,
+            telefone: data?.telefone
+        });
+
+        if (carregou && jogoJaIniciado) {
+            window.location.href = `jogo.html?venda=${encodeURIComponent(vendaId)}`;
+        }
+    });
+
+    socket.on('cartelasNaoEncontradas', () => {
+        // Não redireciona imediatamente porque o fallback HTTP pode funcionar.
+        if (carregamentoHttpFinalizado && !cartelasCarregadas) {
+            console.warn('Servidor não encontrou cartelas para esta venda.');
+        }
+    });
+
+    // O HTTP começa imediatamente e o Socket.IO trabalha em paralelo.
+    // O primeiro caminho que responder com sucesso alimenta a tela.
+    carregarCartelasViaHttp();
 });
