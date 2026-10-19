@@ -1052,3 +1052,112 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
   }
   .premium-dashboard .almost-side.compact #lista-quase-la .quase-item{height:86px!important}
 }
+
+
+/* === QR CODE PRINCIPAL DO TELÃO — SEM FICAR ESCONDIDO === */
+.reference-tv-info{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  overflow:auto!important;
+}
+.tv-qr-primary{
+  margin-top:auto;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 112px;
+  align-items:center;
+  gap:10px;
+  padding:11px;
+  border:1px solid #1d5b46;
+  border-radius:11px;
+  background:
+    radial-gradient(circle at 90% 15%,rgba(44,230,140,.14),transparent 40%),
+    linear-gradient(145deg,#082b22,#0a3a2b);
+  box-shadow:0 10px 24px rgba(0,0,0,.12);
+}
+.tv-qr-copy{
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+.tv-qr-copy .tv-side-kicker{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#63efaa;
+  font-size:.55rem;
+}
+.tv-qr-copy h3{
+  margin:0;
+  color:#fff;
+  font-size:.82rem;
+  line-height:1.15;
+}
+.tv-qr-copy p{
+  margin:0;
+  color:#9eb5c4;
+  font-size:.6rem;
+  line-height:1.35;
+}
+.tv-qr-copy small{
+  display:block;
+  width:100%;
+  color:#6f93a6;
+  font-size:.48rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.tv-qr-link{
+  display:grid;
+  place-items:center;
+  width:112px;
+  height:112px;
+  padding:7px;
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 8px 20px rgba(0,0,0,.25);
+}
+.tv-qr-link img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  border-radius:4px;
+}
+
+/* Quase Lá agora usa toda a largura inferior */
+.premium-dashboard .tv-support-rail.almost-only{
+  grid-template-columns:1fr!important;
+  height:142px!important;
+  min-height:142px!important;
+}
+.premium-dashboard .tv-support-rail.almost-only .almost-side{
+  width:100%!important;
+}
+.premium-dashboard .tv-support-rail.almost-only .almost-side.compact #lista-quase-la{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+}
+
+/* Responsividade */
+@media(max-width:1280px){
+  .tv-qr-primary{
+    grid-template-columns:minmax(0,1fr) 92px;
+  }
+  .tv-qr-link{
+    width:92px;
+    height:92px;
+  }
+}
+@media(max-width:980px){
+  .tv-qr-primary{
+    grid-template-columns:1fr 120px;
+  }
+  .tv-qr-link{
+    width:120px;
+    height:120px;
+  }
+  .premium-dashboard .tv-support-rail.almost-only{
+    height:auto!important;
+    min-height:0!important;
+  }
+}
