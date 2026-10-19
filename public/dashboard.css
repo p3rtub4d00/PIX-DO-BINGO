@@ -1161,3 +1161,199 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
     min-height:0!important;
   }
 }
+
+
+/* ============================================================
+   TELÃO FIXO EM TV — SEM BARRAS DE ROLAGEM
+   ============================================================ */
+html,
+body.premium-dashboard{
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  overflow:hidden!important;
+}
+body.premium-dashboard{
+  position:fixed;
+  inset:0;
+}
+.premium-dashboard .dashboard-header{
+  height:70px!important;
+  min-height:70px!important;
+}
+.premium-dashboard .dashboard-main-fullscreen.reference-tv-layout{
+  height:calc(100vh - 70px)!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  padding:10px!important;
+  grid-template-rows:minmax(0,1fr) 126px!important;
+  gap:9px!important;
+}
+.premium-dashboard #dash-faixa-promocional:not(.oculto)~.dashboard-main-fullscreen.reference-tv-layout{
+  height:calc(100vh - 112px)!important;
+}
+.premium-dashboard .reference-tv-stage{
+  min-height:0!important;
+  height:100%!important;
+  grid-template-columns:210px minmax(0,1fr) 300px!important;
+  gap:9px!important;
+  overflow:hidden!important;
+}
+
+/* Coluna esquerda deve caber inteira sem scroll */
+.premium-dashboard .reference-tv-info{
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  padding:10px!important;
+  gap:7px!important;
+  display:flex!important;
+  flex-direction:column!important;
+}
+.premium-dashboard .reference-tv-info::-webkit-scrollbar{display:none!important}
+.premium-dashboard .tv-info-box{
+  flex:0 0 auto!important;
+  padding:9px 10px!important;
+  gap:3px!important;
+  border-radius:9px!important;
+}
+.premium-dashboard .tv-info-box small{font-size:.52rem!important}
+.premium-dashboard .tv-info-box>strong{font-size:.96rem!important}
+.premium-dashboard .tv-info-box.prize>strong{font-size:1.28rem!important}
+.premium-dashboard .tv-info-box>span{font-size:.58rem!important}
+
+/* Vencedores compactos */
+.premium-dashboard .tv-winners{
+  flex:0 0 auto!important;
+  gap:6px!important;
+}
+.premium-dashboard .tv-winner-card{
+  padding:8px 9px!important;
+  border-radius:8px!important;
+}
+.premium-dashboard .tv-winner-card>span{
+  margin-bottom:3px!important;
+  font-size:.47rem!important;
+}
+.premium-dashboard .tv-winner-card>strong{
+  font-size:.68rem!important;
+  line-height:1.15!important;
+}
+
+/* QR cabe inteiro dentro da coluna sem barra */
+.premium-dashboard .tv-qr-primary{
+  flex:0 0 auto!important;
+  margin-top:auto!important;
+  grid-template-columns:minmax(0,1fr) 78px!important;
+  gap:7px!important;
+  padding:8px!important;
+  border-radius:9px!important;
+}
+.premium-dashboard .tv-qr-copy{gap:2px!important}
+.premium-dashboard .tv-qr-copy .tv-side-kicker{font-size:.47rem!important}
+.premium-dashboard .tv-qr-copy h3{font-size:.68rem!important}
+.premium-dashboard .tv-qr-copy p{font-size:.51rem!important}
+.premium-dashboard .tv-qr-copy small{font-size:.42rem!important}
+.premium-dashboard .tv-qr-link{
+  width:78px!important;
+  height:78px!important;
+  padding:5px!important;
+  border-radius:8px!important;
+}
+
+/* Globo sempre centralizado e contido */
+.premium-dashboard .reference-tv-machine{
+  min-height:0!important;
+  overflow:hidden!important;
+  padding:4px!important;
+}
+.premium-dashboard .tv-machine-art{
+  width:min(100%,620px)!important;
+  max-height:100%!important;
+  aspect-ratio:760/680!important;
+}
+.premium-dashboard .tv-machine-caption{
+  bottom:5px!important;
+  left:10px!important;
+  font-size:.52rem!important;
+}
+
+/* Grade direita sempre inteira */
+.premium-dashboard .reference-tv-numbers{
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  padding:10px!important;
+}
+.premium-dashboard .reference-tv-numbers .tv-board-head{
+  min-height:34px!important;
+  margin-bottom:6px!important;
+}
+.premium-dashboard .reference-tv-numbers #dash-globo-numeros{
+  min-height:0!important;
+  height:calc(100% - 40px)!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  grid-template-rows:repeat(15,minmax(0,1fr))!important;
+  gap:3px!important;
+  overflow:hidden!important;
+}
+
+/* Faixa inferior fixa, sem rolagem */
+.premium-dashboard .tv-support-rail.almost-only{
+  height:126px!important;
+  min-height:126px!important;
+  max-height:126px!important;
+  overflow:hidden!important;
+}
+.premium-dashboard .almost-side.compact{
+  height:100%!important;
+  overflow:hidden!important;
+  padding:8px 10px!important;
+}
+.premium-dashboard .almost-side.compact>.tv-side-kicker{
+  margin-bottom:6px!important;
+  font-size:.6rem!important;
+}
+.premium-dashboard .almost-side.compact #lista-quase-la{
+  height:88px!important;
+  overflow:hidden!important;
+}
+.premium-dashboard .almost-side.compact #lista-quase-la .quase-item{
+  height:88px!important;
+}
+
+/* Header compacto para sobrar mais área útil */
+.premium-dashboard .tv-brand .tv-brand-mark{
+  width:32px!important;
+  height:32px!important;
+}
+.premium-dashboard .tv-brand b{font-size:.66rem!important}
+.premium-dashboard .tv-brand strong{font-size:.9rem!important}
+.premium-dashboard .tv-round-meta strong{
+  font-size:clamp(.9rem,2vw,1.25rem)!important;
+  white-space:nowrap!important;
+}
+.premium-dashboard .header-controls{min-width:0!important}
+
+/* Em tela de TV/note: nunca ativar regras que criam página rolável */
+@media(max-width:980px){
+  html,body.premium-dashboard{overflow:hidden!important}
+  .premium-dashboard .dashboard-main-fullscreen.reference-tv-layout{
+    height:calc(100vh - 70px)!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  .premium-dashboard .reference-tv-stage{
+    grid-template-columns:190px minmax(0,1fr) 260px!important;
+    grid-template-rows:1fr!important;
+    overflow:hidden!important;
+  }
+  .premium-dashboard .reference-tv-numbers{
+    min-height:0!important;
+  }
+  .premium-dashboard .tv-support-rail.almost-only{
+    height:118px!important;
+    min-height:118px!important;
+  }
+}
