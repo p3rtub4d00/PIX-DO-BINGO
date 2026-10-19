@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pix-do-bingo-ultimos-rodape-v21'; // Nova versão para forçar reset
+const CACHE_NAME = 'pix-do-bingo-bolas-redondas-v22'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
