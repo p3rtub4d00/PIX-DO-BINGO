@@ -1,54 +1,90 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anúncios Dashboard - Bingo do Pix</title>
-    <link rel="stylesheet" href="admin.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Publicidade | Pix do Bingo</title>
+  <link rel="stylesheet" href="admin.css?v=ads-20261019">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="admin-panel-body">
+  <aside class="admin-sidebar">
+    <div class="logo pix-admin-logo"><span class="pix-admin-mark"><i></i><i></i><i></i><i></i></span><span><b>PIX <em>DO</em></b><strong>BINGO</strong><small>ADMINISTRATIVO</small></span></div>
+    <nav class="admin-nav">
+      <ul>
+        <li><a href="/admin/painel.html">Painel & Status</a></li>
+        <li><a href="/admin/vencedores.html">Gestão Vencedores</a></li>
+        <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
+        <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li>
+        <li><a href="/admin/comissoes.html">Comissões Online</a></li>
+        <li><a href="/admin/anuncios.html" class="ativo">Publicidade</a></li>
+      </ul>
+    </nav>
+    <div class="logout-link"><a href="/admin/logout">Sair</a></div>
+  </aside>
 
-    <aside class="admin-sidebar">
-        <div class="logo pix-admin-logo"><span class="pix-admin-mark"><i></i><i></i><i></i><i></i></span><span><b>PIX <em>DO</em></b><strong>BINGO</strong><small>ADMINISTRATIVO</small></span></div>
-        <nav class="admin-nav">
-            <ul>
-                <li><a href="/admin/painel.html">Painel & Status</a></li>
-                <li><a href="/admin/vencedores.html">Gestão Vencedores</a></li>
-                <li><a href="/admin/relatorios.html">Relatório de Vendas</a></li>
-                <li><a href="/admin/cambistas.html">Gerenciar Cambistas</a></li>
-                <li><a href="/admin/comissoes.html">Comissões Online</a></li>
-                <li><a href="/admin/anuncios.html" class="ativo">Anúncios Dashboard</a></li>
-            </ul>
-        </nav>
-        <div class="logout-link">
-            <a href="/admin/logout">Sair</a>
-        </div>
-    </aside>
+  <main class="admin-content ads-admin">
+    <header class="content-header ads-header">
+      <div><span class="ads-eyebrow">MONETIZAÇÃO</span><h1>Publicidade do Telão</h1><p>Planos, aprovação, prazos e anúncios cadastrados manualmente.</p></div>
+      <a class="ads-public-link" href="/anuncie" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Ver página Anuncie Aqui</a>
+    </header>
 
-    <main class="admin-content">
-        <header class="content-header">
-            <h1>Gestão de Anúncios da Dashboard</h1>
-        </header>
+    <section class="ads-kpis" id="ads-kpis">
+      <article><span>Ativos</span><strong id="kpi-active">0</strong></article>
+      <article><span>Aguardando aprovação</span><strong id="kpi-pending">0</strong></article>
+      <article><span>Expirados</span><strong id="kpi-expired">0</strong></article>
+      <article><span>Impressões</span><strong id="kpi-impressions">0</strong></article>
+    </section>
 
-        <section class="card admin-section">
-            <h2>Editor JSON</h2>
-            <p>Edite os anúncios da tela de espera da dashboard. Salve e a dashboard buscará automaticamente a configuração atualizada.</p>
+    <section class="card admin-section">
+      <div class="ads-section-head">
+        <div><h2>Planos de publicidade</h2><p>Esses valores aparecem automaticamente para o anunciante e são usados para gerar o PIX.</p></div>
+        <button id="btn-new-plan" class="btn-comprar btn-destaque" type="button"><i class="fa-solid fa-plus"></i> Novo plano</button>
+      </div>
+      <div id="plans-admin-grid" class="plans-admin-grid"></div>
+      <form id="plan-form" class="plan-form hidden">
+        <input type="hidden" id="plan-id">
+        <label>Nome<input id="plan-name" required placeholder="Ex.: 30 dias"></label>
+        <label>Dias<input id="plan-days" type="number" min="1" required></label>
+        <label>Preço (R$)<input id="plan-price" type="number" min="0" step="0.01" required></label>
+        <label>Segundos/exibição<input id="plan-seconds" type="number" min="3" max="60" value="10" required></label>
+        <label>Máx. imagens<input id="plan-images" type="number" min="1" max="3" value="1" required></label>
+        <label class="switch-label"><input id="plan-active" type="checkbox" checked> Plano ativo</label>
+        <div class="plan-actions"><button class="btn-comprar btn-destaque" type="submit">Salvar plano</button><button id="btn-cancel-plan" class="btn-comprar" type="button">Cancelar</button></div>
+      </form>
+    </section>
 
-            <div class="form-grupo">
-                <label for="anuncios-json">Configuração (JSON):</label>
-                <textarea id="anuncios-json" rows="18" placeholder='{"rotacaoSegundos":6,"mensagens":[],"slides":[]}'></textarea>
-            </div>
+    <section class="card admin-section">
+      <div class="ads-section-head">
+        <div><h2>Cadastrar anúncio manual</h2><p>Para patrocinadores, permutas ou pagamentos feitos por fora do sistema.</p></div>
+      </div>
+      <form id="manual-form" class="manual-form">
+        <label>Empresa<input id="manual-company" required></label>
+        <label>Responsável<input id="manual-contact"></label>
+        <label>WhatsApp<input id="manual-whatsapp"></label>
+        <label>Dias no ar<input id="manual-days" type="number" min="1" value="30" required></label>
+        <label>Segundos/exibição<input id="manual-seconds" type="number" min="3" max="60" value="10" required></label>
+        <label class="manual-file">Imagem(ns)<input id="manual-images" type="file" accept="image/jpeg,image/png,image/webp" multiple required><small>Até 3 imagens, máximo 2,5 MB cada.</small></label>
+        <button class="btn-comprar btn-destaque" type="submit">Cadastrar e ativar</button>
+      </form>
+    </section>
 
-            <div style="display:flex; gap:10px; flex-wrap: wrap;">
-                <button type="button" id="btn-validar" class="btn-comprar btn-comprar-azul">Validar JSON</button>
-                <button type="button" id="btn-salvar-anuncios" class="btn-comprar btn-destaque">Salvar anúncios</button>
-            </div>
-
-            <p id="anuncios-status" class="status-message" style="display:none;"></p>
-        </section>
-    </main>
-
-    <script src="anuncios.js"></script>
+    <section class="card admin-section">
+      <div class="ads-section-head">
+        <div><h2>Anúncios</h2><p>O período pago começa somente quando você aprovar o material.</p></div>
+        <button id="btn-refresh-ads" class="btn-comprar btn-comprar-azul" type="button"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+      </div>
+      <div class="ads-filter-row">
+        <button class="ads-filter active" data-filter="all">Todos</button>
+        <button class="ads-filter" data-filter="pending_approval">Aguardando</button>
+        <button class="ads-filter" data-filter="active">Ativos</button>
+        <button class="ads-filter" data-filter="paused">Pausados</button>
+        <button class="ads-filter" data-filter="expired">Expirados</button>
+      </div>
+      <div id="ads-list" class="ads-list"><p>Carregando...</p></div>
+    </section>
+  </main>
+  <script src="anuncios.js?v=ads-20261019"></script>
 </body>
 </html>
