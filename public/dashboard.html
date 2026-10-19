@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Telão | Pix do Bingo</title>
   <meta name="theme-color" content="#061626">
-<link rel="stylesheet" href="dashboard.css?v=tv-sem-scroll-20261019">
+<link rel="stylesheet" href="dashboard.css?v=finale-20261019">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -41,6 +41,62 @@
     <p id="anuncio-vencedor-nome">Nome do Jogador</p>
   </div>
 </div>
+
+<section id="resultado-final-overlay" class="resultado-final-overlay" aria-hidden="true">
+  <div class="finale-confetti" aria-hidden="true">
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+  </div>
+
+  <div class="resultado-final-shell">
+    <div class="finale-topbar">
+      <div class="tv-brand finale-brand">
+        <span class="tv-brand-mark"><i></i><i></i><i></i><i></i></span>
+        <span><b>PIX <em>DO</em></b><strong>BINGO</strong></span>
+      </div>
+      <span class="finale-status"><i></i> RODADA ENCERRADA</span>
+    </div>
+
+    <div class="finale-grid">
+      <div class="finale-hero">
+        <span class="finale-kicker">TEMOS UM GANHADOR!</span>
+        <div class="finale-trophy"><i class="fa-solid fa-trophy"></i></div>
+        <h1 id="finale-winner-name">Ganhador</h1>
+        <p class="finale-prize-label">CARTELA CHEIA</p>
+        <strong class="finale-prize-value" id="finale-prize-value">R$ 0,00</strong>
+
+        <div class="finale-meta-row">
+          <div><small>SORTEIO</small><strong id="finale-round-id">#---</strong></div>
+          <div><small>CARTELA</small><strong id="finale-card-id">---</strong></div>
+          <div><small>PARTICIPANTES</small><strong id="finale-participants">0</strong></div>
+        </div>
+      </div>
+
+      <aside class="finale-details">
+        <div class="finale-detail-card line-winner">
+          <span><i class="fa-solid fa-medal"></i> GANHADOR DA LINHA</span>
+          <strong id="finale-line-winner">Aguardando...</strong>
+          <small id="finale-line-value">R$ 0,00</small>
+        </div>
+
+        <div class="finale-detail-card numbers">
+          <span><i class="fa-solid fa-balls"></i> ÚLTIMOS NÚMEROS</span>
+          <div id="finale-last-numbers" class="finale-last-numbers"></div>
+        </div>
+
+        <div class="finale-detail-card next">
+          <span><i class="fa-regular fa-clock"></i> PRÓXIMA TELA</span>
+          <strong>Próximo sorteio em breve</strong>
+          <small>Retornando automaticamente em <b id="finale-countdown">25</b>s</small>
+        </div>
+      </aside>
+    </div>
+
+    <div class="finale-footer">
+      <span><i class="fa-solid fa-shield-halved"></i> Resultado registrado pelo sistema</span>
+      <span id="finale-finished-at">Encerrado agora</span>
+    </div>
+  </div>
+</section>
 
 <header class="dashboard-header">
   <div class="tv-brand">
@@ -131,6 +187,6 @@
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="dashboard.js?v=tv-sem-scroll-20261019"></script>
+<script src="dashboard.js?v=finale-20261019"></script>
 </body>
 </html>
