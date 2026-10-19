@@ -580,3 +580,58 @@ table.relatorio-vendas td .tipo-online { font-weight: bold; color: var(--color-a
     padding: 0 4px; /* Pequeno padding interno */
 }
 /* ========================================================== */
+
+
+/* =========================================================
+   PIX DO BINGO — ADMIN / CAMBISTA REDESIGN 2026
+   ========================================================= */
+:root{
+  --adm-bg:#f3f6f8;
+  --adm-surface:#fff;
+  --adm-navy:#061626;
+  --adm-navy2:#0a2237;
+  --adm-green:#25d77f;
+  --adm-green2:#13b568;
+  --adm-text:#11263a;
+  --adm-muted:#6f8293;
+  --adm-border:#e1e8ed;
+  --adm-danger:#e64355;
+  --adm-shadow:0 10px 30px rgba(15,23,42,.05);
+}
+body.admin-panel-body{font-family:'Inter',sans-serif;background:var(--adm-bg);color:var(--adm-text)}
+.admin-sidebar{width:245px;background:linear-gradient(180deg,#061626,#0a1f31);padding:22px 14px;border-right:1px solid rgba(255,255,255,.04)}
+.pix-admin-logo{display:flex!important;align-items:center;gap:11px;text-align:left!important;margin:0 7px 24px!important}
+.pix-admin-mark{width:38px;height:38px;display:grid;grid-template-columns:1fr 1fr;gap:3px;transform:rotate(45deg);flex:0 0 38px}
+.pix-admin-mark i{background:linear-gradient(145deg,#45ed9c,#13b96b);border-radius:5px}
+.pix-admin-logo>span:last-child{display:grid;line-height:.82}.pix-admin-logo b{font-size:.68rem;letter-spacing:.04em}.pix-admin-logo em{font-style:normal;color:var(--adm-green)}.pix-admin-logo strong{font-size:.95rem;letter-spacing:.04em}.pix-admin-logo small{margin-top:5px;color:#60798d;font-size:.47rem;letter-spacing:.11em}
+.admin-sidebar .admin-nav li a{padding:11px 12px;border-radius:9px;color:#90a4b6;font-size:.77rem;font-weight:700;margin-bottom:4px}
+.admin-sidebar .admin-nav li a:hover{background:#0f2d45;color:#fff}.admin-sidebar .admin-nav li a.ativo{background:rgba(37,215,127,.12);box-shadow:inset 0 0 0 1px rgba(37,215,127,.15);color:#e8fff3}
+.admin-sidebar .logout-link{border-top:1px solid rgba(255,255,255,.07)}.admin-sidebar .logout-link a{color:#ff8a96;font-size:.75rem}
+.admin-content{padding:24px 28px;max-width:1500px}
+.content-header{padding:0 0 15px;margin-bottom:18px;border-bottom:1px solid #dde5eb}.content-header h1{font-family:'Inter',sans-serif;font-size:1.45rem;letter-spacing:-.025em;color:#0f2234}
+.card.admin-section{padding:22px;border:1px solid var(--adm-border);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.035);margin-bottom:16px;background:#fff}
+.admin-section h2{font-family:'Inter',sans-serif;font-size:1rem;color:#102638;border:0;padding:0;margin:0 0 9px;display:block}.admin-section h2:before{content:"";display:inline-block;width:4px;height:14px;background:var(--adm-green);border-radius:99px;margin-right:8px;vertical-align:-2px}
+.admin-section p{color:#718396;font-size:.77rem;line-height:1.55;margin-bottom:15px}
+.status-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:13px}
+.status-item{background:#f8fafb;border:1px solid #e4eaee;border-radius:11px;padding:13px}
+.status-label{font-size:.65rem;color:#8193a2;margin-bottom:4px}.status-value{font-family:'Inter',sans-serif;font-size:1rem;color:#13293b}.status-value.status-destaque{color:#0ba45b}
+.form-grupo-inline{grid-template-columns:220px minmax(0,300px);gap:12px;margin-bottom:10px}.form-grupo-inline label,.form-grupo-admin label{font-size:.72rem;color:#43586a}
+.form-grupo input[type="text"],.form-grupo input[type="password"],.form-grupo input[type="tel"],.form-grupo input[type="number"],.form-grupo select,
+.form-grupo-admin input,.form-grupo-inline input,.form-grupo-inline select,#anuncios-json{
+  border:1px solid #d8e1e8!important;border-radius:9px!important;background:#fbfcfd!important;padding:10px 11px!important;font-family:'Inter',sans-serif!important;font-size:.78rem!important;color:#173044!important;box-shadow:none!important
+}
+.form-grupo input:focus,.form-grupo-admin input:focus,.form-grupo-inline input:focus,.form-grupo select:focus,#anuncios-json:focus{outline:none;border-color:#5fd89d!important;box-shadow:0 0 0 3px rgba(37,215,127,.09)!important}
+.btn-comprar{border-radius:9px;padding:10px 15px;font-family:'Inter',sans-serif;font-size:.72rem;font-weight:800;text-transform:none;letter-spacing:0;background:#0b2a40}
+.btn-comprar:hover{background:#113b58;transform:none}.btn-comprar.btn-destaque{background:var(--adm-green);color:#062619}.btn-comprar.btn-destaque:hover{background:#1ecb75}.btn-comprar-azul{background:#0e3853}.btn-comprar-azul:hover{background:#164965}.btn-perigo{background:#f04759!important}
+.relatorio-resumo{gap:10px;margin-bottom:16px}.resumo-card{background:#f8fafb;border:1px solid #e2e9ee;border-radius:11px;padding:15px}.resumo-card h3{font-size:.72rem;color:#708395}.resumo-card .valor{font-family:'Inter',sans-serif;font-size:1.55rem;color:#12283b}
+.tabela-relatorio-container{border:1px solid #e4eaf0;border-radius:11px;overflow:auto}table.relatorio-vendas{margin-top:0;font-size:.72rem}table.relatorio-vendas th{background:#f7f9fb;color:#496073;border:0;border-bottom:1px solid #e4eaf0;padding:10px}table.relatorio-vendas td{border:0;border-bottom:1px solid #edf1f4;padding:10px}table.relatorio-vendas tbody tr:hover{background:#f8fbfa}
+.area-titulo-botoes h3{font-family:'Inter',sans-serif;font-size:.82rem}.mini-cartela{border-radius:9px;border:1px solid #dce4ea;box-shadow:none}
+.login-container{max-width:420px;border-radius:18px;border:1px solid #18384e;background:#0a2033;color:#fff;box-shadow:0 25px 70px rgba(0,0,0,.28)}.login-container h1{color:#fff}.login-container p{color:#8fa5b8}.login-container .form-grupo label{color:#bbcad5}.login-container input{background:#071927!important;color:#fff!important;border-color:#24455f!important}
+body.admin-body{font-family:'Inter',sans-serif;background:radial-gradient(circle at 50% 0%,rgba(37,215,127,.12),transparent 30%),#061626}
+@media(max-width:1000px){.status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grupo-inline{grid-template-columns:180px 1fr}}
+@media(max-width:900px){
+  .admin-sidebar{background:#061626}.pix-admin-logo{display:none!important}.admin-sidebar .admin-nav ul{gap:5px}.admin-sidebar .admin-nav li a{padding:9px 10px;font-size:.7rem}.admin-content{padding:14px}
+}
+@media(max-width:640px){
+  .card.admin-section{padding:15px}.status-grid{grid-template-columns:1fr}.form-grupo-inline{grid-template-columns:1fr}.form-grupo-inline label{text-align:left}.content-header h1{font-size:1.15rem}.admin-section h2{font-size:.9rem}
+}
