@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pix-do-bingo-ads-v23'; // Nova versão para forçar reset
+const CACHE_NAME = 'pix-do-bingo-admin-publicidade-v24'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
