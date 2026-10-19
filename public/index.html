@@ -1,198 +1,307 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bingo do Pix - Oficial</title>
-    
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#00C853">
-    <link rel="apple-touch-icon" href="/imagens/icon-192.png">
-
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <link rel="stylesheet" href="/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pix do Bingo</title>
+  <meta name="theme-color" content="#061626">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/imagens/icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body class="home-premium">
 
-    <header class="hero-header">
-        <div class="top-bar">
-            <div class="logo-area">
-                <i class="fa-solid fa-gem logo-icon"></i> BINGO<span class="highlight">PIX</span>
-            </div>
-            <a href="/revendedor.html" class="btn-revendedor-outline">
-                <i class="fa-solid fa-briefcase"></i> Área Revendedor
-            </a>
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="/" aria-label="Pix do Bingo">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="brand-copy"><b>PIX <em>DO</em></b><strong>BINGO</strong></span>
+    </a>
+
+    <nav class="main-nav" aria-label="Navegação principal">
+      <a href="#inicio" class="active">Início</a>
+      <a href="#como-jogar">Como jogar</a>
+      <a href="#premio-info">Prêmios</a>
+      <a href="#minhas-cartelas">Meus jogos</a>
+      <a href="#regras">Ajuda</a>
+    </nav>
+
+    <div class="header-actions">
+      <a href="/revendedor.html" class="btn-header-secondary"><i class="fa-solid fa-briefcase"></i> Revendedor</a>
+      <button id="btn-instalar" class="btn-header-primary" type="button" style="display:none;"><i class="fa-solid fa-download"></i> Instalar</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero-section" id="inicio">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <div class="live-chip"><span></span> SORTEIOS AO VIVO • PIX AUTOMÁTICO</div>
+        <h1>Bora jogar e<br>levar um <span>PIX?</span></h1>
+        <p>Compre suas cartelas pelo celular, acompanhe o sorteio em tempo real e receba seus prêmios com transparência.</p>
+        <div class="hero-actions">
+          <button class="hero-buy" type="button" onclick="document.getElementById('btn-jogue-agora')?.click()">Comprar cartelas <i class="fa-solid fa-arrow-right"></i></button>
+          <a href="/dashboard" class="hero-live"><i class="fa-solid fa-tv"></i> Assistir sorteio</a>
         </div>
-        
-        <div class="hero-content">
-            <h1 class="main-title">BINGO DO PIX</h1>
-            <p class="subtitle">Sorteios ao vivo e pagamentos instantâneos.</p>
+        <div class="hero-trust">
+          <div><i class="fa-solid fa-trophy"></i><span><b>Prêmios via PIX</b><small>Rápido e seguro</small></span></div>
+          <div><i class="fa-solid fa-bolt"></i><span><b>Sorteios ao vivo</b><small>Em tempo real</small></span></div>
+          <div><i class="fa-solid fa-shield-halved"></i><span><b>Ambiente seguro</b><small>Dados protegidos</small></span></div>
         </div>
-        
-        <button id="btn-instalar" class="btn-instalar-app" style="display: none;">
-            <i class="fas fa-download"></i> BAIXAR APLICATIVO
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="globe-stage">
+          <div class="globe-ring"></div>
+          <div class="bingo-globe">
+            <div class="pix-core"><span class="brand-mark mini"><i></i><i></i><i></i><i></i></span></div>
+            <span class="hero-ball b1">17</span>
+            <span class="hero-ball b2">28</span>
+            <span class="hero-ball b3">09</span>
+            <span class="hero-ball b4">42</span>
+            <span class="hero-ball b5">56</span>
+          </div>
+          <div class="globe-base"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="live-strip">
+    <div class="live-strip-inner">
+      <div class="live-round">
+        <span class="round-badge">AO VIVO</span>
+        <span>Sorteio atual</span>
+        <strong id="live-round-label">Rodada em andamento</strong>
+      </div>
+      <div class="live-prize">
+        <i class="fa-solid fa-trophy"></i>
+        <span>Prêmio principal</span>
+        <strong id="hero-premio-cheia">R$ ...</strong>
+      </div>
+      <div class="live-timer">
+        <span>Próximo número em</span>
+        <strong id="hero-timer">--:--</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-shell">
+    <section id="status-sorteio-box" class="status-card status-esperando">
+      <div>
+        <span class="eyebrow"><i class="fa-regular fa-clock"></i> <span id="status-titulo">AGUARDANDO...</span></span>
+        <strong id="status-cronometro" class="status-countdown">--:--</strong>
+        <p id="status-subtexto">Prepare-se para o próximo sorteio!</p>
+      </div>
+      <a href="/dashboard" id="btn-assistir-vivo" class="btn-inline-live" style="display:none;"><i class="fa-solid fa-video"></i> Assistir ao vivo</a>
+    </section>
+
+    <section id="premio-especial" class="special-card" style="display:none;">
+      <div class="special-copy">
+        <span class="special-badge"><i class="fa-solid fa-star"></i> SUPER PRÊMIO</span>
+        <h2>Próximo sorteio especial</h2>
+        <div class="special-value">R$ <span id="especial-valor">...</span></div>
+        <div class="special-date"><i class="fa-regular fa-calendar-days"></i> <span id="especial-data">...</span></div>
+      </div>
+      <button id="btn-jogue-especial" class="btn-special" type="button">Comprar cartelas <small><span id="especial-preco-cartela">R$ ...</span></small></button>
+      <p class="nota-rodape">Compra antecipada.</p>
+    </section>
+
+    <section id="premio-info" class="round-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-eyebrow">RODADA ATUAL</span>
+          <h2>Prêmios da rodada</h2>
+        </div>
+        <span class="secure-pill"><i class="fa-brands fa-pix"></i> Pagamento via PIX</span>
+      </div>
+
+      <div class="prize-grid">
+        <article class="prize-card line">
+          <span class="prize-icon"><i class="fa-solid fa-medal"></i></span>
+          <small>Linha</small>
+          <strong id="index-premio-linha">R$ ...</strong>
+          <span>Premiação parcial</span>
+        </article>
+        <article class="prize-card jackpot">
+          <span class="prize-icon"><i class="fa-solid fa-trophy"></i></span>
+          <small>Cartela cheia</small>
+          <strong id="index-premio-cheia">R$ ...</strong>
+          <span>Prêmio principal no PIX</span>
+        </article>
+      </div>
+
+      <div class="package-heading" id="como-jogar">
+        <div>
+          <span class="section-eyebrow">ESCOLHA SEU PACOTE</span>
+          <h2>Mais cartelas, mais chances</h2>
+        </div>
+        <span class="ticket-unit">Cartela: <b id="index-preco-cartela">R$ ...</b></span>
+      </div>
+
+      <div class="package-grid">
+        <button class="package-card" type="button" data-package="1">
+          <span class="package-name">Pacote Inicial</span>
+          <strong>1 cartela</strong>
+          <span class="package-price" id="package-price-1">R$ ...</span>
+          <small>Entre na rodada</small>
+          <em>Comprar</em>
         </button>
-    </header>
+        <button class="package-card featured" type="button" data-package="5">
+          <span class="popular-tag">MAIS POPULAR</span>
+          <span class="package-name">Pacote Popular</span>
+          <strong>5 cartelas</strong>
+          <span class="package-price" id="package-price-5">R$ ...</span>
+          <small>Mais chances de ganhar</small>
+          <em>Comprar</em>
+        </button>
+        <button class="package-card" type="button" data-package="10">
+          <span class="package-name">Mega Sorte</span>
+          <strong>10 cartelas</strong>
+          <span class="package-price" id="package-price-10">R$ ...</span>
+          <small>Pacote para quem quer jogar mais</small>
+          <em>Comprar</em>
+        </button>
+      </div>
 
-    <main class="container">
+      <button id="btn-jogue-agora" class="hidden-main-buy" type="button">
+        Comprar Cartela <small>(<span class="price-mirror">R$ ...</span>)</small>
+      </button>
+    </section>
 
-        <section id="status-sorteio-box" class="card status-esperando animate-up"> 
-            <div class="status-header">
-                <i class="fa-regular fa-clock"></i> <span id="status-titulo">AGUARDANDO...</span>
-            </div>
-            <div id="status-cronometro" class="timer-display">--:--</div>
-            <p id="status-subtexto">Prepare-se para o próximo sorteio!</p>
-            
-            <a href="/dashboard" id="btn-assistir-vivo" class="btn-live pulse" style="display: none;">
-                <i class="fa-solid fa-video"></i> ASSISTIR AO VIVO
-            </a>
-        </section>
+    <section id="minhas-cartelas" class="my-games-card">
+      <div class="my-games-head">
+        <span class="my-games-icon"><i class="fa-solid fa-ticket"></i></span>
+        <div><span class="section-eyebrow">ÁREA DO PARTICIPANTE</span><h2>Meus jogos</h2><p>Consulte cartelas compradas e prêmios pelo telefone cadastrado.</p></div>
+      </div>
+      <form id="form-recuperar-cartelas" class="lookup-form">
+        <div class="phone-field"><i class="fa-brands fa-whatsapp"></i><input type="tel" id="modal-telefone-recuperar" placeholder="Seu telefone com DDD" required></div>
+        <button type="submit" id="btn-recuperar-cartelas" class="btn-lookup primary">Ver cartelas</button>
+        <button type="button" id="btn-checar-premios" class="btn-lookup">Ver prêmios</button>
+      </form>
+    </section>
 
-        <section id="premio-especial" class="card card-especial animate-up" style="display: none;">
-            <div class="badge-especial"><i class="fa-solid fa-star"></i> SUPER PRÊMIO</div>
-            <div class="premio-destaque-box">
-                <span class="moeda">R$</span>
-                <span id="especial-valor" class="valor-zao text-white">...</span>
-            </div>
-            <p class="desc-premio">Prêmio Cartela Cheia</p>
-            <div class="data-box">
-                <i class="fa-regular fa-calendar-days"></i> <span id="especial-data">...</span>
-            </div>
-            <button id="btn-jogue-especial" class="btn-action btn-white pulse">
-                COMPRAR P/ ESPECIAL <br><small>(<span id="especial-preco-cartela">R$ ...</span>)</small>
-            </button>
-            <p class="nota-rodape">Compra antecipada.</p>
-        </section>
-        
-        <section id="premio-info" class="card animate-up delay-1">
-            <h2 class="section-title">Rodada Atual</h2>
-            <div class="premios-grid">
-                <div class="premio-card principal">
-                    <div class="icon-trophy"><i class="fa-solid fa-trophy"></i></div>
-                    <span class="label">Cartela Cheia</span>
-                    <span class="valor text-gradient" id="index-premio-cheia">R$ ...</span>
-                    <span class="sub">no Pix</span>
-                </div>
-                <div class="premio-card secundario">
-                    <div class="icon-medal"><i class="fa-solid fa-medal"></i></div>
-                    <span class="label">Linha</span>
-                    <span class="valor" id="index-premio-linha">R$ ...</span>
-                    <span class="sub">no Pix</span>
-                </div>
-            </div>
-            <button id="btn-jogue-agora" class="btn-action btn-green pulse">
-                COMPRAR CARTELA <br><small>(<span id="index-preco-cartela">R$ ...</span>)</small>
-            </button>
-        </section>
+    <section class="features-row">
+      <article><i class="fa-brands fa-pix"></i><div><b>PIX Seguro</b><small>Pagamento rápido e protegido</small></div></article>
+      <article><i class="fa-solid fa-clock"></i><div><b>Tempo real</b><small>Acompanhe o sorteio ao vivo</small></div></article>
+      <article><i class="fa-brands fa-whatsapp"></i><div><b>Suporte</b><small>Ajuda pelo WhatsApp</small></div></article>
+    </section>
 
-        <section id="minhas-cartelas" class="card animate-up delay-2">
-            <h2 class="section-title"><i class="fa-solid fa-ticket"></i> Meus Jogos</h2>
-            <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Consulte suas cartelas ou prêmios:</p>
-            <form id="form-recuperar-cartelas">
-                <div class="input-wrapper">
-                    <i class="fa-brands fa-whatsapp"></i>
-                    <input type="tel" id="modal-telefone-recuperar" placeholder="Seu Telefone (com DDD)" required>
-                </div>
-                <div class="action-buttons">
-                    <button type="submit" id="btn-recuperar-cartelas" class="btn-outline">Ver Cartelas</button>
-                    <button type="button" id="btn-checar-premios" class="btn-outline secondary">Ver Prêmios</button>
-                </div>
-            </form>
-        </section>
-        
-        <section class="card animate-up delay-3" style="padding: 0;">
-            <details class="custom-details">
-                <summary>
-                    <span><i class="fa-solid fa-circle-info"></i> Termos de Uso e Regras</span>
-                    <i class="fa-solid fa-chevron-down arrow"></i>
-                </summary>
-                <div class="regras-conteudo">
-                    <p>1. Proibido para menores de 18 anos.</p>
-                    <p>2. Vendas exclusivas via PIX.</p>
-                    <p>3. Ganhadores devem entrar em contato via WhatsApp.</p>
-                    <p>4. O sistema confere as cartelas automaticamente.</p>
-                </div>
-            </details>
-        </section>
-
-    </main>
-
-    <footer>
-        <div class="footer-content">
-            <div class="trust-icons">
-                <i class="fa-brands fa-pix"></i>
-                <i class="fa-solid fa-shield-halved"></i>
-            </div>
-            <p>&copy; 2024 Bingo do Pix.</p>
-            <div class="legal-box">
-                <p class="legal-warning">
-                    <strong>Site Autorizado:</strong> Bingo do Pix opera sob autorização nº <strong>345.987.221/MFA</strong>.
-                </p>
-                <p class="legal-sub">Jogue com responsabilidade. Proibido para menores de 18 anos.</p>
-            </div>
+    <section id="regras" class="rules-card">
+      <details class="custom-details">
+        <summary><span><i class="fa-solid fa-circle-info"></i> Termos de Uso e Regras</span><i class="fa-solid fa-chevron-down arrow"></i></summary>
+        <div class="regras-conteudo">
+          <p>1. Proibido para menores de 18 anos.</p>
+          <p>2. Vendas exclusivas via PIX.</p>
+          <p>3. Ganhadores devem entrar em contato via WhatsApp.</p>
+          <p>4. O sistema confere as cartelas automaticamente.</p>
         </div>
-    </footer>
+      </details>
+    </section>
+  </section>
+</main>
 
-    <div id="modal-checkout" class="modal-overlay">
-        <div class="modal-content">
-             <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
-            
-            <div id="etapa-dados">
-                <div class="modal-header-icon"><i class="fa-solid fa-cart-shopping"></i></div>
-                <h2 class="modal-title" id="modal-titulo">Finalizar Compra</h2>
-                <form id="form-checkout">
-                    <div class="form-grupo"><label>Nome Completo</label><input type="text" id="modal-nome" placeholder="Seu nome" required></div>
-                    <div class="form-grupo"><label>WhatsApp (Pix)</label><input type="tel" id="modal-telefone" placeholder="(DD) 99999-9999" required></div>
-                    <div class="form-grupo"><label>Quantidade</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
-                </form>
-                <div class="total-box"><span>Total:</span><strong id="modal-preco" class="text-pix">R$ ...</strong><span style="display:none" id="modal-label-preco"></span></div>
-                <button id="btn-gerar-pix" class="btn-action btn-green">PAGAR COM PIX <i class="fa-solid fa-qrcode"></i></button>
-            </div>
+<footer class="premium-footer">
+  <div class="footer-inner">
+    <a class="brand footer-brand" href="/"><span class="brand-mark mini"><i></i><i></i><i></i><i></i></span><span class="brand-copy"><b>PIX <em>DO</em></b><strong>BINGO</strong></span></a>
+    <div class="footer-links"><a href="#inicio">Início</a><a href="#como-jogar">Como jogar</a><a href="#premio-info">Prêmios</a><a href="#regras">Ajuda</a></div>
+    <div class="responsible"><span>18+</span><p>Jogue com responsabilidade.<br>Proibido para menores de 18 anos.</p></div>
+  </div>
+</footer>
 
-            <div id="etapa-pix" style="display: none;">
-                <h2 class="modal-title">Pagamento Pix</h2>
-                <p>Escaneie ou copie o código:</p>
-                <div id="pix-qrcode-container" class="qr-wrapper"><img id="pix-qrcode-img" src="" alt="QR Code PIX"></div>
-                <div class="copia-cola-wrapper"><input type="text" id="pix-copia-cola" readonly><button id="btn-copiar-pix">Copiar</button></div>
-                <div id="aguardando-pagamento" class="loading-state"><div class="spinner"></div><p>Confirmando pagamento...</p></div>
-            </div>
-            
-            <div id="etapa-sucesso" style="display: none; text-align: center;">
-                <div class="modal-header-icon" style="color: #00C853; font-size: 3rem;"><i class="fa-solid fa-circle-check"></i></div>
-                <h2 class="modal-title">Sucesso!</h2>
-                <p>Pagamento aprovado. Aguarde...</p>
-                <button id="btn-ir-espera" class="btn-action btn-green" style="margin-top:10px;">Ver Cartelas</button>
-            </div>
-
-        </div>
+<div id="modal-checkout" class="modal-overlay">
+  <div class="modal-content">
+    <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
+    <div id="etapa-dados">
+      <div class="modal-header-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+      <h2 class="modal-title" id="modal-titulo">Finalizar Compra</h2>
+      <span id="modal-titulo-sorteio" style="display:none"></span>
+      <form id="form-checkout">
+        <div class="form-grupo"><label>Nome completo</label><input type="text" id="modal-nome" placeholder="Seu nome" required></div>
+        <div class="form-grupo"><label>WhatsApp</label><input type="tel" id="modal-telefone" placeholder="(DD) 99999-9999" required></div>
+        <div class="form-grupo"><label>Quantidade</label><input type="number" id="modal-quantidade" min="1" value="1" required></div>
+      </form>
+      <div class="total-box"><span>Total</span><strong id="modal-preco" class="text-pix">R$ ...</strong><span id="modal-label-preco" style="display:none"></span></div>
+      <button id="btn-gerar-pix" class="btn-action btn-green">PAGAR COM PIX <i class="fa-solid fa-qrcode"></i></button>
     </div>
 
-    <div id="modal-minhas-cartelas" class="modal-overlay">
-        <div class="modal-content">
-            <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
-            <h2 class="modal-title">Minhas Cartelas</h2>
-            <div id="modal-minhas-cartelas-lista"></div>
-        </div>
+    <div id="etapa-pix" style="display:none;">
+      <h2 class="modal-title">Pagamento PIX</h2>
+      <p>Escaneie ou copie o código:</p>
+      <div id="pix-qrcode-container" class="qr-wrapper"><img id="pix-qrcode-img" src="" alt="QR Code PIX"></div>
+      <div class="copia-cola-wrapper"><input type="text" id="pix-copia-cola" readonly><button id="btn-copiar-pix">Copiar</button></div>
+      <div id="aguardando-pagamento" class="loading-state"><div class="spinner"></div><p>Confirmando pagamento...</p></div>
     </div>
 
-    <div id="modal-meus-premios" class="modal-overlay">
-        <div class="modal-content">
-            <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
-            <h2 class="modal-title">Meus Prêmios</h2>
-            <div id="modal-meus-premios-lista"></div>
-        </div>
+    <div id="etapa-sucesso" style="display:none;text-align:center;">
+      <div class="modal-header-icon success"><i class="fa-solid fa-circle-check"></i></div>
+      <h2 class="modal-title">Pagamento aprovado!</h2>
+      <p>Suas cartelas já estão liberadas.</p>
+      <button id="btn-ir-espera" class="btn-action btn-green" style="margin-top:10px;">Ver cartelas</button>
     </div>
+  </div>
+</div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/script.js"></script>
-    <script>
-        // PWA Installer
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
-        let deferredPrompt; const installBtn = document.getElementById('btn-instalar');
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'block'; });
-        if(installBtn) { installBtn.addEventListener('click', () => { if(deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; installBtn.style.display = 'none'; } }); }
-    </script>
+<div id="modal-minhas-cartelas" class="modal-overlay">
+  <div class="modal-content">
+    <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
+    <h2 class="modal-title">Minhas Cartelas</h2>
+    <div id="modal-minhas-cartelas-lista"></div>
+  </div>
+</div>
+
+<div id="modal-meus-premios" class="modal-overlay">
+  <div class="modal-content">
+    <span class="modal-close"><i class="fa-solid fa-xmark"></i></span>
+    <h2 class="modal-title">Meus Prêmios</h2>
+    <div id="modal-meus-premios-lista"></div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/script.js"></script>
+<script>
+(function(){
+  const basePriceEl=document.getElementById('index-preco-cartela');
+  const modalQty=document.getElementById('modal-quantidade');
+  const buyButton=document.getElementById('btn-jogue-agora');
+  const heroPrize=document.getElementById('hero-premio-cheia');
+  const heroTimer=document.getElementById('hero-timer');
+  const prizeSource=document.getElementById('index-premio-cheia');
+  const timerSource=document.getElementById('status-cronometro');
+
+  function parsePrice(){
+    const raw=(basePriceEl?.textContent||'').replace(/[^0-9,.-]/g,'').replace('.','').replace(',','.');
+    const n=Number(raw);
+    return Number.isFinite(n)?n:0;
+  }
+  function syncPackagePrices(){
+    const unit=parsePrice();
+    [1,5,10].forEach(q=>{
+      const el=document.getElementById('package-price-'+q);
+      if(el) el.textContent=unit?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(unit*q):'R$ ...';
+    });
+    document.querySelectorAll('.price-mirror').forEach(el=>el.textContent=basePriceEl?.textContent||'R$ ...');
+  }
+  document.querySelectorAll('[data-package]').forEach(btn=>btn.addEventListener('click',()=>{
+    if(modalQty) modalQty.value=btn.dataset.package;
+    buyButton?.click();
+  }));
+
+  if(basePriceEl) new MutationObserver(syncPackagePrices).observe(basePriceEl,{childList:true,subtree:true,characterData:true});
+  if(prizeSource) new MutationObserver(()=>{if(heroPrize) heroPrize.textContent=prizeSource.textContent}).observe(prizeSource,{childList:true,subtree:true,characterData:true});
+  if(timerSource) new MutationObserver(()=>{if(heroTimer) heroTimer.textContent=timerSource.textContent}).observe(timerSource,{childList:true,subtree:true,characterData:true});
+  syncPackagePrices();
+
+  if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'));}
+  let deferredPrompt;
+  const installBtn=document.getElementById('btn-instalar');
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(installBtn)installBtn.style.display='inline-flex';});
+  installBtn?.addEventListener('click',()=>{if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;installBtn.style.display='none';}});
+})();
+</script>
 </body>
 </html>
