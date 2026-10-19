@@ -50,6 +50,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const anuncioEsperaOverlay = document.getElementById('anuncio-espera-overlay');
     const esperaCronometroDisplay = document.getElementById('espera-cronometro-display');
     const esperaVencedoresListaEl = document.getElementById('espera-vencedores-lista');
+    const dashboardAdStage = document.getElementById('dashboard-ad-stage');
+    const dashboardAdImage = document.getElementById('dashboard-ad-image');
+    const dashboardAdCompany = document.getElementById('dashboard-ad-company');
+    const dashboardAdEmpty = document.getElementById('dashboard-ad-empty');
+    const advertiseQrImg = document.getElementById('advertise-qr-img');
+    const advertiseQrLink = document.getElementById('advertise-qr-link');
+    const advertiseUrl = document.getElementById('advertise-url');
 
     // Tela final profissional da rodada
     const resultadoFinalOverlay = document.getElementById('resultado-final-overlay');
@@ -75,6 +82,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let filaAnimacaoNumeros = [];
     let animacaoNumeroEmAndamento = false;
     let timerAnimacaoNumero = null;
+    let anunciosComerciais = [];
+    let indiceAnuncioComercial = 0;
+    let timerAnuncioComercial = null;
+    let timerRefreshAnuncios = null;
 
     // --- Lógica de Voz ---
     let somAtivo = false; 
@@ -208,6 +219,96 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (anunciar && typeof falar === 'function') {
             falar(`Bingo encerrado! Parabéns ${vencedor.nome || 'ao ganhador'}. Você ganhou a cartela cheia no valor de ${formatarBRL(vencedor.valor)}.`);
+        }
+    }
+
+    function configurarQrAnuncieAqui() {
+        if (!advertiseQrImg || !advertiseQrLink) return;
+        const destino = `${window.location.origin}/anuncie`;
+        const qrEndpoint = 'https://api.qrserver.com/v1/create-qr-code/';
+        advertiseQrImg.src = `${qrEndpoint}?size=320x320&margin=8&data=${encodeURIComponent(destino)}`;
+        advertiseQrLink.href = destino;
+        if (advertiseUrl) advertiseUrl.textContent = destino.replace(/^https?:\/\//, '');
+    }
+
+    async function registrarImpressaoAnuncio(adId) {
+        if (!adId || !anuncioEsperaOverlay || anuncioEsperaOverlay.classList.contains('oculto')) return;
+        try {
+            await fetch(`/api/ads/${encodeURIComponent(adId)}/impression`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}',
+                keepalive: true
+            });
+        } catch (e) {}
+    }
+
+    function montarFilaAnuncios(ads) {
+        const fila = [];
+        (Array.isArray(ads) ? ads : []).forEach(ad => {
+            (Array.isArray(ad.images) ? ad.images : []).forEach(image => {
+                if (image?.data) {
+                    fila.push({
+                        adId: ad.id,
+                        empresa: ad.empresa || 'Anunciante',
+                        data: image.data,
+                        segundos: Math.max(3, Number(ad.segundosExibicao) || 10)
+                    });
+                }
+            });
+        });
+        return fila;
+    }
+
+    function pararRotacaoAnuncios() {
+        if (timerAnuncioComercial) {
+            clearTimeout(timerAnuncioComercial);
+            timerAnuncioComercial = null;
+        }
+    }
+
+    function exibirAnuncioComercial() {
+        pararRotacaoAnuncios();
+
+        if (!dashboardAdStage || !dashboardAdImage) return;
+
+        if (!anunciosComerciais.length) {
+            dashboardAdStage.classList.remove('has-ad');
+            dashboardAdImage.removeAttribute('src');
+            if (dashboardAdCompany) dashboardAdCompany.textContent = 'Anuncie no Pix do Bingo';
+            return;
+        }
+
+        if (indiceAnuncioComercial >= anunciosComerciais.length) indiceAnuncioComercial = 0;
+        const item = anunciosComerciais[indiceAnuncioComercial];
+
+        dashboardAdImage.style.opacity = '0';
+        dashboardAdImage.src = item.data;
+        dashboardAdImage.onload = () => {
+            dashboardAdStage.classList.add('has-ad');
+            dashboardAdImage.style.opacity = '1';
+        };
+        if (dashboardAdCompany) dashboardAdCompany.textContent = item.empresa;
+
+        registrarImpressaoAnuncio(item.adId);
+
+        timerAnuncioComercial = setTimeout(() => {
+            indiceAnuncioComercial = (indiceAnuncioComercial + 1) % anunciosComerciais.length;
+            exibirAnuncioComercial();
+        }, item.segundos * 1000);
+    }
+
+    async function carregarAnunciosComerciais() {
+        try {
+            const response = await fetch(`/api/ads/active/list?t=${Date.now()}`, { cache: 'no-store' });
+            const data = await response.json();
+            anunciosComerciais = montarFilaAnuncios(data?.ads || []);
+            indiceAnuncioComercial = 0;
+            exibirAnuncioComercial();
+        } catch (e) {
+            console.error('Falha ao carregar anúncios ativos:', e);
+            anunciosComerciais = [];
+            exibirAnuncioComercial();
         }
     }
 
@@ -619,6 +720,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SOCKET EVENTS ---
     configurarQrCompra();
+    configurarQrAnuncieAqui();
+    carregarAnunciosComerciais();
+    timerRefreshAnuncios = setInterval(carregarAnunciosComerciais, 60000);
 
     socket.on('estadoInicial', (data) => {
         if (!data) return;
