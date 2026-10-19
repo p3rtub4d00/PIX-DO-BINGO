@@ -1,143 +1,101 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Painel TV - Bingo do Pix</title>
-    <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="/manifest-dashboard.json">
-    
-    <link rel="stylesheet" href="dashboard.css?v=overlay20260416">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Telão | Pix do Bingo</title>
+  <meta name="theme-color" content="#061626">
+  <link rel="manifest" href="/manifest-dashboard.json">
+  <link rel="stylesheet" href="dashboard.css?v=redesign20261019">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="dashboard-body">
+<body class="dashboard-body premium-dashboard">
 
-    <div id="anuncio-espera-overlay" class="anuncio-espera-overlay">
-        <div class="anuncio-espera-container">
-            <h1>PRÓXIMO SORTEIO</h1>
-            
-            <div class="anuncio-area-espera">
-                <div class="anuncio-slider">
-                    <div class="slide ativo">
-                        <img src="/imagens/seu-anuncio-espera.gif" alt="Aguarde o Sorteio">
-                    </div>
-                </div>
-            </div>
-
-            <p style="font-size: 2rem; color: #aaa; margin-top: 10px;">O show vai começar em:</p>
-            <div id="espera-cronometro-display">--:--</div>
-
-            <div id="overlay-promo-pack">
-                <div id="espera-especial-card" class="overlay-card oculto">
-                    <h3>🎁 PRÓXIMO SORTEIO ESPECIAL</h3>
-                    <p id="espera-especial-data">Data: --</p>
-                    <p id="espera-especial-valor">Prêmio: R$ --</p>
-                </div>
-
-                <div id="espera-vencedores-carousel" class="overlay-card">
-                    <h3>🏆 ÚLTIMO GANHADOR</h3>
-                    <p id="espera-vencedor-atual">Aguardando vencedor...</p>
-                </div>
-
-                <div id="espera-cta-qr" class="overlay-card">
-                    <h3>📲 COMPRE AGORA NO CELULAR</h3>
-                    <a id="espera-qr-link" href="/" target="_blank" rel="noopener noreferrer">
-                        <img id="espera-qr-img" alt="QR para compra de cartelas">
-                    </a>
-                    <p id="espera-qr-url">Carregando link...</p>
-                </div>
-            </div>
-
-            <div id="espera-vencedores-box">
-                <h3>🏆 Últimos Vencedores</h3>
-                <div id="espera-vencedores-lista">
-                    <p>Nenhum ganhador ainda.</p>
-                </div>
-            </div>
-        </div>
+<div id="anuncio-espera-overlay" class="anuncio-espera-overlay">
+  <div class="anuncio-espera-container">
+    <div class="tv-brand large">
+      <span class="tv-brand-mark"><i></i><i></i><i></i><i></i></span>
+      <span><b>PIX <em>DO</em></b><strong>BINGO</strong></span>
     </div>
-
-    <div id="anuncio-vencedor-overlay">
-        <div class="anuncio-vencedor-box">
-            <div style="font-size: 4rem;">🏆</div>
-            <h2 id="anuncio-vencedor-premio">BINGO!</h2>
-            <p id="anuncio-vencedor-nome">Nome do Jogador</p>
-        </div>
+    <h1>PRÓXIMO SORTEIO</h1>
+    <p class="wait-tv-sub">O show vai começar em:</p>
+    <div id="espera-cronometro-display">--:--</div>
+    <div class="waiting-layout">
+      <div class="anuncio-area-espera">
+        <div class="anuncio-slider"><div class="slide ativo"><img src="/imagens/seu-anuncio-espera.gif" alt="Aguarde o Sorteio"></div></div>
+      </div>
+      <div id="overlay-promo-pack">
+        <div id="espera-especial-card" class="overlay-card oculto"><h3>PRÓXIMO SORTEIO ESPECIAL</h3><p id="espera-especial-data">Data: --</p><p id="espera-especial-valor">Prêmio: R$ --</p></div>
+        <div id="espera-vencedores-carousel" class="overlay-card"><h3>ÚLTIMO GANHADOR</h3><p id="espera-vencedor-atual">Aguardando vencedor...</p></div>
+        <div id="espera-cta-qr" class="overlay-card"><h3>COMPRE NO CELULAR</h3><a id="espera-qr-link" href="/" target="_blank" rel="noopener noreferrer"><img id="espera-qr-img" alt="QR para compra de cartelas"></a><p id="espera-qr-url">Carregando link...</p></div>
+      </div>
     </div>
+    <div id="espera-vencedores-box"><h3>Últimos vencedores</h3><div id="espera-vencedores-lista"><p>Nenhum ganhador ainda.</p></div></div>
+  </div>
+</div>
 
-    <header class="dashboard-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <i class="fa-solid fa-gem" style="color:#00ffbf; font-size:1.8rem;"></i>
-            <h1 id="dash-sorteio-id-header">SORTEIO #...</h1>
-        </div>
-        
-        <div class="header-controls">
-             <div id="dash-estado-header" class="estado-texto estado-esperando">AGUARDANDO</div>
-             <button id="btn-toggle-som" title="Voz">
-                 <i class="fas fa-volume-xmark"></i>
-             </button>
-        </div>
-    </header>
+<div id="anuncio-vencedor-overlay">
+  <div class="anuncio-vencedor-box">
+    <div class="winner-trophy"><i class="fa-solid fa-trophy"></i></div>
+    <h2 id="anuncio-vencedor-premio">BINGO!</h2>
+    <p id="anuncio-vencedor-nome">Nome do Jogador</p>
+  </div>
+</div>
 
-    <section id="dash-faixa-promocional" class="oculto">
-        <div class="faixa-track">
-            <span id="dash-faixa-promocional-texto">🔥 SORTEIO ESPECIAL HOJE! GARANTA SUAS CARTELAS NO QR CODE.</span>
-        </div>
+<header class="dashboard-header">
+  <div class="tv-brand">
+    <span class="tv-brand-mark"><i></i><i></i><i></i><i></i></span>
+    <span><b>PIX <em>DO</em></b><strong>BINGO</strong></span>
+  </div>
+  <div class="tv-round-meta"><span>SORTEIO</span><strong id="dash-sorteio-id-header">#...</strong></div>
+  <div class="header-controls">
+    <div id="dash-estado-header" class="estado-texto estado-esperando">AGUARDANDO</div>
+    <button id="btn-toggle-som" title="Voz"><i class="fas fa-volume-xmark"></i></button>
+  </div>
+</header>
+
+<section id="dash-faixa-promocional" class="oculto">
+  <div class="faixa-track"><span id="dash-faixa-promocional-texto">SORTEIO ESPECIAL HOJE! GARANTA SUAS CARTELAS NO QR CODE.</span></div>
+</section>
+
+<main class="dashboard-main-fullscreen">
+  <section class="tv-main-card">
+    <div class="tv-current-number">
+      <span class="tv-label">NÚMERO SORTEADO</span>
+      <div id="dash-ultimo-numero">--</div>
+      <span class="tv-live-note"><i></i> em tempo real</span>
+    </div>
+    <div class="tv-board">
+      <div class="tv-board-head"><h3 id="titulo-numeros-sorteados">ÚLTIMOS NÚMEROS</h3><span>Rodada ao vivo</span></div>
+      <div id="dash-globo-numeros"></div>
+    </div>
+  </section>
+
+  <aside class="barra-lateral">
+    <section id="info-rodada" class="tv-side-card prize-side">
+      <span class="tv-side-kicker">PRÊMIOS</span>
+      <div class="info-item"><span>Jogadores</span><strong id="dash-jogadores-total">--</strong></div>
+      <div class="info-item"><span>Linha</span><strong class="text-pix-sidebar" id="dash-premio-linha">R$ ...</strong></div>
+      <div class="info-item jackpot"><span>Cartela Cheia</span><strong class="text-pix-sidebar" id="dash-premio-cheia">R$ ...</strong></div>
     </section>
 
-    <main class="dashboard-main-fullscreen">
-        
-        <div class="area-principal">
-            <div id="dash-ultimo-numero-wrapper">
-                <div id="dash-ultimo-numero">--</div>
-            </div>
-            <h3 id="titulo-numeros-sorteados">TABULEIRO</h3>
-            <div id="dash-globo-numeros"></div>
-        </div>
+    <section id="acesso-mobile" class="tv-side-card qr-side">
+      <span class="tv-side-kicker">JOGUE PELO CELULAR</span>
+      <h2>Escaneie e compre</h2>
+      <a id="dashboard-qr-link" href="/" target="_blank" rel="noopener noreferrer"><img id="dashboard-qr-img" alt="QR Code para compra de cartelas" loading="lazy"></a>
+      <small id="dashboard-qr-url">Carregando link...</small>
+    </section>
 
-        <aside class="barra-lateral">
-            <section id="info-rodada">
-                <h2><i class="fa-solid fa-sack-dollar"></i> Prêmios</h2>
-                <div class="info-item">
-                    <span>Jogadores:</span> <strong id="dash-jogadores-total">--</strong>
-                </div>
-                <div class="info-item">
-                    <span>Linha:</span> <strong class="text-pix-sidebar" id="dash-premio-linha">R$ ...</strong>
-                </div>
-                <div class="info-item">
-                    <span>Cartela Cheia:</span> <strong class="text-pix-sidebar" id="dash-premio-cheia">R$ ...</strong>
-                </div>
-            </section>
+    <section id="quase-la" class="tv-side-card almost-side">
+      <span class="tv-side-kicker">QUASE LÁ</span>
+      <div id="lista-quase-la"><p>Aguardando...</p></div>
+    </section>
+  </aside>
+</main>
 
-            <section id="acesso-mobile">
-                <h2><i class="fa-solid fa-qrcode"></i> Compre no Celular</h2>
-                <p>Aponte a câmera e compre cartelas em segundos.</p>
-                <a id="dashboard-qr-link" href="/" target="_blank" rel="noopener noreferrer">
-                    <img
-                        id="dashboard-qr-img"
-                        alt="QR Code para abrir o site de compra de cartelas"
-                        loading="lazy"
-                    >
-                </a>
-                <small id="dashboard-qr-url">Carregando link...</small>
-            </section>
-
-            <section id="quase-la">
-                <h2><i class="fa-solid fa-fire"></i> Quase Lá!</h2>
-                <div id="lista-quase-la">
-                    <p>Aguardando...</p>
-                </div>
-            </section>
-</aside>
-    </main>
-
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="dashboard.js?v=overlay20260416"></script>
-    <script src="dashboard-pwa.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="dashboard.js?v=redesign20261019"></script>
+<script src="dashboard-pwa.js"></script>
 </body>
 </html>
