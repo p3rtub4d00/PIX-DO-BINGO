@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pix-do-bingo-flyer-v13'; // Nova versão para forçar reset
+const CACHE_NAME = 'pix-do-bingo-telao-fix-v14'; // Nova versão para forçar reset
 const urlsToCache = [
   '/',
   '/index.html',
@@ -13,8 +13,6 @@ const urlsToCache = [
   '/jogo.js',
   '/dashboard.js',
   '/manifest.json',
-  '/manifest-dashboard.json',
-  '/dashboard-pwa.js'
 ];
 
 self.addEventListener('install', (event) => {
