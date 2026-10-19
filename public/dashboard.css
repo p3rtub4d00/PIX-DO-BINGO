@@ -753,3 +753,104 @@ h3#titulo-numeros-sorteados { font-size: 2vh; margin-bottom: 1vh; color: #888; t
   .tv-dynamic-ball #dash-ultimo-numero{font-size:3rem!important}
   .premium-dashboard .reference-tv-numbers #dash-globo-numeros{grid-template-columns:repeat(4,1fr)}
 }
+
+
+/* === Correções finais do telão: overflow, espera e responsividade === */
+.premium-dashboard .anuncio-espera-overlay{
+  display:grid!important;place-items:center!important;padding:24px!important;overflow:auto!important;
+  background:radial-gradient(circle at 50% 12%,rgba(35,228,137,.10),transparent 28%),linear-gradient(180deg,#04131f,#061a2a)!important
+}
+.premium-dashboard .anuncio-espera-container{
+  width:min(1180px,96vw)!important;max-width:1180px!important;margin:auto!important;padding:0!important;
+  transform:none!important;text-align:center!important
+}
+.premium-dashboard .anuncio-espera-container h1{
+  margin:0 0 5px!important;font-size:clamp(1.9rem,3vw,2.7rem)!important;line-height:1!important;color:#17d9ee!important
+}
+.premium-dashboard .wait-tv-sub{margin:0!important;color:#7f94a8!important;font-size:clamp(.8rem,1.1vw,1rem)!important}
+.premium-dashboard #espera-cronometro-display{
+  margin:8px 0 18px!important;font-size:clamp(4rem,7vw,6rem)!important;line-height:.95!important;
+  color:#21e08a!important;font-family:'Inter',sans-serif!important;letter-spacing:-.06em!important
+}
+.premium-dashboard .waiting-layout{
+  width:100%!important;display:grid!important;grid-template-columns:minmax(250px,.78fr) minmax(0,1.65fr)!important;
+  gap:12px!important;align-items:stretch!important;margin:0!important
+}
+.premium-dashboard .anuncio-area-espera{
+  width:100%!important;max-width:none!important;height:160px!important;aspect-ratio:auto!important;margin:0!important;
+  border:1px solid #173b54!important;border-radius:14px!important;background:#071827!important;box-shadow:none!important
+}
+.premium-dashboard .anuncio-slider,.premium-dashboard .anuncio-slider .slide{width:100%!important;height:100%!important}
+.premium-dashboard .anuncio-slider img,.premium-dashboard .anuncio-slider video{
+  width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;background:#06131f!important
+}
+.premium-dashboard #overlay-promo-pack{
+  width:100%!important;margin:0!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:12px!important;align-items:stretch!important
+}
+.premium-dashboard #overlay-promo-pack .overlay-card{
+  min-width:0!important;min-height:160px!important;height:160px!important;margin:0!important;padding:14px!important;
+  display:grid!important;align-content:center!important;justify-items:center!important;border:1px solid #173b54!important;
+  border-radius:14px!important;background:linear-gradient(145deg,#071a2a,#0a2236)!important;overflow:hidden!important
+}
+.premium-dashboard #overlay-promo-pack .overlay-card.oculto{display:none!important}
+.premium-dashboard #overlay-promo-pack .overlay-card h3{margin:0 0 8px!important;font-size:.88rem!important;color:#12dff0!important}
+.premium-dashboard #overlay-promo-pack .overlay-card p,.premium-dashboard #espera-vencedor-atual{
+  margin:3px 0!important;max-width:100%!important;font-size:.82rem!important;line-height:1.25!important;overflow-wrap:anywhere!important
+}
+.premium-dashboard #espera-qr-link{padding:4px!important;background:#fff!important;border-radius:9px!important}
+.premium-dashboard #espera-qr-img{width:82px!important;height:82px!important;border-radius:6px!important}
+.premium-dashboard #espera-qr-url{
+  width:100%!important;margin-top:5px!important;font-size:.68rem!important;color:#9db7c9!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
+}
+
+/* Grade de números: 5 colunas x 15 linhas, sem estourar o painel */
+.premium-dashboard .dashboard-main-fullscreen.reference-tv-layout{width:100vw!important;max-width:100vw!important;overflow:hidden!important}
+.premium-dashboard .reference-tv-stage{
+  width:100%!important;min-width:0!important;grid-template-columns:230px minmax(0,1fr) minmax(275px,315px)!important;overflow:hidden!important
+}
+.premium-dashboard .reference-tv-info,.premium-dashboard .reference-tv-machine,.premium-dashboard .reference-tv-numbers{
+  min-width:0!important;max-width:100%!important
+}
+.premium-dashboard .reference-tv-numbers{display:flex!important;flex-direction:column!important;padding:13px!important;overflow:hidden!important}
+.premium-dashboard .reference-tv-numbers .tv-board-head{flex:0 0 auto!important;min-height:39px!important;margin:0 0 8px!important}
+.premium-dashboard .reference-tv-numbers #dash-globo-numeros{
+  flex:1 1 auto!important;width:100%!important;min-width:0!important;min-height:0!important;height:auto!important;
+  padding:0!important;margin:0!important;display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-template-rows:repeat(15,minmax(0,1fr))!important;
+  gap:4px!important;align-content:stretch!important;overflow:hidden!important;background:transparent!important;border-radius:0!important
+}
+.premium-dashboard .reference-tv-numbers #dash-globo-numeros .dash-globo-numero{
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;aspect-ratio:auto!important;
+  margin:0!important;padding:0!important;border-radius:7px!important;display:grid!important;place-items:center!important;
+  overflow:hidden!important;background:#0b2940!important;border:1px solid #173f5a!important;color:#5f7d94!important;
+  font-family:'Inter',sans-serif!important;font-size:clamp(.54rem,.68vw,.76rem)!important;line-height:1!important;
+  transform:none!important;box-shadow:none!important
+}
+.premium-dashboard .reference-tv-numbers #dash-globo-numeros .dash-globo-numero.sorteado{
+  background:linear-gradient(145deg,#2be98f,#0fcf73)!important;border-color:#62f3ac!important;color:#062318!important;
+  font-weight:900!important;box-shadow:0 0 10px rgba(30,231,139,.28)!important;transform:none!important;z-index:1!important
+}
+.premium-dashboard .tv-support-rail{width:100%!important;min-width:0!important;overflow:hidden!important}
+.premium-dashboard .tv-side-card.compact{min-width:0!important;overflow:hidden!important}
+
+@media(max-width:1280px){
+  .premium-dashboard .reference-tv-stage{grid-template-columns:205px minmax(0,1fr) minmax(245px,285px)!important}
+  .premium-dashboard .reference-tv-info{padding:10px!important}.premium-dashboard .tv-info-box{padding:10px!important}
+}
+@media(max-width:980px){
+  .premium-dashboard .dashboard-main-fullscreen.reference-tv-layout{height:auto!important;min-height:calc(100vh - 72px)!important;overflow:auto!important}
+  .premium-dashboard .reference-tv-stage{grid-template-columns:1fr!important;grid-template-rows:auto minmax(420px,58vh) auto!important;overflow:visible!important}
+  .premium-dashboard .reference-tv-numbers{min-height:500px!important}
+  .premium-dashboard .tv-support-rail{grid-template-columns:1fr!important}
+}
+@media(max-width:760px){
+  .premium-dashboard .waiting-layout{grid-template-columns:1fr!important}
+  .premium-dashboard #overlay-promo-pack{grid-template-columns:1fr 1fr!important}
+  .premium-dashboard .anuncio-area-espera{height:140px!important}
+}
+@media(max-width:560px){
+  .premium-dashboard #overlay-promo-pack{grid-template-columns:1fr!important}
+  .premium-dashboard #overlay-promo-pack .overlay-card{height:auto!important;min-height:130px!important}
+}
