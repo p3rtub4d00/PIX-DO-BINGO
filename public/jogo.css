@@ -1,104 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@700&display=swap');
-
-/* --- RESET BÁSICO --- */
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-body {
-    background-color: #f0f2f5; /* Fundo Cinza Claro */
-    color: #1e293b; /* Texto Escuro */
-    font-family: 'Montserrat', sans-serif;
-    padding-bottom: 20px;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+:root{
+  --g-bg:#061626;--g-bg2:#0a2033;--g-panel:#0c2237;--g-panel2:#0f2a42;
+  --g-green:#27df86;--g-green2:#11b969;--g-text:#f7fbff;--g-muted:#8ea3b7;
+  --g-line:#1b3952;--g-gold:#f4c44d;--g-red:#ff4c5f;--g-white:#fff;
 }
-
-/* --- HEADER --- */
-.game-header {
-    background: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 100;
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',sans-serif}
+.game-body{min-height:100vh;background:linear-gradient(180deg,#061626,#081c2d 48%,#f4f7f9 48%);color:#102235;padding:0 0 35px}
+.premium-game-header{height:72px;position:sticky;top:0;z-index:100;background:rgba(4,19,32,.96);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.07);padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+.game-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff}
+.game-brand-mark{width:34px;height:34px;display:grid;grid-template-columns:1fr 1fr;gap:3px;transform:rotate(45deg)}
+.game-brand-mark i{background:linear-gradient(145deg,#42ef9b,#13b96b);border-radius:4px}
+.game-brand>span:last-child{display:grid;line-height:.82}.game-brand b{font-size:.67rem}.game-brand em{font-style:normal;color:var(--g-green)}.game-brand strong{font-size:.93rem}
+.game-header-right{display:flex;align-items:center;gap:8px}
+.round-id,.sound-button,.live-badge{height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800}
+.round-id{padding:0 12px;background:#0d293f;color:#bdd0df;border:1px solid #24445e}
+.sound-button{width:36px;border:1px solid #24445e;background:#0d293f;color:#d7e3ec}
+.live-badge{gap:6px;padding:0 11px;background:#e84052;color:#fff}.live-badge i{width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff}
+.game-shell{max-width:920px;margin:auto;padding:24px 16px}
+.game-live-card{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center;padding:24px 28px;border:1px solid var(--g-line);border-radius:20px;background:linear-gradient(135deg,#0a2033,#0d2a42);color:#fff;box-shadow:0 18px 55px rgba(1,12,22,.22)}
+.game-kicker{color:#69eaae;font-size:.6rem;font-weight:900;letter-spacing:.09em}
+.game-live-copy h1{font-size:1.7rem;margin:6px 0 7px}.game-live-copy p{max-width:520px;color:#91a7ba;font-size:.78rem;line-height:1.55}
+.current-ball-wrap{width:150px;height:150px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,#103552,#082033);box-shadow:inset 0 0 25px rgba(255,255,255,.04)}
+.premium-ball{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;font-size:3.2rem;font-weight:900;color:#082136;background:radial-gradient(circle at 30% 25%,#e5f5ff,#61bdf2 38%,#2387d7 70%,#0b5da7);border:7px solid rgba(255,255,255,.45);box-shadow:0 12px 30px rgba(0,0,0,.35),inset -8px -10px 18px rgba(0,0,0,.15)}
+.draw-history-card,.premium-cards-wrap{margin-top:14px;padding:20px;border:1px solid #e0e7ed;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.section-head-game{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.section-head-game h2{font-size:1.08rem;margin-top:3px}
+.auto-mark,.card-status{padding:6px 9px;border-radius:999px;background:#ecfbf3;color:#108e55;font-size:.61rem;font-weight:800}.card-status i{font-size:.42rem}
+#globo-numeros{display:grid;grid-template-columns:repeat(15,1fr);gap:5px}
+.globo-numero{aspect-ratio:1;display:grid;place-items:center;border-radius:8px;background:#f2f5f7;color:#acbbc7;border:1px solid #e4e9ed;font-size:.65rem;font-weight:800}
+.globo-numero.sorteado{color:#fff;border-color:transparent;background:linear-gradient(145deg,#16c672,#0c9f5a);box-shadow:0 4px 12px rgba(18,185,105,.22)}
+.cartela-controls{display:flex;justify-content:center;align-items:center;gap:12px;margin:5px 0 15px}.btn-nav{width:38px;height:38px;border-radius:10px;border:1px solid #dce5eb;background:#f8fafc;color:#143047}.paginacao-txt{font-size:.78rem;font-weight:800;color:#0d8f56}
+#cartelas-container{display:flex;justify-content:center;min-height:300px}
+.cartela-jogador{display:none;grid-template-columns:repeat(5,1fr);gap:5px;width:100%;max-width:420px;padding:12px;border:2px solid #13b96b;border-radius:14px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.08)}
+.cartela-jogador.ativa{display:grid!important;animation:fadeIn .25s ease}
+.cartela-header{aspect-ratio:1;display:grid;place-items:center;border-radius:8px;background:#0c2b41;color:#fff;font-weight:900}
+.cartela-numero{aspect-ratio:1;display:grid;place-items:center;border-radius:8px;background:#f5f8fa;border:1px solid #e0e7ed;color:#152b3c;font-weight:800;font-size:1rem}
+.cartela-numero.free{background:#dff7e9;color:#0a8b51;font-size:.62rem}.marcado{background:linear-gradient(145deg,#27df86,#14b968)!important;color:#062719!important;border-color:#14b968!important}
+.cartela-hash{text-align:center;color:#92a3b1;font-size:.62rem;margin-top:8px}
+.modal-overlay-game{display:none;position:fixed;inset:0;z-index:999;align-items:center;justify-content:center;padding:18px;background:rgba(2,10,17,.82);backdrop-filter:blur(8px)}
+.modal-content-game{width:100%;max-width:440px;padding:28px;border-radius:20px;background:#fff;color:#102235;text-align:center;border:1px solid #e2e8ed;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.trofeu-icon{font-size:2.5rem;color:var(--g-gold)}.msg-win{color:#667b8d;margin:8px 0}.comprovante-box{margin-top:14px;padding:14px;border-radius:12px;background:#f6f8fa}.btn-acao-primaria,.btn-acao-secundaria{width:100%;margin-top:10px;padding:12px;border:0;border-radius:10px;font-weight:900}.btn-acao-primaria{background:var(--g-green);color:#07291b}.btn-acao-secundaria{background:#0b273d;color:#fff}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(max-width:650px){
+  .game-body{background:linear-gradient(180deg,#061626,#081c2d 38%,#f4f7f9 38%)}
+  .premium-game-header{height:64px;padding:0 12px}.round-id{display:none}
+  .game-shell{padding:14px 10px}.game-live-card{grid-template-columns:1fr;padding:18px;text-align:center}.game-live-copy p{margin:auto}
+  .current-ball-wrap{margin:auto}.draw-history-card,.premium-cards-wrap{padding:14px 10px}
+  #globo-numeros{grid-template-columns:repeat(10,1fr);gap:4px}.globo-numero{font-size:.68rem}
+  .section-head-game{align-items:flex-start;flex-direction:column}.auto-mark{display:none}
 }
-.game-logo { font-weight: 900; font-size: 1.2rem; color: #1e293b; }
-.highlight { color: #00C853; }
-
-.badge-id { 
-    background: #e2e8f0; color: #1e293b; padding: 5px 10px; border-radius: 5px; 
-    font-size: 0.9rem; font-weight: 700; border: 1px solid #cbd5e1;
-}
-.status-live { background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; animation: pulse 2s infinite; }
-.btn-som { background: transparent; border: 1px solid #94a3b8; color: #1e293b; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
-/* --- BOLA DA VEZ --- */
-.destaque-container { padding: 20px 0; text-align: center; background: white; margin-bottom: 10px; }
-.label-sorteio { color: #00C853; font-weight: 800; font-size: 1rem; margin-bottom: 5px; display: block; }
-.bola-gigante {
-    width: 110px; height: 110px; background: white; border-radius: 50%; margin: 0 auto;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 4rem; font-weight: 900; color: #1e293b; font-family: 'Roboto', sans-serif;
-    border: 6px solid #00C853; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-/* --- TABULEIRO (GRID 75 NÚMEROS) --- */
-.historico-wrapper { background: white; padding: 15px; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; text-align: center; }
-.label-hist { font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; display: block; }
-
-#globo-numeros {
-    display: grid; 
-    grid-template-columns: repeat(15, 1fr); /* 15 colunas no PC */
-    gap: 3px; justify-content: center; max-width: 800px; margin: 0 auto;
-}
-.globo-numero {
-    aspect-ratio: 1; background: #f1f5f9; color: #ccc; border: 1px solid #e2e8f0;
-    border-radius: 3px; display: flex; align-items: center; justify-content: center;
-    font-size: 0.7rem; font-family: 'Roboto', sans-serif; font-weight: 700;
-}
-.globo-numero.sorteado { background: #00C853; color: white; border-color: #009624; font-weight: 900; }
-
-@media (max-width: 600px) {
-    #globo-numeros { grid-template-columns: repeat(10, 1fr); /* 10 colunas no celular */ }
-    .globo-numero { font-size: 0.8rem; }
-}
-
-/* --- CARTELAS (IMPORTANTE) --- */
-.cartelas-wrapper { padding: 20px 10px; text-align: center; }
-.titulo-secao { font-size: 1.1rem; font-weight: 800; margin-bottom: 10px; }
-
-.cartela-controls { display: flex; justify-content: center; gap: 15px; align-items: center; margin-bottom: 15px; }
-.btn-nav { background: #1e293b; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
-.paginacao-txt { font-weight: 700; color: #00C853; font-size: 1rem; }
-
-/* Container */
-#cartelas-container { display: flex; justify-content: center; min-height: 300px; }
-
-/* A Cartela criada pelo JS */
-.cartela-jogador {
-    display: none; /* JS troca para grid quando ativa */
-    grid-template-columns: repeat(5, 1fr); gap: 4px;
-    background: white; padding: 10px; border-radius: 10px;
-    border: 2px solid #e2e8f0; width: 100%; max-width: 320px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-}
-.cartela-jogador.ativa { display: grid !important; animation: fadeIn 0.3s; }
-
-.cartela-header {
-    background: #1e293b; color: white; font-weight: 900; border-radius: 5px;
-    display: flex; align-items: center; justify-content: center; aspect-ratio: 1; font-size: 1.1rem;
-}
-.cartela-numero {
-    background: #f8fafc; color: #333; font-weight: 800; border-radius: 5px;
-    border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center;
-    aspect-ratio: 1; font-family: 'Roboto', sans-serif; font-size: 1.1rem;
-}
-.cartela-numero.free { background: #cbd5e1; color: #666; font-size: 0.6rem; }
-.marcado { background: #ef4444 !important; color: white !important; border-color: #d32f2f !important; }
-
-/* Modal Resultado */
-.modal-overlay-game { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:999; align-items:center; justify-content:center; }
-.modal-content-game {
-    background: linear-gradient(135deg, #FFD600, #FFAB00); padding: 30px;
-    border-radius: 20px; text-align: center; color: black; width: 90%; max-width: 400px;
-    border: 4px solid white; animation: popIn 0.5s;
-}
-.btn-acao-primaria { background: black; color: #FFD600; padding: 12px; width: 100%; border-radius: 50px; border: none; font-weight: 800; margin-top: 10px; cursor: pointer; }
-.btn-acao-secundaria { background: white; color: black; padding: 10px; width: 100%; border-radius: 50px; border: none; font-weight: 700; margin-top: 5px; cursor: pointer; }
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
