@@ -313,6 +313,7 @@ let DURACAO_ESPERA_ATUAL = 20, MIN_BOTS_ATUAL = 80, MAX_BOTS_ATUAL = 150;
 let numeroDoSorteio = 500;
 let PRECO_CARTELA_ESPECIAL_ATUAL = '10.00', SORTEIO_ESPECIAL_DATAHORA = '', SORTEIO_ESPECIAL_ATIVO = 'false';
 let sorteioEspecialEmAndamento = false;
+let resultadoFinalAtual = null;
 let PROXIMO_ALVO_LINHA_GLOBAL = 250;
 
 async function carregarConfiguracoes() {
@@ -1270,18 +1271,60 @@ async function sortearNumero() {
                     io.emit('estadoJogoUpdate', { sorteioId: idSorteio, estado: estadoJogo });
                     
                     await salvarVencedor(idSorteio, 'Cartela Cheia', jog.nome, jog.telefone, jog.cartelas[i].c_id);
-                    
-                    setTimeout(async () => {
-                        let premioValor = PREMIO_CHEIA;
-                        if (sorteioEspecialEmAndamento) {
-                            const confEspecial = await Config.findOne({ chave: 'sorteio_especial_valor' });
-                            premioValor = parseFloat(confEspecial?.valor || '1000');
-                        }
 
-                        const dadosVencedor = { nome: jog.nome, cartelaGanhadora: jog.cartelas[i], indiceCartela: i, premioValor };
-                        const sock = (!jog.isBot && !jog.isManual) ? sid : null;
-                        terminarRodada(dadosVencedor, sock);
-                    }, 5000);
+                    let premioValor = parseFloat(PREMIO_CHEIA) || 0;
+                    if (sorteioEspecialEmAndamento) {
+                        const confEspecial = await Config.findOne({ chave: 'sorteio_especial_valor' });
+                        premioValor = parseFloat(confEspecial?.valor || '1000') || 1000;
+                    }
+
+                    const linhaVencedora = await Vencedor.findOne({
+                        sorteio_id: idSorteio,
+                        premio: 'Linha'
+                    }).sort({ timestamp: -1 }).lean();
+
+                    const duracaoTelaFinalMs = 25000;
+                    resultadoFinalAtual = {
+                        sorteioId: idSorteio,
+                        vencedor: {
+                            nome: jog.nome,
+                            premio: 'Cartela Cheia',
+                            valor: premioValor,
+                            cartelaId: jog.cartelas[i].c_id || null
+                        },
+                        vencedorLinha: linhaVencedora ? {
+                            nome: linhaVencedora.nome,
+                            cartelaId: linhaVencedora.cartela_id || null,
+                            valor: parseFloat(PREMIO_LINHA) || 0
+                        } : null,
+                        participantes: getContagemJogadores().total,
+                        numerosSorteados: [...numerosSorteados],
+                        encerradoEm: new Date().toISOString(),
+                        exibirAte: Date.now() + duracaoTelaFinalMs,
+                        duracaoSegundos: Math.round(duracaoTelaFinalMs / 1000)
+                    };
+
+                    const dadosVencedor = {
+                        nome: jog.nome,
+                        cartelaGanhadora: jog.cartelas[i],
+                        indiceCartela: i,
+                        premioValor
+                    };
+                    const sock = (!jog.isBot && !jog.isManual) ? sid : null;
+
+                    // Notifica os jogadores imediatamente; o telão permanece 25s no encerramento.
+                    if (sock && io.sockets.sockets.get(sock)) {
+                        io.to(sock).emit('voceGanhouCartelaCheia', dadosVencedor);
+                        io.sockets.sockets.get(sock).broadcast.emit('alguemGanhouCartelaCheia', { nome: dadosVencedor.nome });
+                    } else {
+                        io.emit('alguemGanhouCartelaCheia', { nome: dadosVencedor.nome });
+                    }
+
+                    io.emit('resultadoFinalRodada', resultadoFinalAtual);
+
+                    setTimeout(() => {
+                        terminarRodada(dadosVencedor, sock, { notificarVencedor: false });
+                    }, duracaoTelaFinalMs);
                     return;
                 }
             }
@@ -1309,19 +1352,22 @@ async function salvarVencedor(sid, premio, nome, tel, cid) {
     io.emit('atualizarVencedores', u);
 }
 
-async function terminarRodada(vencedor, socketId) {
+async function terminarRodada(vencedor, socketId, { notificarVencedor = true } = {}) {
     if (intervaloSorteio) {
         clearInterval(intervaloSorteio);
         intervaloSorteio = null;
     }
 
-    if(vencedor) {
+    if (vencedor && notificarVencedor) {
         if(socketId && io.sockets.sockets.get(socketId)) {
-            io.to(socketId).emit('voceGanhouCartelaCheia', vencedor);            io.sockets.sockets.get(socketId).broadcast.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome });
+            io.to(socketId).emit('voceGanhouCartelaCheia', vencedor);
+            io.sockets.sockets.get(socketId).broadcast.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome });
         } else {
             io.emit('alguemGanhouCartelaCheia', { nome: vencedor.nome });
         }
-    } else io.emit('jogoTerminouSemVencedor');
+    } else if (!vencedor) {
+        io.emit('jogoTerminouSemVencedor');
+    }
 
     if(sorteioEspecialEmAndamento) {
         sorteioEspecialEmAndamento = false;
@@ -1333,6 +1379,7 @@ async function terminarRodada(vencedor, socketId) {
         await Config.findOneAndUpdate({ chave: 'numero_sorteio_atual' }, { valor: String(numeroDoSorteio) }, { upsert: true });
     }
     
+    resultadoFinalAtual = null;
     tempoRestante = DURACAO_ESPERA_ATUAL;
     estadoJogo = "ESPERANDO";
     await salvarEstadoJogo(); // Salva que voltou para espera
@@ -1357,6 +1404,9 @@ io.on('connection', async (socket) => {
         jogadoresReais: cont.reais,
         ultimosVencedores: ultimos,
         numerosSorteados: numerosSorteados, // Manda o histórico para quem reconecta
+        resultadoFinal: resultadoFinalAtual && Number(resultadoFinalAtual.exibirAte) > Date.now()
+            ? resultadoFinalAtual
+            : null,
         configuracoes: configMap
     });
 
