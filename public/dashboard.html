@@ -66,39 +66,44 @@
   <div class="faixa-track"><span id="dash-faixa-promocional-texto">SORTEIO ESPECIAL HOJE! GARANTA SUAS CARTELAS NO QR CODE.</span></div>
 </section>
 
-<main class="dashboard-main-fullscreen">
-  <section class="tv-main-card">
-    <div class="tv-current-number">
-      <span class="tv-label">NÚMERO SORTEADO</span>
-      <div id="dash-ultimo-numero">--</div>
-      <span class="tv-live-note"><i></i> em tempo real</span>
-    </div>
-    <div class="tv-board">
-      <div class="tv-board-head"><h3 id="titulo-numeros-sorteados">ÚLTIMOS NÚMEROS</h3><span>Rodada ao vivo</span></div>
+<main class="dashboard-main-fullscreen reference-tv-layout">
+  <section class="reference-tv-stage">
+    <aside id="info-rodada" class="reference-tv-info">
+      <div class="tv-info-logo"><span class="tv-brand-mark"><i></i><i></i><i></i><i></i></span><b>PIX <em>DO</em> BINGO</b></div>
+      <div class="tv-info-box">
+        <small>SORTEIO ATUAL</small>
+        <strong id="reference-tv-round">Rodada ao vivo</strong>
+        <span>Participantes <b id="dash-jogadores-total">--</b></span>
+      </div>
+      <div class="tv-info-box prize">
+        <small>PRÊMIO PRINCIPAL</small>
+        <strong class="text-pix-sidebar" id="dash-premio-cheia">R$ ...</strong>
+        <span>Linha: <b class="text-pix-sidebar" id="dash-premio-linha">R$ ...</b></span>
+      </div>
+    </aside>
+
+    <section class="reference-tv-machine">
+      <img src="/imagens/bingo-machine-neon.svg" alt="Globo de bingo neon" class="tv-machine-image">
+      <div class="tv-dynamic-ball"><span id="dash-ultimo-numero">--</span></div>
+      <div class="tv-machine-caption"><i></i> SORTEIO EM TEMPO REAL</div>
+    </section>
+
+    <section class="reference-tv-numbers tv-board">
+      <div class="tv-board-head"><h3 id="titulo-numeros-sorteados">ÚLTIMOS NÚMEROS</h3><span>AO VIVO</span></div>
       <div id="dash-globo-numeros"></div>
-    </div>
+    </section>
   </section>
 
-  <aside class="barra-lateral">
-    <section id="info-rodada" class="tv-side-card prize-side">
-      <span class="tv-side-kicker">PRÊMIOS</span>
-      <div class="info-item"><span>Jogadores</span><strong id="dash-jogadores-total">--</strong></div>
-      <div class="info-item"><span>Linha</span><strong class="text-pix-sidebar" id="dash-premio-linha">R$ ...</strong></div>
-      <div class="info-item jackpot"><span>Cartela Cheia</span><strong class="text-pix-sidebar" id="dash-premio-cheia">R$ ...</strong></div>
-    </section>
-
-    <section id="acesso-mobile" class="tv-side-card qr-side">
-      <span class="tv-side-kicker">JOGUE PELO CELULAR</span>
-      <h2>Escaneie e compre</h2>
+  <section class="tv-support-rail">
+    <section id="acesso-mobile" class="tv-side-card qr-side compact">
+      <div><span class="tv-side-kicker">JOGUE PELO CELULAR</span><h2>Escaneie e compre suas cartelas</h2><small id="dashboard-qr-url">Carregando link...</small></div>
       <a id="dashboard-qr-link" href="/" target="_blank" rel="noopener noreferrer"><img id="dashboard-qr-img" alt="QR Code para compra de cartelas" loading="lazy"></a>
-      <small id="dashboard-qr-url">Carregando link...</small>
     </section>
-
-    <section id="quase-la" class="tv-side-card almost-side">
+    <section id="quase-la" class="tv-side-card almost-side compact">
       <span class="tv-side-kicker">QUASE LÁ</span>
       <div id="lista-quase-la"><p>Aguardando...</p></div>
     </section>
-  </aside>
+  </section>
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
